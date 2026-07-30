@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "마이템포",
+    "slug": "mytempo-golf",
+    "scheme": "mytempo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
+    "backgroundColor": "#101410",
+    "splash": {
+      "backgroundColor": "#101410"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mytempo.golf",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "android": {
+      "package": "com.mytempo.golf",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#436437"
+      }
+    },
+    "plugins": ["expo-router"]
+  }
+}

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>마이템포 — UI 와이어프레임 (WBS 1.4)</title>
+<style>
+  :root{
+    --green:#436437;
+    --green-light:#859A7D;
+    --green-dark:#2E4526;
+    --gold:#D4AF37;
+    --gold-light:#F0D477;
+    --cream:#F7F1E0;
+    --ink:#26331F;
+    --muted:#6E7C66;
+    --bg:#FAF8F2;
+    --line:#E3DFD1;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    background:#EDEAE0;
+    padding:32px;
+    color:var(--ink);
+  }
+  h1{font-size:18px;font-weight:700;margin:0 0 4px;}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:24px;}
+  .row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .label{font-size:13px;font-weight:700;color:var(--green-dark);}
+
+  .phone{
+    width:300px;height:640px;
+    background:#111;
+    border-radius:36px;
+    padding:10px;
+    box-shadow:0 6px 18px rgba(0,0,0,.25);
+  }
+  .screen{
+    width:100%;height:100%;
+    background:var(--bg);
+    border-radius:26px;
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    position:relative;
+  }
+  .notch{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:70px;height:14px;background:#111;border-radius:8px;z-index:5;
+  }
+  .header{
+    background:var(--green);
+    color:var(--cream);
+    padding:26px 16px 12px;
+    font-weight:700;font-size:15px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .header .sub{font-size:11px;font-weight:400;opacity:.85;margin-left:auto;}
+  .body{flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px;}
+
+  .tabbar{
+    display:flex;border-top:1px solid var(--line);background:#fff;
+  }
+  .tab{flex:1;text-align:center;padding:8px 0 10px;font-size:10px;color:var(--muted);}
+  .tab.active{color:var(--green);font-weight:700;}
+  .tab .dot{width:6px;height:6px;border-radius:50%;background:var(--green);margin:0 auto 3px;opacity:0;}
+  .tab.active .dot{opacity:1;}
+
+  /* preset card */
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .card-title{font-size:13px;font-weight:700;margin-bottom:8px;}
+  .ratio-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#eee;margin-bottom:10px;}
+  .ratio-bar .bs{background:var(--green);}
+  .ratio-bar .ds{background:var(--gold);}
+  .card-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .btn{font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);}
+  .btn.primary{background:var(--green);color:var(--cream);border:none;font-weight:700;}
+
+  /* my swings */
+  .fab-row{display:flex;justify-content:flex-end;}
+  .fab{background:var(--gold);color:var(--green-dark);font-size:11px;font-weight:700;padding:7px 12px;border-radius:20px;}
+  .swing-card{display:flex;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;align-items:center;}
+  .thumb{width:44px;height:44px;border-radius:8px;background:var(--green);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:16px;}
+  .swing-meta{flex:1;}
+  .swing-name{font-size:12px;font-weight:700;}
+  .swing-sub{font-size:10px;color:var(--muted);}
+  .dots{font-size:14px;color:var(--muted);}
+
+  /* marking screen */
+  .video-area{background:var(--green-dark);height:44%;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .play-tri{width:0;height:0;border-left:16px solid var(--cream);border-top:10px solid transparent;border-bottom:10px solid transparent;}
+  .timecode{position:absolute;bottom:8px;right:10px;color:var(--cream);font-size:10px;opacity:.8;}
+  .scrubber{height:6px;background:#e3e0d2;border-radius:3px;position:relative;margin:8px 2px 16px;}
+  .scrubber .fill{position:absolute;left:0;top:0;bottom:0;width:38%;background:var(--green-light);border-radius:3px;}
+  .pin{position:absolute;top:-5px;width:2px;height:16px;background:var(--ink);}
+  .pin::after{content:'';position:absolute;top:-6px;left:-4px;width:10px;height:10px;border-radius:50%;}
+  .pin.p1::after{background:var(--green-light);} .pin.p1{left:10%;}
+  .pin.p2::after{background:var(--gold);} .pin.p2{left:38%;}
+  .pin.p3::after{background:var(--gold-light);border:1px solid var(--gold);} .pin.p3{left:70%;opacity:.35;}
+  .mark-row{display:flex;gap:6px;}
+  .mark-btn{flex:1;font-size:10px;text-align:center;padding:8px 4px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);}
+  .mark-btn.done{background:var(--green-light);color:#fff;border:none;}
+  .mark-btn.current{background:var(--gold);color:var(--green-dark);border:none;font-weight:700;}
+  .speed-row{display:flex;gap:6px;}
+  .chip{font-size:10px;padding:5px 10px;border-radius:14px;border:1px solid var(--line);color:var(--muted);}
+  .chip.on{background:var(--green);color:var(--cream);border:none;font-weight:700;}
+  .nudge-row{display:flex;gap:6px;justify-content:center;}
+  .nudge{font-size:10px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;color:var(--ink);}
+  .readout{background:var(--cream);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--green-dark);text-align:center;font-weight:700;}
+
+  /* practice screen */
+  .ring-wrap{display:flex;align-items:center;justify-content:center;padding:14px 0;}
+  .ring-label{position:absolute;font-size:11px;font-weight:700;color:var(--green-dark);text-align:center;}
+  .bpm-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);}
+  .slider{flex:1;height:4px;background:#e3e0d2;border-radius:2px;position:relative;}
+  .slider .knob{position:absolute;top:-6px;width:16px;height:16px;border-radius:50%;background:var(--gold);left:52%;}
+  .play-big{width:64px;height:64px;border-radius:50%;background:var(--gold);margin:8px auto 0;display:flex;align-items:center;justify-content:center;}
+  .play-big .tri{width:0;height:0;border-left:18px solid var(--green-dark);border-top:11px solid transparent;border-bottom:11px solid transparent;margin-left:4px;}
+  .footnote{text-align:center;font-size:10px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<h1>마이템포 — 핵심 화면 와이어프레임</h1>
+<div class="meta">[@golf-ux-designer] · WBS 1.4 · PLANNING.md 5절 기반, 최종 브랜드(#436437 + 골드) 적용</div>
+
+<div class="row">
+
+  <div class="col">
+    <div class="label">① 프리셋 목록</div>
+    <div class="phone"><div class="notch"></div><div class="screen">
+      <div class="header">마이템포 <span class="sub">프리셋</span></div>
+      <div class="body">
+        <div class="card">
+          <div class="card-title">2.5 : 1 템포</div>
+          <div class="ratio-bar"><div class="bs" style="flex:71"></div><div class="ds" style="flex:29"></div></div>
+          <div class="card-actions"><button class="btn">미리듣기</button><button class="btn primary">연습하기</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">3 : 1 템포</div>
+          <div class="ratio-bar"><div class="bs" style="flex:75"></div><div class="ds" style="flex:25"></div></div>
+          <div class="card-actions"><button class="btn">미리듣기</button><button class="btn primary">연습하기</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">3.5 : 1 템포</div>
+          <div class="ratio-bar"><div class="bs" style="flex:78"></div><div class="ds" style="flex:22"></div></div>
+          <div class="card-actions"><button class="btn">미리듣기</button><button class="btn primary">연습하기</button></div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active"><div class="dot"></div>프리셋</div>
+        <div class="tab">내 스윙</div>
+        <div class="tab">연습</div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="col">
+    <div class="label">② 내 스윙 목록</div>
+    <div class="phone"><div class="notch"></div><div class="screen">
+      <div class="header">마이템포 <span class="sub">내 스윙</span></div>
+      <div class="body">
+        <div class="fab-row"><div class="fab">+ 새 영상 마킹</div></div>
+        <div class="swing-card">
+          <div class="thumb">▸</div>
+          <div class="swing-meta"><div class="swing-name">인생 드라이버 샷</div><div class="swing-sub">3.2 : 1 · 7/28 저장</div></div>
+          <div class="dots">⋮</div>
+        </div>
+        <div class="swing-card">
+          <div class="thumb">▸</div>
+          <div class="swing-meta"><div class="swing-name">연습장 아이언</div><div class="swing-sub">2.9 : 1 · 7/25 저장</div></div>
+          <div class="dots">⋮</div>
+        </div>
+        <div class="swing-card">
+          <div class="thumb">▸</div>
+          <div class="swing-meta"><div class="swing-name">라운드 3번홀</div><div class="swing-sub">3.4 : 1 · 7/20 저장</div></div>
+          <div class="dots">⋮</div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="tab">프리셋</div>
+        <div class="tab active"><div class="dot"></div>내 스윙</div>
+        <div class="tab">연습</div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="col">
+    <div class="label">③ 스윙 마킹 화면 (핵심)</div>
+    <div class="phone"><div class="notch"></div><div class="screen">
+      <div class="header">◂ 스윙 마킹 <span class="sub">저장 안 됨</span></div>
+      <div class="body">
+        <div class="video-area"><div class="play-tri"></div><div class="timecode">0:03 / 0:12</div></div>
+        <div class="scrubber">
+          <div class="fill"></div>
+          <div class="pin p1"></div><div class="pin p2"></div><div class="pin p3"></div>
+        </div>
+        <div class="mark-row">
+          <div class="mark-btn done">① 백스윙 시작 ✓</div>
+          <div class="mark-btn current">② 탑</div>
+          <div class="mark-btn">③ 임팩트</div>
+        </div>
+        <div class="speed-row">
+          <div class="chip">1x</div><div class="chip">0.5x</div><div class="chip on">0.25x</div>
+        </div>
+        <div class="nudge-row">
+          <div class="nudge">◂ 1프레임</div><div class="nudge">1프레임 ▸</div>
+        </div>
+        <div class="readout">백스윙 0.68s : 다운스윙 0.22s → 3.1 : 1</div>
+      </div>
+      <div class="tabbar"><div class="tab active" style="flex:1"><button class="btn primary" style="width:90%;">이름 붙여 저장</button></div></div>
+    </div></div>
+  </div>
+
+  <div class="col">
+    <div class="label">④ 연습 화면</div>
+    <div class="phone"><div class="notch"></div><div class="screen">
+      <div class="header">마이템포 <span class="sub">3 : 1 템포</span></div>
+      <div class="body" style="align-items:center;">
+        <div class="ring-wrap">
+          <svg width="170" height="170" viewBox="0 0 170 170">
+            <circle cx="85" cy="85" r="70" fill="none" stroke="#e3e0d2" stroke-width="14"/>
+            <circle cx="85" cy="85" r="70" fill="none" stroke="var(--green)" stroke-width="14"
+              stroke-dasharray="330 440" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 85 85)"/>
+            <circle cx="85" cy="85" r="70" fill="none" stroke="var(--gold)" stroke-width="14"
+              stroke-dasharray="110 440" stroke-dashoffset="-330" stroke-linecap="round" transform="rotate(-90 85 85)"/>
+          </svg>
+          <div class="ring-label">백스윙<br>다운스윙<br>3:1</div>
+        </div>
+        <div class="play-big"><div class="tri"></div></div>
+        <div class="bpm-row" style="width:100%;">
+          <span>BPM</span>
+          <div class="slider"><div class="knob"></div></div>
+          <span>78</span>
+        </div>
+        <div class="footnote">저음(시작) · 중음(탑) · 강조음(임팩트)</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab">프리셋</div>
+        <div class="tab">내 스윙</div>
+        <div class="tab active"><div class="dot"></div>연습</div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+</body>
+</html>

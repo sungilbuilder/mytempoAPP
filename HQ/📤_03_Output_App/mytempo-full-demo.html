@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>마이템포 — 통합 데모 (온보딩 + 라이트/다크 + 나눔고딕)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  /* 이 파일은 크롬에서 바로 열어 보는 "웹 미리보기"용 데모입니다.
+     실제 앱은 React Native(Expo)로 별도 구현되어 있으며(app/ 폴더),
+     여기서는 최종 확정된 컬러 토큰(tailwind.config.js)과 나눔고딕 폰트,
+     라이트/다크 토글, 온보딩 흐름을 하나로 합쳐 눈으로 확인할 수 있게 만들었습니다. */
+  :root{
+    --lt-bg:#FAF8F2; --lt-surface:#FFFFFF; --lt-surface2:#F3EFE2; --lt-line:#E3DFD1;
+    --lt-ink:#26331F; --lt-muted:#6E7C66; --lt-disabled:#B9C2B2; --lt-onAccent:#F7F1E0;
+    --lt-green:#436437; --lt-gold:#D4AF37;
+
+    --dk-bg:#101410; --dk-surface:#181D17; --dk-surface2:#20261F; --dk-line:#2B322A;
+    --dk-ink:#F5F7F2; --dk-muted:#A9B3A5; --dk-disabled:#5C6459; --dk-onAccent:#0A0F09;
+    --dk-green:#5FC639; --dk-gold:#EFC94D;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Nanum Gothic',-apple-system,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    background:#EDEAE0; padding:40px; display:flex; justify-content:center; align-items:flex-start;
+  }
+  .note{ position:fixed; top:12px; left:50%; transform:translateX(-50%); color:#8A8375; font-size:12px; text-align:center; }
+
+  .phone{ width:390px; height:800px; background:#000; border-radius:44px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+  .screen{
+    width:100%; height:100%; border-radius:34px; overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+    background:var(--bg); color:var(--ink);
+    transition:background .25s ease, color .25s ease;
+  }
+  /* 테마 스코프: .screen에 data-theme 부여 */
+  .screen[data-theme="light"]{
+    --bg:var(--lt-bg); --surface:var(--lt-surface); --surface2:var(--lt-surface2); --line:var(--lt-line);
+    --ink:var(--lt-ink); --muted:var(--lt-muted); --disabled:var(--lt-disabled); --onAccent:var(--lt-onAccent);
+    --green:var(--lt-green); --gold:var(--lt-gold); --onGold:var(--lt-onAccent);
+  }
+  .screen[data-theme="dark"]{
+    --bg:var(--dk-bg); --surface:var(--dk-surface); --surface2:var(--dk-surface2); --line:var(--dk-line);
+    --ink:var(--dk-ink); --muted:var(--dk-muted); --disabled:var(--dk-disabled); --onAccent:var(--dk-onAccent);
+    --green:var(--dk-green); --gold:var(--dk-gold); --onGold:var(--dk-onAccent);
+  }
+
+  .notch{ position:absolute; top:14px; left:50%; transform:translateX(-50%); width:90px; height:18px; background:#000; border-radius:10px; z-index:20; }
+
+  /* ---------- 온보딩 ---------- */
+  #onboarding{ position:absolute; inset:0; z-index:15; display:flex; flex-direction:column; }
+  #onboarding.hidden{ display:none; }
+  .progress-row{ position:absolute; top:38px; left:20px; right:20px; display:flex; gap:6px; z-index:5; }
+  .progress-seg{ flex:1; height:4px; border-radius:2px; background:rgba(120,120,120,0.25); overflow:hidden; }
+  .progress-seg .fill{ height:100%; width:0%; background:var(--green); transition:width .3s ease; }
+  .skip{ position:absolute; top:56px; right:20px; z-index:5; color:var(--muted); font-size:12px; font-weight:700; background:none; border:none; cursor:pointer; font-family:inherit; }
+  .slides{ display:flex; width:300%; height:100%; transition:transform .4s ease; }
+  .slide{ width:33.3333%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 32px 40px; text-align:center; gap:18px; position:relative; }
+  .tap-left,.tap-right{ position:absolute; top:100px; bottom:120px; width:35%; z-index:4; cursor:pointer; }
+  .tap-left{ left:0; } .tap-right{ right:0; }
+  .icon-badge{ width:72px; height:72px; border-radius:20px; background:#436437; display:flex; align-items:center; justify-content:center; }
+  h1.headline{ font-size:22px; font-weight:800; line-height:1.35; margin:0; color:var(--ink); }
+  p.sub{ font-size:13px; line-height:1.6; margin:0; max-width:260px; color:var(--muted); }
+  .demo-bar-wrap{ width:100%; max-width:220px; }
+  .demo-bar-track{ height:16px; border-radius:999px; overflow:hidden; background:var(--surface2); display:flex; position:relative; }
+  .demo-bar-bs{ background:var(--green); flex-basis:75%; }
+  .demo-bar-ds{ background:var(--gold); flex:1; }
+  .ring-wrap{ position:relative; width:130px; height:130px; display:flex; align-items:center; justify-content:center; }
+  .ring{ position:absolute; border-radius:50%; border:2px solid var(--gold); animation:ringPulse 2.4s ease-out infinite; }
+  .ring.r1{ animation-delay:0s; } .ring.r2{ animation-delay:.6s; } .ring.r3{ animation-delay:1.2s; }
+  @keyframes ringPulse{ 0%{ width:56px; height:56px; opacity:.9;} 100%{ width:140px; height:140px; opacity:0;} }
+  .ring-center{ position:relative; z-index:2; width:52px; height:52px; border-radius:50%; background:var(--gold); }
+  .cta{ width:100%; max-width:260px; border:none; border-radius:16px; padding:16px; background:var(--green); color:var(--onGold); font-size:15px; font-weight:800; cursor:pointer; margin-top:6px; font-family:inherit; }
+  .cta-note{ color:var(--disabled); font-size:10px; margin-top:-6px; max-width:240px; }
+  .dots{ position:absolute; bottom:34px; left:0; right:0; display:flex; justify-content:center; gap:8px; z-index:5; }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background .2s; }
+  .dot.active{ background:var(--green); }
+  .next-btn{ width:100%; max-width:260px; border:1px solid var(--line); border-radius:16px; padding:16px; background:transparent; color:var(--ink); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+
+  /* ---------- 메인 앱 ---------- */
+  #mainApp{ display:flex; flex-direction:column; height:100%; }
+  .header{ padding:40px 20px 12px; display:flex; align-items:center; justify-content:space-between; }
+  .header-left{ display:flex; align-items:baseline; gap:8px; }
+  .header-title{ font-weight:700; font-size:15px; font-family:inherit; }
+  .header-sub{ color:var(--muted); font-weight:400; font-size:12px; }
+  .gear-btn{ background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink); line-height:1; }
+
+  .tabpanel{ flex:1; overflow-y:auto; display:none; }
+  .tabpanel.active{ display:flex; flex-direction:column; }
+
+  .presets-list{ padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .card{ background:var(--surface); border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:12px; }
+  .card-top{ display:flex; align-items:baseline; justify-content:space-between; }
+  .card-name{ font-size:14px; font-weight:700; }
+  .card-ratio{ font-size:26px; font-weight:800; }
+  .bar-track{ height:16px; border-radius:999px; overflow:hidden; background:var(--surface2); display:flex; }
+  .bar-fill-bs{ background:var(--green); transition:flex-basis .6s ease; }
+  .bar-fill-ds{ background:var(--gold); }
+  .card-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:2px; }
+  .btn-ghost{ border:1px solid var(--line); border-radius:12px; padding:8px 14px; color:var(--muted); font-size:12px; font-weight:700; background:transparent; cursor:pointer; font-family:inherit; }
+  .btn-primary{ border:none; border-radius:12px; padding:8px 14px; color:var(--onGold); font-size:12px; font-weight:700; background:var(--green); cursor:pointer; font-family:inherit; }
+
+  .practice-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px; gap:22px; }
+  .glass-card{ width:100%; border-radius:24px; padding:26px 22px; display:flex; flex-direction:column; align-items:center; gap:18px; background:color-mix(in srgb, var(--surface) 55%, transparent); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid color-mix(in srgb, var(--ink) 8%, transparent); }
+  .practice-name{ color:var(--muted); font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+  .practice-ratio{ font-size:52px; font-weight:800; line-height:1; }
+  .practice-caption{ color:var(--muted); font-size:11px; }
+  .play-btn{ width:72px; height:72px; border-radius:999px; border:none; cursor:pointer; background:var(--gold); color:var(--onGold); font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; transition:transform .15s ease; font-family:inherit; }
+  .play-btn:active{ transform:scale(0.94); }
+  .rate-row{ display:flex; align-items:center; gap:14px; }
+  .rate-btn{ border:1px solid var(--line); border-radius:12px; padding:8px 14px; font-size:12px; font-weight:700; background:transparent; cursor:pointer; color:var(--ink); font-family:inherit; }
+  .rate-value{ font-size:15px; font-weight:700; min-width:44px; text-align:center; }
+
+  .swings-body{ flex:1; padding:20px; display:flex; flex-direction:column; gap:16px; }
+  .fab-row{ display:flex; justify-content:flex-end; }
+  .fab{ background:var(--gold); color:var(--onGold); font-size:12px; font-weight:700; padding:10px 16px; border-radius:999px; }
+  .empty{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:0 20px; }
+  .empty-title{ font-size:15px; font-weight:700; }
+  .empty-body{ color:var(--muted); font-size:12px; }
+
+  /* settings */
+  .settings-body{ flex:1; padding:20px; display:flex; flex-direction:column; gap:24px; }
+  .settings-section-title{ font-size:14px; font-weight:700; }
+  .theme-list{ background:var(--surface); border-radius:16px; overflow:hidden; }
+  .theme-opt{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-top:1px solid var(--line); cursor:pointer; }
+  .theme-opt:first-child{ border-top:none; }
+  .theme-opt .check{ color:var(--green); font-weight:700; visibility:hidden; }
+  .theme-opt.selected .check{ visibility:visible; }
+  .license-box{ background:var(--surface); border-radius:16px; padding:14px; color:var(--muted); font-size:11px; line-height:1.6; }
+  .back-row{ display:flex; align-items:center; gap:8px; }
+  .back-btn{ background:none; border:none; font-size:14px; color:var(--ink); cursor:pointer; font-family:inherit; padding:0; }
+
+  .tabbar{ display:flex; border-top:1px solid var(--line); padding-bottom:8px; }
+  .tab{ flex:1; text-align:center; padding:10px 0 6px; font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; font-family:inherit; }
+  .tab .dotm{ width:6px; height:6px; border-radius:50%; background:var(--green); margin:0 auto 4px; opacity:0; }
+  .tab.active{ color:var(--green); font-weight:700; }
+  .tab.active .dotm{ opacity:1; }
+</style>
+</head>
+<body>
+<div class="note">마이템포 통합 데모 — 온보딩 → 프리셋/연습/내 스윙 → 우상단 톱니바퀴로 라이트/다크 전환까지 실제 흐름대로 눌러볼 수 있어요</div>
+
+<div class="phone">
+  <div class="screen" id="screen" data-theme="dark">
+    <div class="notch"></div>
+
+    <!-- 온보딩 -->
+    <div id="onboarding">
+      <div class="progress-row" id="progressRow"></div>
+      <button class="skip" onclick="finishOnboarding()">건너뛰기</button>
+      <div class="slides" id="slides" style="transform:translateX(0%);">
+        <div class="slide">
+          <div class="tap-left" onclick="prevSlide()"></div>
+          <div class="tap-right" onclick="nextSlide()"></div>
+          <div class="icon-badge">
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="none"><circle cx="12" cy="12" r="9" fill="#F7F1E0"/><circle cx="10" cy="9" r="1" fill="#436437"/><circle cx="14" cy="9" r="1" fill="#436437"/><circle cx="12" cy="12" r="1" fill="#436437"/><circle cx="10" cy="15" r="1" fill="#436437"/><circle cx="14" cy="15" r="1" fill="#436437"/></svg>
+          </div>
+          <h1 class="headline">프로의 템포가 아니라,<br>내 최고의 스윙의 템포</h1>
+          <p class="sub">누구나 자신만의 리듬이 있어요. 마이템포는 그 리듬을 찾고 반복 연습하도록 돕습니다.</p>
+        </div>
+        <div class="slide">
+          <div class="tap-left" onclick="prevSlide()"></div>
+          <div class="tap-right" onclick="nextSlide()"></div>
+          <h1 class="headline">내 인생 최고의 스윙<br>한 번을 저장하세요</h1>
+          <p class="sub">백스윙과 다운스윙의 비율을 숫자(예: 3:1)로 남겨두면 언제든 그 감각을 다시 불러올 수 있어요.</p>
+          <div class="demo-bar-wrap">
+            <div class="demo-bar-track"><div class="demo-bar-bs"></div><div class="demo-bar-ds"></div></div>
+          </div>
+        </div>
+        <div class="slide">
+          <div class="tap-left" onclick="prevSlide()"></div>
+          <h1 class="headline">그 리듬을 소리로<br>반복 연습합니다</h1>
+          <p class="sub">비프음 템포에 맞춰 스윙하며 몸에 리듬을 새기세요.</p>
+          <div class="ring-wrap">
+            <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+            <div class="ring-center"></div>
+          </div>
+          <button class="cta" onclick="finishOnboarding()">무료로 시작하기</button>
+          <p class="cta-note">템포 여러 개 저장과 연습 히스토리는 추후 프리미엄 기능으로 제공될 예정이에요</p>
+        </div>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+
+    <!-- 메인 앱 -->
+    <div id="mainApp" style="display:none;">
+      <div class="header">
+        <div class="header-left"><span class="header-title" id="headerTitle">마이템포</span><span class="header-sub" id="headerSub">프리셋</span></div>
+        <button class="gear-btn" onclick="showTab('settings')" title="설정">⚙</button>
+      </div>
+
+      <div class="tabpanel active" id="tab-presets"><div class="presets-list" id="presetsList"></div></div>
+
+      <div class="tabpanel" id="tab-practice">
+        <div class="practice-body">
+          <div class="glass-card">
+            <div class="practice-name" id="practiceName">3:1 템포 · 안정형</div>
+            <div class="practice-ratio" id="practiceRatio">3:1</div>
+            <div class="bar-track" style="width:100%;">
+              <div class="bar-fill-bs" id="practiceBarBs" style="flex-basis:75%;"></div>
+              <div class="bar-fill-ds" style="flex:1;"></div>
+            </div>
+            <div class="practice-caption">백스윙(그린) · 다운스윙/임팩트(골드)</div>
+            <button class="play-btn" id="playBtn" onclick="togglePlay()">재생</button>
+            <div class="rate-row">
+              <button class="rate-btn" onclick="changeRate(-0.1)">느리게</button>
+              <div class="rate-value" id="rateValue">1.0x</div>
+              <button class="rate-btn" onclick="changeRate(0.1)">빠르게</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="tab-swings">
+        <div class="swings-body">
+          <div class="fab-row"><div class="fab">+ 새 영상 마킹</div></div>
+          <div class="empty">
+            <div class="empty-title">아직 저장된 스윙이 없어요</div>
+            <div class="empty-body">카메라롤에서 영상을 불러와 백스윙 시작/탑/임팩트를 마킹하는 기능은 다음 단계(Phase 2)에서 구현됩니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="tab-settings">
+        <div class="settings-body">
+          <div class="back-row"><button class="back-btn" onclick="showTab('presets')">‹ 뒤로</button></div>
+          <div>
+            <div class="settings-section-title" style="margin-bottom:10px;">테마</div>
+            <div class="theme-list" id="themeList"></div>
+          </div>
+          <div>
+            <div class="settings-section-title" style="margin-bottom:10px;">오픈소스 라이선스</div>
+            <div class="license-box">본 앱은 네이버에서 제공한 나눔글꼴이 적용되어 있습니다. (SIL Open Font License 1.1)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <button class="tab active" id="navBtn-presets" onclick="showTab('presets')"><div class="dotm"></div>프리셋</button>
+        <button class="tab" id="navBtn-swings" onclick="showTab('swings')"><div class="dotm"></div>내 스윙</button>
+        <button class="tab" id="navBtn-practice" onclick="showTab('practice')"><div class="dotm"></div>연습</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- 온보딩 ---------- */
+const TOTAL = 3;
+let current = 0;
+
+function renderOnboarding(){
+  document.getElementById('slides').style.transform = `translateX(-${current * 33.3333}%)`;
+  document.querySelectorAll('.progress-seg .fill').forEach((el,i)=>{ el.style.width = i <= current ? '100%' : '0%'; });
+  document.querySelectorAll('.dot').forEach((el,i)=>{ el.classList.toggle('active', i === current); });
+}
+function buildOnboardingChrome(){
+  const pr = document.getElementById('progressRow');
+  const dots = document.getElementById('dots');
+  for (let i=0;i<TOTAL;i++){
+    const seg = document.createElement('div'); seg.className='progress-seg'; seg.innerHTML='<div class="fill"></div>'; pr.appendChild(seg);
+    const dot = document.createElement('div'); dot.className='dot'; dot.onclick=()=>{ current=i; renderOnboarding(); }; dots.appendChild(dot);
+  }
+}
+function nextSlide(){ if (current < TOTAL-1){ current++; renderOnboarding(); } }
+function prevSlide(){ if (current > 0){ current--; renderOnboarding(); } }
+function finishOnboarding(){
+  document.getElementById('onboarding').classList.add('hidden');
+  document.getElementById('mainApp').style.display = 'flex';
+}
+
+/* ---------- 메인 앱 ---------- */
+const PRESETS = [
+  { id:'p1', name:'2.5:1 템포 · 균형형', bs:2.5, ds:1 },
+  { id:'p2', name:'3:1 템포 · 안정형', bs:3, ds:1 },
+  { id:'p3', name:'3.5:1 템포 · 파워형', bs:3.5, ds:1 },
+];
+let currentPresetId = 'p2';
+let isPlaying = false;
+let rate = 1.0;
+
+const headerSub = { presets:'프리셋', swings:'내 스윙', practice:'연습', settings:'설정' };
+
+function renderPresets(){
+  const list = document.getElementById('presetsList');
+  list.innerHTML = '';
+  PRESETS.forEach(p=>{
+    const bsPercent = (p.bs/(p.bs+p.ds)*100).toFixed(0);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-top"><div class="card-name">${p.name}</div><div class="card-ratio">${p.bs}:${p.ds}</div></div>
+      <div class="bar-track"><div class="bar-fill-bs" style="flex-basis:${bsPercent}%;"></div><div class="bar-fill-ds" style="flex:1;"></div></div>
+      <div class="card-actions">
+        <button class="btn-ghost">미리듣기</button>
+        <button class="btn-primary" onclick="goPractice('${p.id}')">이 템포로 연습하기</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+function updatePracticeView(){
+  const p = PRESETS.find(x=>x.id===currentPresetId);
+  document.getElementById('practiceName').textContent = p.name;
+  document.getElementById('practiceRatio').textContent = `${p.bs}:${p.ds}`;
+  document.getElementById('practiceBarBs').style.flexBasis = (p.bs/(p.bs+p.ds)*100).toFixed(0) + '%';
+}
+function goPractice(id){ currentPresetId = id; updatePracticeView(); showTab('practice'); }
+
+function showTab(name){
+  ['presets','swings','practice','settings'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+    const nav = document.getElementById('navBtn-'+t);
+    if (nav) nav.classList.toggle('active', t===name);
+  });
+  document.getElementById('headerSub').textContent = headerSub[name];
+}
+function togglePlay(){
+  const btn = document.getElementById('playBtn');
+  isPlaying = !isPlaying;
+  btn.textContent = isPlaying ? '정지' : '재생';
+}
+function changeRate(delta){
+  rate = Math.max(0.5, Math.min(1.5, rate+delta));
+  document.getElementById('rateValue').textContent = rate.toFixed(1)+'x';
+}
+
+/* ---------- 테마(라이트/다크/시스템) ---------- */
+const THEME_OPTIONS = [
+  { key:'system', label:'시스템 설정 따르기' },
+  { key:'light', label:'라이트' },
+  { key:'dark', label:'다크' },
+];
+let themeChoice = 'dark'; // 데모 기본값: 다크로 시작(실제 앱은 system이 기본)
+
+function resolveScheme(){
+  if (themeChoice === 'system'){
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return themeChoice;
+}
+function applyTheme(){
+  document.getElementById('screen').setAttribute('data-theme', resolveScheme());
+}
+function renderThemeList(){
+  const box = document.getElementById('themeList');
+  box.innerHTML = '';
+  THEME_OPTIONS.forEach(opt=>{
+    const row = document.createElement('div');
+    row.className = 'theme-opt' + (themeChoice===opt.key ? ' selected' : '');
+    row.onclick = ()=>{ themeChoice = opt.key; applyTheme(); renderThemeList(); };
+    row.innerHTML = `<span>${opt.label}</span><span class="check">✓</span>`;
+    box.appendChild(row);
+  });
+}
+
+buildOnboardingChrome();
+renderOnboarding();
+renderPresets();
+updatePracticeView();
+renderThemeList();
+applyTheme();
+</script>
+</body>
+</html>

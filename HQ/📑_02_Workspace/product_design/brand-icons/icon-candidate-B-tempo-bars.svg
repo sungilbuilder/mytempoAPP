@@ -1,0 +1,23 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#132A22"/>
+      <stop offset="100%" stop-color="#0B1F19"/>
+    </linearGradient>
+    <linearGradient id="barGold" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#B8892E"/>
+      <stop offset="100%" stop-color="#F0D477"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="220" fill="url(#bgB)"/>
+
+  <!-- 3-beat tempo bars: 저음(low) / 중음(mid) / 강조음(accent) -->
+  <rect x="320" y="560" width="96" height="180" rx="30" fill="#7FA893" opacity="0.85"/>
+  <rect x="464" y="460" width="96" height="280" rx="30" fill="#D4AF37" opacity="0.95"/>
+  <rect x="608" y="330" width="96" height="410" rx="30" fill="url(#barGold)"/>
+
+  <!-- small beat dots above each bar -->
+  <circle cx="368" cy="520" r="16" fill="#7FA893" opacity="0.85"/>
+  <circle cx="512" cy="418" r="18" fill="#D4AF37"/>
+  <circle cx="656" cy="286" r="22" fill="#F0D477"/>
+</svg>

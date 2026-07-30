@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>마이템포 — 다크모드 인터랙티브 데모 (WBS 1.5)</title>
+<style>
+  :root{
+    --bg:#101410; --surface:#181D17; --surface2:#20261F; --line:#2B322A;
+    --green:#436437; --green-neon:#5FC639; --green-bright:#75D553;
+    --gold:#D4AF37; --gold-neon:#EFC94D; --gold-bright:#F7D464;
+    --ink:#F5F7F2; --muted:#A9B3A5; --disabled:#5C6459;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    background:#0A0C0A;
+    padding:40px;
+    display:flex;
+    justify-content:center;
+  }
+  .note{
+    position:fixed; top:12px; left:50%; transform:translateX(-50%);
+    color:#6E7C66; font-size:12px;
+  }
+  .phone{
+    width:390px; height:780px;
+    background:#000;
+    border-radius:44px;
+    padding:12px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+  }
+  .screen{
+    width:100%; height:100%;
+    background:var(--bg);
+    border-radius:34px;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    position:relative;
+  }
+  .notch{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    width:90px; height:18px; background:#000; border-radius:10px; z-index:5;
+  }
+  .header{
+    padding:40px 24px 12px;
+    color:var(--ink);
+    font-weight:700; font-size:15px;
+    display:flex; align-items:center;
+  }
+  .header .sub{ color:var(--muted); font-weight:400; font-size:12px; margin-left:8px; }
+
+  .tabpanel{ flex:1; overflow-y:auto; display:none; }
+  .tabpanel.active{ display:flex; flex-direction:column; }
+
+  /* presets */
+  .presets-list{ padding:0 24px 24px; display:flex; flex-direction:column; gap:16px; }
+  .card{
+    background:var(--surface); border-radius:16px; padding:24px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .card-top{ display:flex; align-items:baseline; justify-content:space-between; }
+  .card-name{ color:var(--ink); font-size:14px; font-weight:700; }
+  .card-ratio{ color:var(--ink); font-size:26px; font-weight:800; }
+  .bar-track{ height:16px; border-radius:999px; overflow:hidden; background:var(--surface2); display:flex; }
+  .bar-fill-bs{ background:var(--green-neon); transition:flex-basis .6s ease; }
+  .bar-fill-ds{ background:var(--gold-neon); }
+  .card-actions{ display:flex; justify-content:flex-end; gap:12px; margin-top:4px; }
+  .btn-ghost{
+    border:1px solid var(--line); border-radius:12px; padding:8px 16px;
+    color:var(--muted); font-size:13px; font-weight:700; background:transparent; cursor:pointer;
+  }
+  .btn-primary{
+    border:none; border-radius:12px; padding:8px 16px;
+    color:#0A0F09; font-size:13px; font-weight:700; background:var(--green-neon); cursor:pointer;
+  }
+
+  /* practice */
+  .practice-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; gap:24px; }
+  .glass-card{
+    width:100%; border-radius:24px; padding:28px 24px;
+    display:flex; flex-direction:column; align-items:center; gap:20px;
+    background:rgba(24,29,23,0.55);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .practice-name{ color:var(--muted); font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+  .practice-ratio{ color:var(--ink); font-size:56px; font-weight:800; line-height:1; }
+  .practice-caption{ color:var(--muted); font-size:11px; }
+  .play-btn{
+    width:76px; height:76px; border-radius:999px; border:none; cursor:pointer;
+    background:var(--gold-neon); color:#0A0F09; font-size:14px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .15s ease, background .2s ease;
+  }
+  .play-btn:active{ transform:scale(0.94); }
+  .play-btn.playing{ background:var(--gold-bright); }
+  .rate-row{ display:flex; align-items:center; gap:16px; }
+  .rate-btn{
+    border:1px solid var(--line); border-radius:12px; padding:8px 16px;
+    color:var(--ink); font-size:13px; font-weight:700; background:transparent; cursor:pointer;
+  }
+  .rate-value{ color:var(--ink); font-size:15px; font-weight:700; min-width:48px; text-align:center; }
+
+  /* my swings */
+  .swings-body{ flex:1; padding:24px; display:flex; flex-direction:column; gap:16px; }
+  .fab-row{ display:flex; justify-content:flex-end; }
+  .fab{ background:var(--gold-neon); color:#0A0F09; font-size:12px; font-weight:700; padding:10px 16px; border-radius:999px; }
+  .empty{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:0 24px; }
+  .empty-title{ color:var(--ink); font-size:16px; font-weight:700; }
+  .empty-body{ color:var(--muted); font-size:13px; }
+
+  /* tabbar */
+  .tabbar{ display:flex; border-top:1px solid var(--line); background:var(--bg); padding-bottom:8px; }
+  .tab{
+    flex:1; text-align:center; padding:10px 0 6px; font-size:11px; color:var(--muted);
+    background:none; border:none; cursor:pointer; font-family:inherit;
+  }
+  .tab .dot{ width:6px; height:6px; border-radius:50%; background:var(--green-neon); margin:0 auto 4px; opacity:0; }
+  .tab.active{ color:var(--green-neon); font-weight:700; }
+  .tab.active .dot{ opacity:1; }
+</style>
+</head>
+<body>
+<div class="note">마이템포 다크모드 데모 — 탭/프리셋 클릭, 재생 버튼, 배속 버튼이 실제로 동작합니다</div>
+
+<div class="phone">
+  <div class="screen">
+    <div class="notch"></div>
+    <div class="header" id="header"><span id="headerTitle">마이템포</span><span class="sub" id="headerSub">프리셋</span></div>
+
+    <div class="tabpanel active" id="tab-presets">
+      <div class="presets-list" id="presetsList"></div>
+    </div>
+
+    <div class="tabpanel" id="tab-practice">
+      <div class="practice-body">
+        <div class="glass-card">
+          <div class="practice-name" id="practiceName">3:1 템포 · 안정형</div>
+          <div class="practice-ratio" id="practiceRatio">3:1</div>
+          <div class="bar-track" style="width:100%;">
+            <div class="bar-fill-bs" id="practiceBarBs" style="flex-basis:75%;"></div>
+            <div class="bar-fill-ds" style="flex:1;"></div>
+          </div>
+          <div class="practice-caption">백스윙(그린) · 다운스윙/임팩트(골드)</div>
+          <button class="play-btn" id="playBtn" onclick="togglePlay()">재생</button>
+          <div class="rate-row">
+            <button class="rate-btn" onclick="changeRate(-0.1)">느리게</button>
+            <div class="rate-value" id="rateValue">1.0x</div>
+            <button class="rate-btn" onclick="changeRate(0.1)">빠르게</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="tab-swings">
+      <div class="swings-body">
+        <div class="fab-row"><div class="fab">+ 새 영상 마킹</div></div>
+        <div class="empty">
+          <div class="empty-title">아직 저장된 스윙이 없어요</div>
+          <div class="empty-body">카메라롤에서 영상을 불러와 백스윙 시작/탑/임팩트를 마킹하는 기능은 다음 단계(Phase 2)에서 구현됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <button class="tab active" id="navBtn-presets" onclick="showTab('presets')"><div class="dot"></div>프리셋</button>
+      <button class="tab" id="navBtn-swings" onclick="showTab('swings')"><div class="dot"></div>내 스윙</button>
+      <button class="tab" id="navBtn-practice" onclick="showTab('practice')"><div class="dot"></div>연습</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PRESETS = [
+  { id:'p1', name:'2.5:1 템포 · 균형형', bs:2.5, ds:1 },
+  { id:'p2', name:'3:1 템포 · 안정형', bs:3, ds:1 },
+  { id:'p3', name:'3.5:1 템포 · 파워형', bs:3.5, ds:1 },
+];
+
+let currentPresetId = 'p2';
+let isPlaying = false;
+let rate = 1.0;
+let playInterval = null;
+
+const headerTitle = { presets: '마이템포', swings: '마이템포', practice: '마이템포' };
+const headerSub = { presets: '프리셋', swings: '내 스윙', practice: '연습' };
+
+function renderPresets(){
+  const list = document.getElementById('presetsList');
+  list.innerHTML = '';
+  PRESETS.forEach(p => {
+    const bsPercent = (p.bs / (p.bs + p.ds) * 100).toFixed(0);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="card-name">${p.name}</div>
+        <div class="card-ratio">${p.bs}:${p.ds}</div>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill-bs" style="flex-basis:${bsPercent}%;"></div>
+        <div class="bar-fill-ds" style="flex:1;"></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-ghost">미리듣기</button>
+        <button class="btn-primary" onclick="goPractice('${p.id}')">이 템포로 연습하기</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function updatePracticeView(){
+  const p = PRESETS.find(x => x.id === currentPresetId);
+  document.getElementById('practiceName').textContent = p.name;
+  document.getElementById('practiceRatio').textContent = `${p.bs}:${p.ds}`;
+  const bsPercent = (p.bs / (p.bs + p.ds) * 100).toFixed(0);
+  document.getElementById('practiceBarBs').style.flexBasis = bsPercent + '%';
+}
+
+function goPractice(id){
+  currentPresetId = id;
+  updatePracticeView();
+  showTab('practice');
+}
+
+function showTab(name){
+  ['presets','swings','practice'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    document.getElementById('navBtn-' + t).classList.toggle('active', t === name);
+  });
+  document.getElementById('headerTitle').textContent = headerTitle[name];
+  document.getElementById('headerSub').textContent = headerSub[name];
+}
+
+function togglePlay(){
+  const btn = document.getElementById('playBtn');
+  isPlaying = !isPlaying;
+  btn.textContent = isPlaying ? '정지' : '재생';
+  btn.classList.toggle('playing', isPlaying);
+}
+
+function changeRate(delta){
+  rate = Math.max(0.5, Math.min(2.0, rate + delta));
+  document.getElementById('rateValue').textContent = rate.toFixed(1) + 'x';
+}
+
+renderPresets();
+updatePracticeView();
+</script>
+</body>
+</html>

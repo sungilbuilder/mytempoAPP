@@ -1,0 +1,20 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E3B2C"/>
+      <stop offset="100%" stop-color="#1E6B4E"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="220" fill="url(#bgC)"/>
+
+  <!-- swing arc path -->
+  <path d="M 300 680 Q 512 220 760 420" fill="none" stroke="#F0D477" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- tempo beat dots along the arc: low / mid / accent -->
+  <circle cx="300" cy="680" r="26" fill="#7FA893"/>
+  <circle cx="470" cy="360" r="32" fill="#D4AF37"/>
+  <circle cx="760" cy="420" r="42" fill="#FFFDF5"/>
+
+  <!-- club head at the end -->
+  <path d="M 760 420 l 70 -34 a 20 20 0 0 1 18 30 l -66 40 z" fill="#FFFDF5" opacity="0.95"/>
+</svg>

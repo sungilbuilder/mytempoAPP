@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>마이템포 — 랜딩/온보딩 인터랙티브 데모 (WBS 1.7)</title>
+<style>
+  :root{
+    --bg:#101410; --surface:#181D17; --surface2:#20261F; --line:#2B322A;
+    --green-neon:#5FC639; --gold-neon:#EFC94D; --gold-bright:#F7D464;
+    --ink:#F5F7F2; --muted:#A9B3A5;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    background:#0A0C0A; padding:40px; display:flex; justify-content:center;
+  }
+  .note{ position:fixed; top:12px; left:50%; transform:translateX(-50%); color:#6E7C66; font-size:12px; }
+  .phone{ width:390px; height:780px; background:#000; border-radius:44px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .screen{ width:100%; height:100%; background:var(--bg); border-radius:34px; overflow:hidden; position:relative; }
+  .notch{ position:absolute; top:14px; left:50%; transform:translateX(-50%); width:90px; height:18px; background:#000; border-radius:10px; z-index:6; }
+
+  .progress-row{ position:absolute; top:38px; left:20px; right:20px; display:flex; gap:6px; z-index:5; }
+  .progress-seg{ flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,0.15); overflow:hidden; }
+  .progress-seg .fill{ height:100%; width:0%; background:var(--green-neon); transition:width .3s ease; }
+
+  .skip{
+    position:absolute; top:56px; right:20px; z-index:5;
+    color:var(--muted); font-size:12px; font-weight:700; background:none; border:none; cursor:pointer;
+  }
+
+  .slides{ display:flex; width:300%; height:100%; transition:transform .4s ease; }
+  .slide{
+    width:33.3333%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:80px 32px 40px; text-align:center; gap:20px; position:relative;
+  }
+  .tap-left, .tap-right{ position:absolute; top:100px; bottom:120px; width:35%; z-index:4; cursor:pointer; }
+  .tap-left{ left:0; } .tap-right{ right:0; }
+
+  .icon-badge{
+    width:72px; height:72px; border-radius:20px; background:#436437;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-badge svg{ width:40px; height:40px; }
+
+  h1.headline{ color:var(--ink); font-size:22px; font-weight:800; line-height:1.35; margin:0; }
+  p.sub{ color:var(--muted); font-size:13px; line-height:1.6; margin:0; max-width:260px; }
+
+  .demo-bar-wrap{ width:100%; max-width:220px; }
+  .demo-bar-track{ height:16px; border-radius:999px; overflow:hidden; background:var(--surface2); display:flex; position:relative; }
+  .demo-bar-bs{ background:var(--green-neon); flex-basis:75%; }
+  .demo-bar-ds{ background:var(--gold-neon); flex:1; }
+  .beat-dot{
+    position:absolute; top:-3px; width:22px; height:22px; border-radius:50%; background:var(--ink);
+    animation:beatMove 2.4s linear infinite;
+  }
+  @keyframes beatMove{
+    0%{ left:0%; transform:translateX(0); }
+    100%{ left:100%; transform:translateX(-100%); }
+  }
+
+  .ring-wrap{ position:relative; width:140px; height:140px; display:flex; align-items:center; justify-content:center; }
+  .ring{
+    position:absolute; border-radius:50%; border:2px solid var(--gold-neon);
+    animation:ringPulse 2.4s ease-out infinite;
+  }
+  .ring.r1{ width:60px; height:60px; animation-delay:0s; }
+  .ring.r2{ width:60px; height:60px; animation-delay:.6s; }
+  .ring.r3{ width:60px; height:60px; animation-delay:1.2s; }
+  @keyframes ringPulse{
+    0%{ width:60px; height:60px; opacity:.9; border-color:var(--gold-neon); }
+    100%{ width:150px; height:150px; opacity:0; border-color:var(--gold-neon); }
+  }
+  .ring-center{
+    position:relative; z-index:2; width:56px; height:56px; border-radius:50%; background:var(--gold-neon);
+  }
+
+  .cta{
+    width:100%; max-width:260px; border:none; border-radius:16px; padding:16px;
+    background:var(--green-neon); color:#0A0F09; font-size:15px; font-weight:800; cursor:pointer;
+    margin-top:8px;
+  }
+  .cta-note{ color:var(--muted); font-size:10px; margin-top:-8px; }
+
+  .dots{ position:absolute; bottom:34px; left:0; right:0; display:flex; justify-content:center; gap:8px; z-index:5; }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background .2s; }
+  .dot.active{ background:var(--green-neon); }
+
+  .toast{
+    position:absolute; bottom:80px; left:20px; right:20px; background:var(--surface); border:1px solid var(--line);
+    border-radius:12px; padding:14px; color:var(--ink); font-size:12px; text-align:center; z-index:10;
+    opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+<div class="note">마이템포 랜딩/온보딩 데모 — 좌우 탭 또는 버튼으로 넘어가고, 3번째 화면 CTA를 눌러보세요</div>
+
+<div class="phone">
+  <div class="screen">
+    <div class="notch"></div>
+    <div class="progress-row" id="progressRow"></div>
+    <button class="skip" onclick="finish()">건너뛰기</button>
+
+    <div class="slides" id="slides" style="transform:translateX(0%);">
+      <div class="slide">
+        <div class="tap-left" onclick="prevSlide()"></div>
+        <div class="tap-right" onclick="nextSlide()"></div>
+        <div class="icon-badge">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#F7F1E0"/><circle cx="10" cy="9" r="1" fill="#436437"/><circle cx="14" cy="9" r="1" fill="#436437"/><circle cx="12" cy="12" r="1" fill="#436437"/><circle cx="10" cy="15" r="1" fill="#436437"/><circle cx="14" cy="15" r="1" fill="#436437"/></svg>
+        </div>
+        <h1 class="headline">프로의 템포가 아니라,<br>내 최고의 스윙의 템포.</h1>
+        <p class="sub">복잡한 AI 분석 없이, 내 인생 최고의 스윙 한 번을 숫자로 저장하는 가장 단순한 리듬 트레이닝.</p>
+      </div>
+
+      <div class="slide">
+        <div class="tap-left" onclick="prevSlide()"></div>
+        <div class="tap-right" onclick="nextSlide()"></div>
+        <h1 class="headline">내 인생 최고의 스윙,<br>한 번만 저장하세요</h1>
+        <p class="sub">백스윙 시작 · 탑 · 임팩트, 세 지점만 마킹하면 나만의 템포 비율이 자동으로 계산돼요.</p>
+        <div class="demo-bar-wrap">
+          <div class="demo-bar-track">
+            <div class="demo-bar-bs"></div>
+            <div class="demo-bar-ds"></div>
+            <div class="beat-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide">
+        <div class="tap-left" onclick="prevSlide()"></div>
+        <h1 class="headline">그 리듬을,<br>소리로 반복 연습</h1>
+        <p class="sub">저음·중음·강조음 세 번의 비프로 내 템포를 몸에 새겨요. 연습장 어디서든, 오프라인으로.</p>
+        <div class="ring-wrap">
+          <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+          <div class="ring-center"></div>
+        </div>
+        <button class="cta" onclick="finish()">무료로 시작하기</button>
+        <p class="cta-note">내 템포 여러 개 저장·히스토리는 추후 프리미엄으로 제공될 수 있어요</p>
+      </div>
+    </div>
+
+    <div class="dots" id="dots"></div>
+    <div class="toast" id="toast">메인 화면(프리셋 탭)으로 이동합니다</div>
+  </div>
+</div>
+
+<script>
+const TOTAL = 3;
+let current = 0;
+
+function render(){
+  document.getElementById('slides').style.transform = `translateX(-${current * 33.3333}%)`;
+  document.querySelectorAll('.progress-seg .fill').forEach((el, i) => {
+    el.style.width = i <= current ? '100%' : '0%';
+  });
+  document.querySelectorAll('.dot').forEach((el, i) => {
+    el.classList.toggle('active', i === current);
+  });
+}
+
+function buildChrome(){
+  const pr = document.getElementById('progressRow');
+  const dots = document.getElementById('dots');
+  for (let i = 0; i < TOTAL; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'progress-seg';
+    seg.innerHTML = '<div class="fill"></div>';
+    pr.appendChild(seg);
+
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.onclick = () => { current = i; render(); };
+    dots.appendChild(dot);
+  }
+}
+
+function nextSlide(){
+  if (current < TOTAL - 1) { current++; render(); }
+}
+function prevSlide(){
+  if (current > 0) { current--; render(); }
+}
+function finish(){
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+buildChrome();
+render();
+</script>
+</body>
+</html>

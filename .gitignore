@@ -1,0 +1,50 @@
+# 의존성 (401MB — 절대 커밋하지 말 것, package.json/package-lock.json만 올리면 재현됨)
+node_modules/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.jsbundle
+
+# 네이티브 빌드 산출물
+/ios
+/android
+*.orig.*
+*.apk
+*.aab
+*.ipa
+
+# 로그
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# 에디터
+.vscode/
+.idea/
+*.swp
+
+# 환경변수 / 비밀키 (현재 없지만 실수 방지용으로 미리 차단)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# 임시 파일
+*.tmp
+~$*
+.~lock.*#
