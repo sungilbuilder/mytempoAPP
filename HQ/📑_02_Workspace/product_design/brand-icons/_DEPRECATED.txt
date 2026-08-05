@@ -1,0 +1,4 @@
+⚠️ 구 로고 (2026-07-30 확정 → 2026-07-31 Tempo Arc Mark로 대체됨)
+현재 확정 로고: ../brand-system-v2/svg-final/
+상세: Obsidian Vault > MYTEMPO/99_Archive/로고-v1-폐기안내.md
+※ store-assets/ 폴더는 최신 상태입니다.

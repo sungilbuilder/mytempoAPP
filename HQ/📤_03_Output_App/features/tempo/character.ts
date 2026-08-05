@@ -1,0 +1,109 @@
+/**
+ * 템포 성향 판정 — 비율 하나를 사람이 읽을 수 있는 문장으로 바꾼다.
+ *
+ * 시안 근거: Premium/App UI "결과 — 내 템포 저장" 화면
+ *   "'파워형'에 가까운 리듬이에요 / 길게 끌어 올렸다가 빠르게 내려치는 편입니다."
+ *
+ * 라벨(안정형/균형형/파워형)은 `preset-naming-methodology-proposal.md`의 별칭 체계를 따른다.
+ * Tour Tempo 고유의 프레임 표기(21/7, 24/8 등)는 의도적으로 쓰지 않는다 —
+ * 방법론 네이밍 유사성 리스크를 피하기 위한 결정(company-memory.md 2026-07-30).
+ *
+ * ⚠️ 임계값은 프리셋 3종(2.5 / 3.0 / 3.5)의 중간지점을 기준으로 잡은 것이고,
+ * 골프 스윙 생체역학 연구에 근거한 값이 아니다. PM 확정 전까지 잠정값이다.
+ */
+export type TempoCharacter = {
+  id: 'balanced' | 'stable' | 'power';
+  label: string;
+  headline: string;
+  detail: string;
+};
+
+const BALANCED: TempoCharacter = {
+  id: 'balanced',
+  label: '균형형',
+  headline: "'균형형'에 가까운 리듬이에요",
+  detail: '올리고 내리는 속도가 고르게 이어지는 편입니다.',
+};
+
+const STABLE: TempoCharacter = {
+  id: 'stable',
+  label: '안정형',
+  headline: "'안정형'에 가까운 리듬이에요",
+  detail: '천천히 올렸다가 정확하게 내려놓는 편입니다.',
+};
+
+const POWER: TempoCharacter = {
+  id: 'power',
+  label: '파워형',
+  headline: "'파워형'에 가까운 리듬이에요",
+  detail: '길게 끌어 올렸다가 빠르게 내려치는 편입니다.',
+};
+
+/** 백스윙:다운스윙 비율(예: 3.2)을 성향으로 변환 */
+export function characterForRatio(ratio: number): TempoCharacter {
+  if (ratio < 2.75) return BALANCED;
+  if (ratio <= 3.25) return STABLE;
+  return POWER;
+}
+
+/** 3.15 → "3.2:1" (소수 첫째자리 반올림) */
+export function formatRatio(ratio: number): string {
+  return `${Math.round(ratio * 10) / 10}:1`;
+}
+
+/* ───────────── 영상 fps에 따른 표시 정밀도 (2026-07-31 신설) ───────────── */
+
+/**
+ * 왜 fps에 따라 표시를 바꾸는가.
+ *
+ * 3:1 템포에서 다운스윙은 30fps 기준 8프레임뿐이다. 분모가 작아 마킹 오차가 증폭되는데,
+ * 슬로우 재생으로 사용자 오차를 없애도 "실제 임팩트 순간이 두 프레임 사이에 있는"
+ * 양자화 오차(±0.5프레임)는 남는다. 이걸 비율 오차로 환산하면:
+ *
+ *    30fps → ±0.19   (3.0과 3.2를 구분 못 함)
+ *    60fps → ±0.09
+ *   120fps → ±0.05
+ *   240fps → ±0.02   (슬로모)
+ *
+ * 게다가 30fps는 셔터 1/60s 기준 노출 중 클럽헤드가 약 67cm 이동해 임팩트 프레임이
+ * 통째로 번진다 — 계산 오차 이전에 눈으로 판별이 어렵다.
+ *
+ * 그래서 30fps 영상에 "3.2:1"이라고 쓰면 근거 없는 정밀도를 보여주는 것이 된다.
+ * 창업자 확정(2026-07-31): 정직하게 표시한다.
+ */
+export type RatioPrecision = 'exact' | 'approximate' | 'coarse';
+
+export function precisionForFps(fps: number | undefined): RatioPrecision {
+  if (fps === undefined) return 'coarse'; // 알 수 없으면 가장 보수적으로
+  if (fps >= 120) return 'exact';
+  if (fps >= 60) return 'approximate';
+  return 'coarse';
+}
+
+/**
+ * 정밀도를 반영해 비율을 문자열로 만든다.
+ *   exact       → "3.2:1"
+ *   approximate → "3.2:1"  (별도로 tolerance 표기를 함께 노출)
+ *   coarse      → "약 3:1"  (정수)
+ */
+export function formatRatioWithPrecision(
+  ratio: number,
+  precision: RatioPrecision
+): { text: string; tolerance?: string; canImprove: boolean } {
+  if (precision === 'coarse') {
+    return { text: `약 ${Math.round(ratio)}:1`, canImprove: true };
+  }
+  if (precision === 'approximate') {
+    return { text: formatRatio(ratio), tolerance: '±0.1', canImprove: true };
+  }
+  return { text: formatRatio(ratio), canImprove: false };
+}
+
+/** 슬로모 촬영 안내 문구 — 결과 화면에서만 노출한다(창업자 확정: 강요하지 않음) */
+export const SLOWMO_HINT =
+  '더 정확한 값을 보고 싶다면 슬로모로 촬영해보세요. 아이폰은 카메라 → 슬로모, 갤럭시는 카메라 → 더보기 → 슬로우 모션입니다.';
+
+/** 초 단위를 "0.56s" 형태로 */
+export function formatSeconds(sec: number): string {
+  return `${sec.toFixed(2)}s`;
+}

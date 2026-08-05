@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MYTEMPO monogram">
+  <g fill="none" stroke="#436437" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 34 168 L 34 96"/>
+    <path d="M 34 118 C 34 102 46 96 58 96 C 70 96 78 104 78 118 L 78 168"/>
+    <path d="M 78 118 C 78 102 90 96 102 96 C 114 96 122 104 122 118 L 122 168"/>
+    <path d="M 158 72 L 158 146 C 158 160 166 168 180 168 L 192 168"/>
+    <path d="M 140 100 L 190 100"/>
+  </g>
+  <circle cx="210" cy="168" r="9" fill="#C9932B"/>
+</svg>

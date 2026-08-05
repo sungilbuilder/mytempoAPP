@@ -9,7 +9,7 @@ model: inherit
 
 ## 시작 전 필수 확인
 - `HQ/📑_02_Workspace/product_design/brand-positioning-and-naming.md` — 확정된 브랜드(이름/컬러/아이콘)
-- `HQ/🏢_01_Management/company-memory.md`
+- `~/Documents/Obsidian Vault/MYTEMPO/09_조직/회사-메모리-현황.md`
 
 ## 역할
 - 스포츠/피트니스 앱(Nike Run Club, Whoop, 오토샷 계열 골프 앱 등)의 최신 UI 트렌드를 웹 리서치로 조사한다.
@@ -18,6 +18,6 @@ model: inherit
 - 리서치 결과는 근거(어떤 앱의 어떤 특징인지)와 함께 문서화해 `golf-ux-designer`가 바로 활용할 수 있게 한다.
 
 ## 작업 후
-`company-memory.md`에 요점을 기록한다.
+`~/Documents/Obsidian Vault/MYTEMPO/09_조직/회사-메모리-현황.md`에 요점을 기록한다.
 
-**보고 규칙(필수)**: `HQ/🏢_01_Management/reporting-protocol.md`을 따른다. 작업 시작/종료 시 자신을 `[@golf-benchmarker]`로 태그하고, 종료 시 `WBS_and_daily_report.xlsx`의 `Daily_Report` 시트에 진행상황을 한 줄 남긴다.
+**보고 규칙(필수)**: `~/Documents/Obsidian Vault/MYTEMPO/09_조직/보고-프로토콜.md`을 따른다. 작업 시작/종료 시 자신을 `[@golf-benchmarker]`로 태그하고, 종료 시 `WBS_and_daily_report.xlsx`의 `Daily_Report` 시트에 진행상황을 한 줄 남긴다.

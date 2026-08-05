@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MYTEMPO app icon">
+  <rect x="0" y="0" width="1024" height="1024" rx="220" fill="#0D110D"/>
+  <path d="M 538.147 213.142 A 300.000 300.000 0 1 1 216.558 564.094" fill="none" stroke="#7ED45C" stroke-width="68" stroke-linecap="round"/>
+  <path d="M 212.000 512.000 A 300.000 300.000 0 0 1 485.853 213.142" fill="none" stroke="#E9CE6C" stroke-width="68" stroke-linecap="round"/>
+</svg>

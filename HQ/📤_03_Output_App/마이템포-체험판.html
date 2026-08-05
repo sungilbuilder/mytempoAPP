@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0D110D">
+<meta property="og:title" content="마이템포 — 내 스윙의 리듬을 저장하고 반복합니다">
+<meta property="og:description" content="프로의 템포가 아니라, 내 최고의 스윙의 템포. 눌러서 체험해보세요.">
+<title>마이템포 — 체험판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBFAF6; --surface:#FFFFFF; --surface2:#F2F0E8; --line:#E7E4D9;
+  --ink:#16211A; --muted:#5F6C5C; --subtle:#8A9382; --track:#F0EEE6;
+  --primary:#3F6136; --accent:#D9B84A; --onPri:#FFFFFF;
+}
+[data-theme="dark"]{
+  --bg:#0D110D; --surface:#161C15; --surface2:#222A20; --line:#2C3629;
+  --ink:#F2F5EE; --muted:#7E8A79; --subtle:#5C6659; --track:#232C21;
+  --primary:#7ED45C; --accent:#E9CE6C; --onPri:#0A0F09;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Noto Sans KR',-apple-system,sans-serif;
+  background:#20261F;display:flex;align-items:center;justify-content:center;
+}
+button{font-family:inherit;border:none;background:none;cursor:pointer;color:inherit}
+
+/* 데스크톱: 폰 프레임 / 모바일: 전체화면 */
+#frame{
+  width:100%;height:100%;background:var(--bg);color:var(--ink);
+  display:flex;flex-direction:column;position:relative;overflow:hidden;
+  transition:background .25s
+}
+@media (min-width:540px) and (min-height:680px){
+  body{padding:24px}
+  #frame{width:390px;height:800px;max-height:94vh;border-radius:42px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);border:9px solid #000}
+}
+
+.scr{flex:1;display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scr.on{display:flex}
+.pad{padding:22px 20px}
+.grow{flex:1}
+
+/* 타이포 */
+.h1{font-size:22px;font-weight:700;letter-spacing:-.4px;line-height:1.35}
+.h2{font-size:17px;font-weight:700}
+.bd{font-size:15px;line-height:1.6}
+.cp{font-size:12px;font-weight:500;color:var(--subtle);line-height:1.5}
+.mu{font-size:12px;color:var(--muted)}
+.num{font-family:'Space Grotesk';font-weight:700;letter-spacing:-.03em}
+.ctr{text-align:center}
+
+/* 컴포넌트 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px}
+.card.lg{border-radius:24px;padding:20px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  border-radius:18px;padding:15px;font-size:15px;font-weight:700;width:100%}
+.btn:active{opacity:.82}
+.btn.pri{background:var(--primary);color:var(--onPri)}
+.btn.acc{background:var(--accent);color:var(--onPri)}
+.btn.gh{background:var(--surface2);border:1px solid var(--line);color:var(--ink)}
+.row{display:flex;align-items:center;justify-content:space-between}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;padding:8px 4px;border-radius:10px;font-size:12px;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:700}
+.sw{width:50px;height:29px;border-radius:999px;padding:3px;display:flex;align-items:center;
+  background:var(--surface2);transition:background .2s;flex-shrink:0}
+.sw.on{background:var(--primary);justify-content:flex-end}
+.sw i{width:23px;height:23px;border-radius:999px;background:#fff;display:block}
+.li{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+.hr{height:1px;background:var(--line);margin:2px 0}
+
+/* 탭바 */
+.tabbar{display:flex;border-top:1px solid var(--line);background:var(--bg);
+  padding:7px 0 max(9px,env(safe-area-inset-bottom))}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:10.5px;font-weight:500;color:var(--subtle)}
+.tabbar button.on{color:var(--primary);font-weight:700}
+
+/* 템포 링 */
+.ring{position:relative;margin:0 auto}
+.ring svg{position:absolute;inset:0;width:100%;height:100%}
+.ring .dot{transition:none}
+.ring .mid{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center}
+
+/* 온보딩 */
+#ob{position:absolute;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column}
+.prog{display:flex;gap:6px;padding:max(14px,env(safe-area-inset-top)) 20px 0}
+.prog i{flex:1;height:4px;border-radius:2px;background:var(--line);overflow:hidden;display:block}
+.prog i b{display:block;height:100%;width:0;background:var(--primary);transition:width .3s}
+.slides{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.slides::-webkit-scrollbar{display:none}
+.slide{min-width:100%;scroll-snap-align:center;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;padding:20px 34px;text-align:center}
+.badge{width:74px;height:74px;border-radius:22px;background:var(--primary);
+  display:flex;align-items:center;justify-content:center}
+.tbar{width:100%;max-width:220px;height:16px;border-radius:999px;overflow:hidden;
+  display:flex;background:var(--surface2)}
+.pulse{position:relative;width:130px;height:130px;display:flex;align-items:center;justify-content:center}
+.pulse i{position:absolute;border-radius:50%;border:2px solid var(--accent);
+  animation:pu 2.4s ease-out infinite}
+.pulse i:nth-child(2){animation-delay:.8s}
+.pulse i:nth-child(3){animation-delay:1.6s}
+.pulse b{width:52px;height:52px;border-radius:50%;background:var(--accent);z-index:2}
+@keyframes pu{0%{width:56px;height:56px;opacity:.9}100%{width:140px;height:140px;opacity:0}}
+/* 온보딩 ④ 테마 선택 */
+.tOpt{text-align:center}
+.tOpt .tPrev{
+  height:104px;border-radius:18px;padding:10px;display:flex;flex-direction:column;
+  justify-content:space-between;border:2px solid transparent;transition:border-color .15s
+}
+.tOpt.on .tPrev{border-color:var(--primary)}
+.tOpt .tPrev[data-p="light"]{background:#FBFAF6}
+.tOpt .tPrev[data-p="dark"]{background:#0D110D}
+.tPrev .mini{display:flex;align-items:center;gap:8px;border-radius:10px;padding:8px}
+.tPrev[data-p="light"] .mini{background:#FFFFFF}
+.tPrev[data-p="dark"]  .mini{background:#161C15}
+.tPrev .lines{flex:1;display:flex;flex-direction:column;gap:4px}
+.tPrev .lines i{height:6px;border-radius:999px;display:block}
+.tPrev .lines i:nth-child(1){width:70%}
+.tPrev .lines i:nth-child(2){width:45%;height:5px}
+.tPrev[data-p="light"] .lines i:nth-child(1){background:#16211A}
+.tPrev[data-p="light"] .lines i:nth-child(2){background:#5F6C5C}
+.tPrev[data-p="dark"]  .lines i:nth-child(1){background:#F2F5EE}
+.tPrev[data-p="dark"]  .lines i:nth-child(2){background:#7E8A79}
+.tPrev .mbtn{height:22px;border-radius:8px}
+.tPrev[data-p="light"] .mbtn{background:#D9B84A}
+.tPrev[data-p="dark"]  .mbtn{background:#E9CE6C}
+.tLbl{display:flex;align-items:center;justify-content:center;gap:5px;padding-top:8px}
+.chk{width:16px;height:16px;border-radius:50%;background:var(--primary);color:#fff;
+  font-size:10px;font-weight:900;display:none;align-items:center;justify-content:center;flex-shrink:0}
+.chk::before{content:'✓'}
+.tOpt.on .chk{display:flex}
+.tOpt.auto.on{border-color:var(--primary)!important;border-width:2px!important}
+
+.dots{display:flex;justify-content:center;gap:8px;padding:0 0 max(26px,env(safe-area-inset-bottom))}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
+.dots i.on{background:var(--primary);width:20px;border-radius:999px}
+
+/* 마킹 스크러버 */
+.tl{position:relative;height:44px;display:flex;align-items:center;touch-action:none}
+.tl .bar{height:6px;width:100%;border-radius:999px;background:var(--track)}
+.tl .mk{position:absolute;width:3px;height:20px;border-radius:2px}
+.tl .hd{position:absolute;width:20px;height:20px;margin-left:-10px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--primary)}
+.vid{flex:1;min-height:150px;border-radius:24px;background:var(--surface2);
+  border:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px}
+
+.toast{position:absolute;left:20px;right:20px;bottom:78px;background:var(--ink);color:var(--bg);
+  border-radius:14px;padding:13px 16px;font-size:13px;font-weight:500;text-align:center;
+  opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;z-index:40}
+.toast.on{opacity:1;transform:none}
+.banner{background:var(--surface2);border-radius:14px;padding:11px 14px;font-size:11.5px;
+  line-height:1.6;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="frame" data-theme="light">
+
+  <!-- ───────── 온보딩 ───────── -->
+  <div id="ob">
+    <div class="prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0">
+      <div style="display:flex;align-items:center;gap:7px">
+        <svg width="24" height="24" viewBox="0 0 1024 1024" style="border-radius:7px">
+          <rect width="1024" height="1024" rx="220" fill="#436437"/>
+          <rect x="270" y="660" width="90" height="180" rx="26" fill="#859A7D"/>
+          <rect x="392" y="580" width="90" height="260" rx="26" fill="#D4AF37"/>
+          <rect x="514" y="470" width="90" height="370" rx="26" fill="#F0D477"/>
+          <circle cx="662" cy="360" r="98" fill="#F7F1E0"/>
+        </svg>
+        <span class="cp" style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.5px;color:var(--ink)">MYTEMPO</span>
+      </div>
+      <button class="cp" style="font-weight:700;color:var(--muted)" onclick="finishOb()">건너뛰기</button>
+    </div>
+    <div class="slides" id="slides">
+      <div class="slide">
+        <div class="badge">
+          <svg viewBox="0 0 24 24" width="42" height="42"><circle cx="12" cy="12" r="9" fill="#F7F1E0"/>
+          <circle cx="10" cy="9" r="1" class="dimple"/><circle cx="14" cy="9" r="1" class="dimple"/>
+          <circle cx="12" cy="12" r="1" class="dimple"/><circle cx="10" cy="15" r="1" class="dimple"/>
+          <circle cx="14" cy="15" r="1" class="dimple"/></svg>
+        </div>
+        <div class="h1">프로의 템포가 아니라,<br>내 최고의 스윙의 템포</div>
+        <div class="bd" style="color:var(--muted);max-width:280px">누구나 자신만의 리듬이 있어요.<br>마이템포는 그 리듬을 찾고 반복 연습하도록 돕습니다.</div>
+      </div>
+      <div class="slide">
+        <div class="h1">내 인생 최고의 스윙<br>한 번을 저장하세요</div>
+        <div class="bd" style="color:var(--muted);max-width:280px">백스윙과 다운스윙의 비율을 숫자(예: 3:1)로 남겨두면 언제든 그 감각을 다시 불러올 수 있어요.</div>
+        <div class="tbar"><i style="flex-basis:75%;background:var(--primary)"></i><i style="flex:1;background:var(--accent)"></i></div>
+      </div>
+      <div class="slide">
+        <div class="h1">그 리듬을 소리로<br>반복 연습합니다</div>
+        <div class="bd" style="color:var(--muted);max-width:280px">비프음 템포에 맞춰 스윙하며<br>몸에 리듬을 새기세요.</div>
+        <div class="pulse"><i></i><i></i><i></i><b></b></div>
+      </div>
+      <div class="slide">
+        <div class="h1">화면은 어떻게<br>보여드릴까요</div>
+        <div class="bd" style="color:var(--muted);max-width:290px">야간 연습장이나 실내 스크린에서는 어둡게가 눈이 편해요.<br>나중에 설정에서 언제든 바꿀 수 있습니다.</div>
+        <div style="width:100%;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:12px">
+            <button class="tOpt" data-m="light" onclick="pickTheme('light')" style="flex:1">
+              <div class="tPrev" data-p="light"></div>
+              <div class="tLbl"><span class="chk"></span><span class="h2" style="font-size:15px">밝게</span></div>
+              <div class="cp">낮 · 실외 연습장</div>
+            </button>
+            <button class="tOpt" data-m="dark" onclick="pickTheme('dark')" style="flex:1">
+              <div class="tPrev" data-p="dark"></div>
+              <div class="tLbl"><span class="chk"></span><span class="h2" style="font-size:15px">어둡게</span></div>
+              <div class="cp">야간 · 실내 스크린</div>
+            </button>
+          </div>
+          <button class="tOpt auto" data-m="auto" onclick="pickTheme('auto')"
+            style="display:flex;align-items:center;justify-content:center;gap:7px;
+            background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px">
+            <span class="chk"></span><span class="bd" style="font-weight:500">폰 설정을 따를게요</span>
+          </button>
+        </div>
+        <button class="btn pri" onclick="finishOb()">무료로 시작하기</button>
+        <div class="cp" style="max-width:260px">템포 여러 개 저장과 연습 히스토리는 추후 프리미엄 기능으로 제공될 예정이에요</div>
+      </div>
+    </div>
+    <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+  </div>
+
+  <!-- ───────── 홈 ───────── -->
+  <div class="scr on pad" id="s-home">
+    <div class="row" style="align-items:flex-start;padding-bottom:26px">
+      <div><div class="cp">오늘</div><div class="h1" style="padding-top:2px">연습할까요</div></div>
+      <button onclick="go('settings')" style="padding:4px">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+    </div>
+
+    <div class="card lg" style="display:flex;flex-direction:column;align-items:center">
+      <div style="align-self:stretch">
+        <div class="mu">이어서 연습</div>
+        <div class="cp" id="homeSub" style="padding-top:2px">프리셋 · 3:1</div>
+      </div>
+      <div style="padding:16px 0" id="homeRing"></div>
+      <button class="btn acc" onclick="go('practice')">
+        <svg width="19" height="19" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
+        바로 연습 시작
+      </button>
+    </div>
+
+    <div style="display:flex;gap:11px;padding-top:13px">
+      <button class="card" style="flex:1;text-align:left" onclick="startMarking()">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/></svg>
+        <div class="h2" style="font-size:14.5px;padding-top:7px">내 스윙 등록</div>
+        <div class="cp" style="padding-top:3px">영상에서 3곳 탭</div>
+      </button>
+      <button class="card" style="flex:1;text-align:left" onclick="go('presets')">
+        <svg width="21" height="21" viewBox="0 0 24 24"><rect x="3" y="13" width="4" height="8" rx="1.6" fill="var(--primary)"/><rect x="10" y="9" width="4" height="12" rx="1.6" fill="var(--primary)"/><rect x="17" y="5" width="4" height="16" rx="1.6" fill="var(--primary)"/></svg>
+        <div class="h2" style="font-size:14.5px;padding-top:7px">템포 바꾸기</div>
+        <div class="cp" style="padding-top:3px">3종 프리셋</div>
+      </button>
+    </div>
+
+    <button class="row" style="background:var(--surface2);border-radius:18px;padding:14px 16px;margin-top:13px;width:100%"
+      onclick="go('history')">
+      <span class="cp">이번 주</span>
+      <span><span class="num" style="font-size:19px" id="homeWeek">0일</span></span>
+    </button>
+  </div>
+
+  <!-- ───────── 프리셋 ───────── -->
+  <div class="scr pad" id="s-presets">
+    <button class="h2" style="align-self:flex-start;padding-bottom:14px" onclick="go('home')">‹</button>
+    <div class="h1">템포 고르기</div>
+    <div class="cp" style="padding-top:6px">먼저 고르고, 나중에 내 스윙으로 바꿀 수 있어요</div>
+    <div id="presetList" style="display:flex;flex-direction:column;gap:11px;padding-top:20px"></div>
+    <div class="grow"></div>
+    <button class="btn pri" style="margin-top:20px" onclick="go('practice')">이 템포로 연습</button>
+  </div>
+
+  <!-- ───────── 연습 ───────── -->
+  <div class="scr" id="s-practice" style="padding:22px 20px">
+    <div class="row">
+      <button onclick="stopPlay();go('home')" style="font-size:19px;color:var(--subtle)">✕</button>
+      <span class="mu" id="pracName">프리셋 · 안정형</span><span style="width:14px"></span>
+    </div>
+    <div class="grow" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0">
+      <div class="cp" style="letter-spacing:.16em;padding-bottom:14px">BACKSWING : DOWNSWING</div>
+      <div id="pracRing"></div>
+      <div style="display:flex;gap:22px;padding-top:20px">
+        <span style="display:flex;align-items:center;gap:6px"><i style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:block"></i><span class="cp">백스윙 시작</span></span>
+        <span style="display:flex;align-items:center;gap:6px"><i style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:block"></i><span class="cp">임팩트</span></span>
+      </div>
+      <div class="cp" style="padding-top:18px" id="pracTime">아직 시작 전이에요</div>
+    </div>
+    <button class="btn acc" id="playBtn" style="padding:17px;box-shadow:0 6px 20px rgba(217,184,74,.4)" onclick="togglePlay()">
+      <span id="playIcon">▶</span> <span id="playLabel">재생</span>
+    </button>
+    <div class="row" style="padding-top:13px">
+      <button class="btn gh" style="width:auto;padding:10px 16px;font-size:12px;font-weight:500" onclick="rateStep(-1)">느리게</button>
+      <span class="num" style="font-size:17px" id="rateVal">1.0x</span>
+      <button class="btn gh" style="width:auto;padding:10px 16px;font-size:12px;font-weight:500" onclick="rateStep(1)">빠르게</button>
+    </div>
+  </div>
+
+  <!-- ───────── 내 스윙 ───────── -->
+  <div class="scr pad" id="s-swings">
+    <div class="h1">내 스윙</div>
+    <div class="cp" style="padding-top:6px">가장 잘 맞은 스윙 하나를 저장해두면, 그 리듬으로 반복 연습할 수 있어요</div>
+    <div id="swingList" style="padding-top:20px"></div>
+  </div>
+
+  <!-- ───────── 마킹 ───────── -->
+  <div class="scr" id="s-marking" style="padding:22px 20px">
+    <div class="row" style="padding-bottom:14px">
+      <button style="font-size:19px" onclick="go('home')">‹</button>
+      <span class="num" style="font-size:13px" id="mkStep">1 / 3</span>
+      <button class="mu" onclick="undoMark()">되돌리기</button>
+    </div>
+    <div class="h1" id="mkTitle">백스윙을 시작하는 순간</div>
+    <div class="cp" style="padding-top:6px" id="mkHint">클럽이 움직이기 시작하는 지점</div>
+    <div class="vid" style="margin:18px 0">
+      <div class="cp" style="font-family:'Space Grotesk';letter-spacing:.24em">SWING VIDEO</div>
+      <div class="num" style="font-size:30px" id="mkSec">0.35초</div>
+      <div class="cp" id="mkFrame">프레임 11</div>
+    </div>
+    <div class="tl" id="tl"><div class="bar"></div></div>
+    <div class="row" style="padding-bottom:14px" id="mkMarks"></div>
+    <button class="btn pri" id="mkBtn" onclick="markHere()">여기가 시작이에요</button>
+  </div>
+
+  <!-- ───────── 결과 ───────── -->
+  <div class="scr" id="s-result" style="padding:22px 20px">
+    <div class="cp">내 스윙 템포</div>
+    <div style="padding-top:18px" id="resRing"></div>
+    <div class="mu ctr" style="padding-top:12px" id="resSec">0.56s : 0.18s</div>
+    <div class="card lg" style="margin-top:24px">
+      <div class="h2" style="font-size:14.5px" id="resHead">'안정형'에 가까운 리듬이에요</div>
+      <div class="cp" style="padding-top:5px" id="resDetail">천천히 올렸다가 정확하게 내려놓는 편입니다.</div>
+    </div>
+    <div style="padding-top:18px">
+      <div class="cp" style="padding-bottom:6px">이름 붙이기</div>
+      <input id="resName" class="card" value="7월 드라이버"
+        style="width:100%;font-family:inherit;font-size:15px;font-weight:500;color:var(--ink);outline:none">
+    </div>
+    <div class="grow"></div>
+    <button class="btn pri" onclick="saveSwing(true)">이 템포로 바로 연습</button>
+    <button class="mu ctr" style="padding:18px 0;width:100%" onclick="saveSwing(false)">저장만 하기</button>
+  </div>
+
+  <!-- ───────── 기록 ───────── -->
+  <div class="scr pad" id="s-history">
+    <div class="h1">기록</div>
+    <div class="cp" style="padding-top:6px" id="hisSub">이번 주 0일 · 0분</div>
+    <div style="display:flex;gap:11px;padding-top:20px">
+      <div class="card" style="flex:1"><div class="cp">평균 템포</div>
+        <div class="num" style="font-size:26px;padding-top:4px" id="hisAvg">—</div></div>
+      <div class="card" style="flex:1"><div class="cp">연속</div>
+        <div class="num" style="font-size:26px;padding-top:4px" id="hisStreak">0일</div>
+        <div class="cp" style="padding-top:3px" id="hisStreakSub">오늘 시작해볼까요</div></div>
+    </div>
+    <div id="hisList" style="padding-top:18px"></div>
+  </div>
+
+  <!-- ───────── 설정 ───────── -->
+  <div class="scr pad" id="s-settings">
+    <button class="h2" style="align-self:flex-start;padding-bottom:14px" onclick="go('home')">‹</button>
+    <div class="h1">설정</div>
+
+    <div style="padding-top:18px"><div class="cp" style="padding-bottom:6px">화면</div>
+      <div class="card lg"><div class="row"><span class="bd" style="font-weight:500">테마</span>
+        <div class="seg" style="width:180px" id="themeSeg">
+          <button onclick="setTheme('light')">라이트</button>
+          <button onclick="setTheme('dark')">다크</button>
+        </div></div></div></div>
+
+    <div style="padding-top:18px"><div class="cp" style="padding-bottom:6px">소리 · 진동</div>
+      <div class="card lg">
+        <div class="row"><div><div class="bd" style="font-weight:500">비프 볼륨</div>
+          <div class="cp" style="padding-top:2px" id="volLabel">80%</div></div>
+          <div style="display:flex;gap:5px" id="volBtns"></div></div>
+        <div class="hr" style="margin:8px 0"></div>
+        <div class="row" style="padding:6px 0"><div><div class="bd" style="font-weight:500">임팩트에 진동</div>
+          <div class="cp" style="padding-top:2px">폰에서만 동작합니다</div></div>
+          <div class="sw on" id="swHaptic" onclick="toggleSw(this)"><i></i></div></div>
+        <div class="hr" style="margin:8px 0"></div>
+        <div class="row" style="padding:6px 0"><span class="bd" style="font-weight:500">화면 항상 켜기</span>
+          <div class="sw on" id="swAwake" onclick="toggleSw(this)"><i></i></div></div>
+      </div></div>
+
+    <div style="padding-top:18px"><div class="cp" style="padding-bottom:6px">앱 정보</div>
+      <div class="card lg">
+        <button class="row" style="width:100%" onclick="replayOb()">
+          <span><span class="bd" style="font-weight:500;display:block;text-align:left">온보딩 다시 보기</span>
+          <span class="cp" style="display:block;text-align:left;padding-top:2px">처음 나오는 소개 화면</span></span>
+          <span class="mu">›</span></button>
+      </div></div>
+
+    <div class="banner" style="margin-top:22px">
+      이 화면은 <b>체험판</b>이에요. 실제 앱은 스윙 영상을 불러와 마킹하고, 연습 기록이 폰에 저장됩니다.
+    </div>
+    <div class="cp" style="padding-top:16px">Noto Sans KR, Space Grotesk · SIL Open Font License 1.1<br>마이템포 v0.1.0</div>
+  </div>
+
+  <!-- 탭바 -->
+  <div class="tabbar" id="tabbar">
+    <button data-t="home" class="on" onclick="go('home')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</button>
+    <button data-t="swings" onclick="go('swings')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/></svg>내 스윙</button>
+    <button data-t="history" onclick="go('history')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5.5-5.5 3.5 3.5L21 6"/><path d="M16 6h5v5"/></svg>기록</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ═══════════ 상태 ═══════════ */
+const PRESETS=[
+  {id:'p3',alias:'안정형',label:'3:1',desc:'천천히 올리고 정확하게 내리는 리듬',r:3},
+  {id:'p25',alias:'균형형',label:'2.5:1',desc:'가장 무난한 기본 리듬',r:2.5},
+  {id:'p35',alias:'파워형',label:'3.5:1',desc:'길게 끌고 강하게 때리는 리듬',r:3.5},
+];
+let S={screen:'home',preset:'p3',swing:null,swings:[],sessions:[],
+       rate:1,vol:.8,playing:false,elapsed:0,swingCount:0};
+
+const $=id=>document.getElementById(id);
+const frame=$('frame');
+
+function activeTempo(){
+  if(S.swing){const w=S.swings.find(x=>x.id===S.swing);
+    if(w)return{label:w.name,sub:'내 스윙 · '+w.date,r:w.ratio,own:true};}
+  const p=PRESETS.find(x=>x.id===S.preset)||PRESETS[0];
+  return{label:p.alias,sub:'프리셋 · '+p.label,r:p.r,own:false};
+}
+const fmtRatio=r=>(Math.round(r*10)/10)+':1';
+function character(r){
+  if(r<2.75)return["'균형형'에 가까운 리듬이에요",'올리고 내리는 속도가 고르게 이어지는 편입니다.'];
+  if(r<=3.25)return["'안정형'에 가까운 리듬이에요",'천천히 올렸다가 정확하게 내려놓는 편입니다.'];
+  return["'파워형'에 가까운 리듬이에요",'길게 끌어 올렸다가 빠르게 내려치는 편입니다.'];
+}
+
+/* ═══════════ 템포 링 ═══════════ */
+function ringHTML(ratio,size,mid,id){
+  const R=42,C=2*Math.PI*R,back=C*(ratio/(ratio+1));
+  return `<div class="ring" style="width:${size}px;height:${size}px">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--track)" stroke-width="9"/>
+      <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--accent)" stroke-width="9"
+        stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="${C}"/>
+      <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--primary)" stroke-width="9"
+        stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="${back} ${C-back}"/>
+    </svg>
+    <svg viewBox="0 0 100 100" ${id?`id="${id}"`:''} class="dot">
+      <circle cx="50" cy="8" r="4.5" fill="var(--ink)"/></svg>
+    <div class="mid">${mid}</div></div>`;
+}
+
+/* ═══════════ 오디오 (Web Audio) ═══════════ */
+let ac=null,timer=null,tick=null,rafId=null,cycleStart=0,cycleLen=0;
+function beep(freq,dur,gain){
+  if(!ac)return;
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.value=freq;
+  o.connect(g);g.connect(ac.destination);
+  const t=ac.currentTime;
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(gain*S.vol,t+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.start(t);o.stop(t+dur+.02);
+}
+function cycleMs(){
+  const r=activeTempo().r, unit=240/S.rate;      // 다운스윙 1단위 = 0.24초 (배속 반영)
+  return {back:unit*r, down:unit, rest:900/S.rate};
+}
+function runCycle(){
+  const {back,down,rest}=cycleMs();
+  cycleLen=back+down+rest; cycleStart=performance.now();
+  beep(420,.09,.5);                               // 백스윙 시작 — 저음
+  setTimeout(()=>beep(620,.09,.55),back);          // 탑 — 중음
+  setTimeout(()=>{beep(950,.13,.85);               // 임팩트 — 강조음
+    S.swingCount++;
+    if($('swHaptic').classList.contains('on')&&navigator.vibrate)navigator.vibrate(28);
+  },back+down);
+}
+function togglePlay(){ S.playing?stopPlay():startPlay(); }
+function startPlay(){
+  if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();
+  if(ac.state==='suspended')ac.resume();
+  S.playing=true;S.elapsed=0;S.swingCount=0;
+  $('playIcon').textContent='■';$('playLabel').textContent='정지';
+  runCycle(); timer=setInterval(runCycle,cycleLen);
+  tick=setInterval(()=>{S.elapsed++;
+    $('pracTime').textContent=`${Math.floor(S.elapsed/60)}분 ${String(S.elapsed%60).padStart(2,'0')}초 · ${S.swingCount}스윙`;},1000);
+  spinDot();
+}
+function stopPlay(){
+  if(!S.playing)return;
+  S.playing=false;clearInterval(timer);clearInterval(tick);cancelAnimationFrame(rafId);
+  $('playIcon').textContent='▶';$('playLabel').textContent='재생';
+  const d=$('pracDot'); if(d)d.style.transform='';
+  if(S.elapsed>=5){
+    const t=activeTempo();
+    S.sessions.unshift({date:'오늘',dur:S.elapsed,ratio:t.r,src:t.own?'내 스윙':t.label});
+    renderHistory();renderHome();toast('연습 기록이 저장됐어요');
+  }
+}
+function spinDot(){
+  const step=()=>{
+    if(!S.playing)return;
+    const d=$('pracDot');
+    if(d)d.style.transform=`rotate(${((performance.now()-cycleStart)/cycleLen)*360}deg)`;
+    rafId=requestAnimationFrame(step);
+  };step();
+}
+function rateStep(dir){
+  const steps=[.8,.9,1,1.1,1.25];
+  let i=steps.indexOf(S.rate); if(i<0)i=2;
+  S.rate=steps[Math.min(steps.length-1,Math.max(0,i+dir))];
+  $('rateVal').textContent=S.rate.toFixed(2).replace(/0$/,'')+'x';
+  if(S.playing){clearInterval(timer);runCycle();timer=setInterval(runCycle,cycleLen);}
+}
+
+/* ═══════════ 화면 전환 ═══════════ */
+function go(name){
+  stopPlay();
+  document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
+  $('s-'+name).classList.add('on');
+  $('s-'+name).scrollTop=0;
+  S.screen=name;
+  const tabs=['home','swings','history'];
+  $('tabbar').style.display=tabs.includes(name)?'flex':'none';
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.t===name));
+  if(name==='home')renderHome();
+  if(name==='practice')renderPractice();
+  if(name==='presets')renderPresets();
+  if(name==='swings')renderSwings();
+  if(name==='history')renderHistory();
+}
+
+/* ═══════════ 렌더 ═══════════ */
+function renderHome(){
+  const t=activeTempo();
+  $('homeSub').textContent=t.sub;
+  $('homeRing').innerHTML=ringHTML(t.r,180,
+    `<div class="num" style="font-size:42px">${fmtRatio(t.r)}</div>
+     <div class="cp" style="padding-top:2px">${t.label}</div>`);
+  const days=new Set(S.sessions.map(s=>s.date)).size;
+  const min=Math.round(S.sessions.reduce((a,s)=>a+s.dur,0)/60);
+  $('homeWeek').textContent=days+'일'+(min?` · ${min}분`:'');
+}
+function renderPractice(){
+  const t=activeTempo();
+  $('pracName').textContent=(t.own?'내 스윙':'프리셋')+' · '+t.label;
+  $('pracRing').innerHTML=ringHTML(t.r,250,`<div class="num" style="font-size:56px">${fmtRatio(t.r)}</div>`,'pracDot');
+  $('pracTime').textContent='아직 시작 전이에요';
+  $('rateVal').textContent=S.rate.toFixed(2).replace(/0$/,'')+'x';
+}
+function renderPresets(){
+  $('presetList').innerHTML=PRESETS.map(p=>{
+    const on=p.id===S.preset&&!S.swing, pct=p.r/(p.r+1)*100;
+    return `<button class="card lg" style="text-align:left;${on?'border:2px solid var(--primary)':''}"
+      onclick="pickPreset('${p.id}')">
+      <div class="row"><div>
+        <div style="display:flex;align-items:center;gap:7px">
+          <span class="h2">${p.alias}</span>
+          ${on?'<span style="width:19px;height:19px;border-radius:50%;background:var(--primary);color:var(--onPri);font-size:11px;display:flex;align-items:center;justify-content:center">✓</span>':''}
+        </div><div class="cp" style="padding-top:4px">${p.desc}</div></div>
+        <div class="num" style="font-size:23px">${p.label}</div></div>
+      <div style="display:flex;height:8px;border-radius:999px;overflow:hidden;margin-top:13px;background:var(--track)">
+        <i style="width:${pct}%;background:var(--primary)"></i><i style="flex:1;background:var(--accent)"></i></div>
+    </button>`;}).join('');
+}
+function pickPreset(id){S.preset=id;S.swing=null;renderPresets();}
+function renderSwings(){
+  const L=$('swingList');
+  if(!S.swings.length){
+    L.innerHTML=`<div class="card lg" style="display:flex;flex-direction:column;align-items:center;padding:44px 22px">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--subtle)" stroke-width="1.5"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/></svg>
+      <div class="h2" style="font-size:14.5px;padding-top:14px">아직 저장한 스윙이 없어요</div>
+      <div class="cp ctr" style="padding-top:6px">영상에서 백스윙 시작·탑·임팩트<br>세 곳만 찍으면 됩니다</div>
+      <button class="btn pri" style="margin-top:20px" onclick="startMarking()">내 스윙 등록하기</button></div>`;
+    return;
+  }
+  L.innerHTML=S.swings.map(w=>{
+    const on=w.id===S.swing;
+    return `<button class="card lg" style="width:100%;text-align:left;margin-bottom:11px;${on?'border:2px solid var(--primary)':''}"
+      onclick="S.swing='${w.id}';go('practice')">
+      <div class="row"><div><div class="h2">${w.name}</div>
+        <div class="cp" style="padding-top:4px">${w.date} 저장</div></div>
+        <div class="num" style="font-size:23px">${fmtRatio(w.ratio)}</div></div></button>`;
+  }).join('')+`<button class="btn gh" onclick="startMarking()">새 스윙 등록</button>`;
+}
+function renderHistory(){
+  const days=new Set(S.sessions.map(s=>s.date)).size;
+  const min=Math.round(S.sessions.reduce((a,s)=>a+s.dur,0)/60);
+  $('hisSub').textContent=`이번 주 ${days}일 · ${min}분`;
+  $('hisAvg').textContent=S.sessions.length?fmtRatio(S.sessions.reduce((a,s)=>a+s.ratio,0)/S.sessions.length):'—';
+  $('hisStreak').textContent=days+'일';
+  $('hisStreakSub').textContent=days?'이어가는 중':'오늘 시작해볼까요';
+  $('hisList').innerHTML=S.sessions.length
+    ? S.sessions.map(s=>`<div class="li"><div><div class="h2" style="font-size:14.5px">${s.date}</div>
+        <div class="cp" style="padding-top:2px">${s.dur<60?s.dur+'초':Math.round(s.dur/60)+'분'} · ${s.src}</div></div>
+        <div class="num" style="font-size:16px">${fmtRatio(s.ratio)}</div></div>`).join('')
+    : `<div class="card lg ctr" style="padding:44px 22px"><div class="h2" style="font-size:14.5px">아직 연습 기록이 없어요</div>
+       <div class="cp" style="padding-top:6px">한 번만 연습해도 여기에 남습니다</div></div>`;
+}
+
+/* ═══════════ 마킹 ═══════════ */
+const MK=[{t:'백스윙을 시작하는 순간',h:'클럽이 움직이기 시작하는 지점',b:'여기가 시작이에요'},
+          {t:'클럽이 가장 높은 순간',h:'영상을 좌우로 밀어 프레임을 찾습니다',b:'여기가 탑이에요'},
+          {t:'공에 맞는 순간',h:'클럽 헤드가 공에 닿는 지점',b:'여기가 임팩트예요'}];
+let mkStep=0,mkPos=.35,mkMarks=[];
+const TL_SEC=3;
+function startMarking(){mkStep=0;mkPos=.2;mkMarks=[];go('marking');renderMk();}
+function renderMk(){
+  $('mkStep').textContent=(mkStep+1)+' / 3';
+  $('mkTitle').textContent=MK[mkStep].t;$('mkHint').textContent=MK[mkStep].h;
+  $('mkBtn').textContent=MK[mkStep].b;
+  const sec=mkPos*TL_SEC;
+  $('mkSec').textContent=sec.toFixed(2)+'초';$('mkFrame').textContent='프레임 '+Math.round(sec*30);
+  const tl=$('tl');
+  tl.querySelectorAll('.mk,.hd').forEach(e=>e.remove());
+  mkMarks.forEach((m,i)=>{const e=document.createElement('div');e.className='mk';
+    e.style.left=(m/TL_SEC*100)+'%';e.style.background=i===2?'var(--accent)':'var(--primary)';tl.appendChild(e);});
+  const hd=document.createElement('div');hd.className='hd';hd.style.left=(mkPos*100)+'%';tl.appendChild(hd);
+  $('mkMarks').innerHTML=['시작','탑','임팩트'].map((n,i)=>
+    `<div class="ctr"><div class="cp">${n}</div><div class="num" style="font-size:11.5px;padding-top:2px">${mkMarks[i]!==undefined?mkMarks[i].toFixed(2)+'s':'— —'}</div></div>`).join('');
+}
+function tlDrag(e){
+  const r=$('tl').getBoundingClientRect();
+  const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  mkPos=Math.min(1,Math.max(0,x/r.width));renderMk();
+}
+['touchstart','touchmove'].forEach(ev=>$('tl').addEventListener(ev,e=>{e.preventDefault();tlDrag(e);},{passive:false}));
+$('tl').addEventListener('mousedown',e=>{tlDrag(e);
+  const mv=ev=>tlDrag(ev),up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
+function markHere(){
+  mkMarks[mkStep]=mkPos*TL_SEC;
+  if(navigator.vibrate)navigator.vibrate(12);
+  if(mkStep<2){mkStep++;mkPos=Math.min(1,mkPos+.25);renderMk();return;}
+  showResult();
+}
+function undoMark(){
+  if(mkStep===0){go('home');return;}
+  mkStep--;mkMarks.length=mkStep;renderMk();
+}
+function showResult(){
+  const back=Math.max(0,mkMarks[1]-mkMarks[0]),down=Math.max(.05,mkMarks[2]-mkMarks[1]);
+  const r=back/down;
+  window._pending={back,down,r};
+  $('resRing').innerHTML=ringHTML(r,200,`<div class="num" style="font-size:48px">${fmtRatio(r)}</div>`);
+  $('resSec').textContent=back.toFixed(2)+'s : '+down.toFixed(2)+'s';
+  const [h,d]=character(r);$('resHead').textContent=h;$('resDetail').textContent=d;
+  go('result');
+}
+function saveSwing(thenPractice){
+  const p=window._pending,now=new Date();
+  const id='w'+Date.now();
+  S.swings.unshift({id,name:$('resName').value||'내 스윙',ratio:p.r,
+    date:`${now.getMonth()+1}/${now.getDate()}`});
+  S.swing=id;
+  toast('저장했어요');
+  go(thenPractice?'practice':'swings');
+}
+
+/* ═══════════ 온보딩 ═══════════ */
+let obPage=0;
+const slides=$('slides');
+slides.addEventListener('scroll',()=>{
+  const p=Math.round(slides.scrollLeft/slides.clientWidth);
+  if(p!==obPage){obPage=p;renderOb();}
+});
+function renderOb(){
+  document.querySelectorAll('.prog i b').forEach((e,i)=>e.style.width=i<=obPage?'100%':'0');
+  document.querySelectorAll('.dots i').forEach((e,i)=>e.classList.toggle('on',i===obPage));
+}
+function finishOb(){$('ob').style.display='none';go('home');}
+function replayOb(){obPage=0;slides.scrollLeft=0;renderOb();$('ob').style.display='flex';}
+
+/* 온보딩 ④ 테마 선택 — 고르는 즉시 앱 전체에 반영된다 */
+let themeMode='auto';
+function pickTheme(m){
+  themeMode=m;
+  document.querySelectorAll('.tOpt').forEach(e=>e.classList.toggle('on',e.dataset.m===m));
+  setTheme(m==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m);
+}
+/* 미니 프리뷰 내용은 라이트/다크 두 벌 다 고정값이라 한 번만 채워두면 된다 */
+document.querySelectorAll('.tPrev').forEach(p=>{
+  p.innerHTML=`<div class="mini">
+    <svg width="26" height="26" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="40" fill="none" stroke="${p.dataset.p==='dark'?'#232C21':'#F0EEE6'}" stroke-width="13"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="${p.dataset.p==='dark'?'#E9CE6C':'#D9B84A'}" stroke-width="13" transform="rotate(-90 50 50)" stroke-dasharray="251"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="${p.dataset.p==='dark'?'#7ED45C':'#3F6136'}" stroke-width="13" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="188 63"/>
+    </svg>
+    <div class="lines"><i></i><i></i></div>
+  </div><div class="mbtn"></div>`;
+});
+
+/* ═══════════ 설정 ═══════════ */
+function setTheme(t){
+  frame.dataset.theme=t;
+  document.querySelector('meta[name=theme-color]').content=t==='dark'?'#0D110D':'#FBFAF6';
+  document.querySelectorAll('#themeSeg button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(t==='light')));
+  document.querySelectorAll('.dimple').forEach(e=>e.setAttribute('fill',
+    getComputedStyle(frame).getPropertyValue('--primary')));
+  if(S.screen==='home')renderHome();
+  if(S.screen==='practice')renderPractice();
+  if(S.screen==='presets')renderPresets();
+}
+function toggleSw(el){el.classList.toggle('on');}
+$('volBtns').innerHTML=[40,60,80,100].map(v=>
+  `<button onclick="setVol(${v})" data-v="${v}" style="width:34px;padding:7px 0;border-radius:12px;
+   font-family:'Space Grotesk';font-size:11px;background:var(--surface2);color:var(--muted)">${v}</button>`).join('');
+function setVol(v){
+  S.vol=v/100;$('volLabel').textContent=v+'%';
+  document.querySelectorAll('#volBtns button').forEach(b=>{
+    const on=+b.dataset.v===v;
+    b.style.background=on?'var(--primary)':'var(--surface2)';
+    b.style.color=on?'var(--onPri)':'var(--muted)';});
+}
+
+function toast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),1800);
+}
+
+/* ═══════════ 시작 ═══════════ */
+pickTheme('auto');
+setVol(80);renderOb();renderHome();
+$('tabbar').style.display='flex';
+</script>
+</body>
+</html>

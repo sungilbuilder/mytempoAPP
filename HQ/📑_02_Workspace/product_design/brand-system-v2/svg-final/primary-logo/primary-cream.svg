@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="mytempo logo">
+  <path d="M 106.101 30.266 A 70.000 70.000 0 1 1 31.063 112.155" fill="none" stroke="#F7F1E0" stroke-width="17" stroke-linecap="round"/>
+  <path d="M 30.000 100.000 A 70.000 70.000 0 0 1 93.899 30.266" fill="none" stroke="#E9CE6C" stroke-width="17" stroke-linecap="round"/>
+  <text x="228" y="128" font-family="'Space Grotesk','Helvetica Neue',Arial,sans-serif" font-weight="600" font-size="88" letter-spacing="0.04em" fill="#F7F1E0">mytempo</text>
+</svg>

@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * 웹(react-native-web) 전용 — 루트 높이 확보.
+ *
+ * RN의 `flex: 1`은 부모에 확정된 높이가 있어야 의미가 있다. 웹에서 html/body/루트 div에
+ * 높이가 지정돼 있지 않으면 0px로 접히고, SafeAreaView(flex-1) 이하 전체가 0 높이가 되어
+ * 아무것도 안 보인다(번들은 정상인데 흰 화면).
+ *
+ * 루트 엘리먼트의 id가 빌드 방식에 따라 다를 수 있어 id를 특정하지 않고
+ * `body > div`까지 함께 잡는다. overflow는 건드리지 않는다 —
+ * hidden으로 막으면 레이아웃이 어긋났을 때 증상만 감춰서 진단이 더 어려워진다.
+ *
+ * 네이티브에는 영향이 없다. 이 규칙은 웹 번들에만 포함된다.
+ */
+html,
+body {
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+#root,
+#main,
+#__next,
+body > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 100vh;
+}

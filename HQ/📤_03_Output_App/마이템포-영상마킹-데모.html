@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MYTEMPO — 영상 마킹 데모</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/*
+  한글 어절 단위 줄바꿈 (2026-07-31)
+  기본값은 한글을 단어 중간에서 자른다 — "다운스윙의 비율" → "다운스윙의 비 / 율".
+  word-break:keep-all이 공백(어절) 기준으로만 끊게 하고,
+  overflow-wrap:break-word는 한 어절이 화면보다 길 때만 예외적으로 끊어준다.
+*/
+body,.phone,.panel{word-break:keep-all;overflow-wrap:break-word}
+
+:root{
+  --bg:#FBFAF6; --surface:#FFFFFF; --surface2:#F2F0E9; --line:#E4E1D6;
+  --ink:#14170F; --muted:#5D6355; --subtle:#8B9082; --track:#E4E1D6;
+  --primary:#436437; --accent:#C9932B; --onPrimary:#FBFAF6;
+}
+[data-theme="dark"]{
+  --bg:#0D110D; --surface:#161B15; --surface2:#1E251C; --line:#2A322718;
+  --ink:#F6F4EC; --muted:#A8AF9F; --subtle:#767D6E; --track:#232C21;
+  --primary:#7ED45C; --accent:#E9CE6C; --onPrimary:#0A0F09;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#7a7f74;font-family:'Noto Sans KR',sans-serif;
+  display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;gap:20px;flex-wrap:wrap}
+.phone{width:380px;height:800px;background:var(--bg);border-radius:38px;overflow:hidden;
+  position:relative;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;
+  border:9px solid #1b1f19}
+.screen{flex:1;display:none;flex-direction:column;overflow:hidden}
+.screen.on{display:flex}
+.mono{font-family:'Space Grotesk',monospace}
+
+/* 헤더 */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px}
+.hdr .step{font-family:'Space Grotesk';font-weight:700;color:var(--ink);font-size:15px}
+.back,.undo{background:none;border:0;font-size:13px;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:700}
+h1{margin:0;padding:0 20px;font-size:22px;font-weight:700;color:var(--ink);line-height:30px}
+.hint{padding:6px 20px 0;font-size:12px;color:var(--subtle);line-height:18px}
+
+/* 영상 영역 */
+.videoWrap{flex:1;margin:14px 20px;border-radius:24px;overflow:hidden;background:#000;
+  position:relative;display:flex;align-items:center;justify-content:center}
+#fakeVideo{width:100%;height:100%;display:block}
+.blurNote{position:absolute;bottom:10px;left:10px;right:10px;background:rgba(0,0,0,.6);
+  color:#fff;font-size:10px;padding:6px 8px;border-radius:8px;line-height:14px}
+
+/* 현재 위치 / 배속 */
+.meta{display:flex;align-items:center;justify-content:space-between;padding:0 20px 8px}
+.tsec{font-family:'Space Grotesk';font-weight:700;font-size:18px;color:var(--ink)}
+.tframe{font-size:12px;color:var(--subtle);margin-top:2px}
+.rates{display:flex;gap:6px}
+.rate{padding:6px 10px;border-radius:12px;background:var(--surface2);border:0;cursor:pointer;
+  font-family:'Space Grotesk';font-weight:700;font-size:12px;color:var(--muted)}
+.rate.on{background:var(--primary);color:var(--onPrimary)}
+
+/* 타임라인 */
+.tl{position:relative;height:44px;margin:0 20px;display:flex;align-items:center;cursor:pointer}
+.tlTrack{height:6px;width:100%;border-radius:999px;background:var(--track)}
+.tlMark{position:absolute;width:3px;height:20px;border-radius:999px}
+.tlHead{position:absolute;width:18px;height:18px;border-radius:999px;background:var(--surface);
+  border:2px solid var(--primary);margin-left:-9px;pointer-events:none}
+
+.frameBtns{display:flex;gap:10px;justify-content:center;padding:6px 20px 4px}
+.fbtn{padding:10px 14px;border-radius:14px;background:var(--surface2);border:0;cursor:pointer;
+  font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--ink)}
+.fbtn:active{opacity:.7}
+.fbtn.kr{font-family:'Noto Sans KR';font-weight:700}
+
+.summary{display:flex;justify-content:space-between;padding:6px 20px 4px}
+.sitem{text-align:center}
+.slabel{font-size:12px;color:var(--subtle)}
+.sval{font-family:'Space Grotesk';font-size:12px;color:var(--ink);margin-top:2px}
+
+.btn{margin:8px 20px 18px;padding:16px;border-radius:16px;background:var(--primary);color:var(--onPrimary);
+  border:0;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.btn:active{opacity:.85}
+.btn.ghost{background:transparent;color:var(--muted);margin-top:0}
+
+/* 결과 화면 */
+.res{flex:1;padding:24px 20px;display:flex;flex-direction:column}
+.cap{font-size:12px;color:var(--subtle)}
+.ringWrap{display:flex;flex-direction:column;align-items:center;padding-top:20px}
+/* 링 중앙 정렬 — 음수 마진 대신 absolute inset:0으로 항상 정확히 중앙에 오게 한다 */
+.ringBox{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.ringCenter{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.bigRatio{font-family:'Space Grotesk';font-weight:700;color:var(--ink)}
+.tol{font-family:'Space Grotesk';font-size:12px;color:var(--subtle);margin-top:2px}
+.secs{font-size:12px;color:var(--muted);margin-top:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:24px}
+.card b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
+.card span{font-size:12px;color:var(--subtle);line-height:18px}
+.slowmo{background:var(--surface2);border-radius:14px;padding:14px;margin-top:14px;
+  font-size:12px;color:var(--subtle);line-height:18px}
+
+/* 컨트롤 패널 */
+.panel{width:330px;background:#fff;border-radius:20px;padding:20px;font-size:13px;line-height:1.65;
+  box-shadow:0 18px 44px rgba(0,0,0,.25);max-height:800px;overflow:auto}
+.panel h2{margin:0 0 4px;font-size:16px}
+.panel h3{margin:18px 0 6px;font-size:13px;color:#444}
+.panel p{margin:0 0 8px;color:#555}
+.panel .fpsBtns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.panel .fpsBtn{padding:8px 12px;border-radius:10px;border:1px solid #ddd;background:#fafafa;
+  cursor:pointer;font-family:'Space Grotesk';font-weight:700;font-size:12px}
+.panel .fpsBtn.on{background:#436437;color:#fff;border-color:#436437}
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px}
+.tbl th,.tbl td{border:1px solid #e5e5e5;padding:5px 6px;text-align:left}
+.tbl th{background:#f6f6f4}
+.themeBtn{margin-top:14px;padding:9px 14px;border-radius:10px;border:1px solid #ddd;
+  background:#fafafa;cursor:pointer;font-family:inherit;font-size:12.5px;width:100%}
+code{background:#f2f2ef;padding:1px 5px;border-radius:4px;font-family:'Space Grotesk';font-size:11.5px}
+</style>
+</head>
+<body data-theme="light">
+
+<div class="phone">
+  <!-- ① 영상 선택 -->
+  <div class="screen on" id="s-pick">
+    <div class="hdr"><button class="back">‹</button><span></span><span></span></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 20px;gap:20px">
+      <h1 style="padding:0">스윙 영상을<br>골라주세요</h1>
+      <p class="hint" style="padding:0">아무 영상이나 괜찮아요. 앱에서 느리게 돌려보며 시작·탑·임팩트 세 지점만 찍으면 템포가 계산됩니다.</p>
+      <button class="btn" style="margin:0" onclick="startMarking()">갤러리에서 영상 고르기</button>
+    </div>
+  </div>
+
+  <!-- ② 마킹 -->
+  <div class="screen" id="s-mark">
+    <div class="hdr">
+      <button class="back" onclick="reset()">‹</button>
+      <span class="step mono" id="stepNo">1 / 3</span>
+      <button class="undo" onclick="undo()">되돌리기</button>
+    </div>
+    <h1 id="mTitle">백스윙을 시작하는 순간</h1>
+    <p class="hint" id="mHint">클럽이 움직이기 시작하는 지점</p>
+
+    <div class="videoWrap">
+      <canvas id="fakeVideo" width="340" height="300"></canvas>
+      <div class="blurNote" id="blurNote"></div>
+    </div>
+
+    <div class="meta">
+      <div>
+        <div class="tsec" id="tSec">0.000초</div>
+        <div class="tframe" id="tFrame">프레임 0 · 30fps</div>
+      </div>
+      <div class="rates">
+        <button class="rate" onclick="setRate(0)">1x</button>
+        <button class="rate" onclick="setRate(1)">0.5x</button>
+        <button class="rate on" onclick="setRate(2)">0.25x</button>
+      </div>
+    </div>
+
+    <div class="tl" id="tl">
+      <div class="tlTrack"></div>
+      <div class="tlHead" id="tlHead" style="left:0%"></div>
+    </div>
+
+    <div class="frameBtns">
+      <button class="fbtn" onclick="stepFrame(-1)">◀ 1프레임</button>
+      <button class="fbtn kr" id="playBtn" onclick="togglePlay()">재생</button>
+      <button class="fbtn" onclick="stepFrame(1)">1프레임 ▶</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <button class="btn" id="markBtn" onclick="markHere()">여기가 시작이에요</button>
+  </div>
+
+  <!-- ③ 결과 -->
+  <div class="screen" id="s-result">
+    <div class="res">
+      <div class="cap">내 스윙 템포</div>
+      <div class="ringWrap">
+        <div class="ringBox">
+          <svg width="220" height="220" viewBox="0 0 220 220">
+            <circle cx="110" cy="110" r="92" fill="none" stroke="var(--track)" stroke-width="14"/>
+            <path id="ringLong" fill="none" stroke="var(--primary)" stroke-width="14" stroke-linecap="round"/>
+            <path id="ringShort" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round"/>
+          </svg>
+          <div class="ringCenter">
+            <div class="bigRatio" id="rRatio">3.2:1</div>
+            <div class="tol" id="rTol"></div>
+          </div>
+        </div>
+        <div class="secs" id="rSecs"></div>
+      </div>
+      <div class="card">
+        <b id="rHead"></b><span id="rDetail"></span>
+      </div>
+      <div class="slowmo" id="rSlowmo" style="display:none"></div>
+      <div style="flex:1"></div>
+    </div>
+    <button class="btn" onclick="reset()">이 템포로 바로 연습</button>
+    <button class="btn ghost" onclick="reset()">저장만 하기</button>
+  </div>
+</div>
+
+<!-- 컨트롤 패널 -->
+<div class="panel">
+  <h2>영상 마킹 데모</h2>
+  <p>실제 앱의 새 마킹 플로우입니다. 아래에서 <b>촬영 fps</b>를 바꿔가며 결과 표시가 어떻게 달라지는지 확인해보세요.</p>
+
+  <h3>촬영 fps 시뮬레이션</h3>
+  <div class="fpsBtns">
+    <button class="fpsBtn on" onclick="setFps(30)">30fps<br><span style="font-weight:400">일반</span></button>
+    <button class="fpsBtn" onclick="setFps(60)">60fps</button>
+    <button class="fpsBtn" onclick="setFps(120)">120fps</button>
+    <button class="fpsBtn" onclick="setFps(240)">240fps<br><span style="font-weight:400">슬로모</span></button>
+  </div>
+  <p id="fpsExplain" style="font-size:12px"></p>
+
+  <h3>fps별 실제 오차</h3>
+  <table class="tbl">
+    <tr><th>촬영</th><th>다운스윙</th><th>오차</th><th>표시</th></tr>
+    <tr><td>30fps</td><td>8프레임</td><td>±0.19</td><td>약 3:1</td></tr>
+    <tr><td>60fps</td><td>16프레임</td><td>±0.09</td><td>3.2:1 ±0.1</td></tr>
+    <tr><td>120fps</td><td>32프레임</td><td>±0.05</td><td>3.2:1</td></tr>
+    <tr><td>240fps</td><td>64프레임</td><td>±0.02</td><td>3.2:1</td></tr>
+  </table>
+  <p style="font-size:11.5px;margin-top:8px">슬로우 재생을 쓴 경우(양자화 오차 ±0.5프레임) 기준입니다.</p>
+
+  <h3>왜 프레임 버튼이 필요한가</h3>
+  <p style="font-size:12px">240fps 3초 영상이면 화면 폭 350px에서 <b>1프레임이 0.5px</b>입니다. 손가락 드래그로는 특정 프레임을 고를 수 없어서, 드래그로 대략 맞추고 <code>◀ ▶</code> 버튼으로 미세 조정하는 2단 구조가 필수입니다.</p>
+
+  <h3>모션 블러</h3>
+  <p style="font-size:12px">헤드스피드 40m/s 기준, 30fps(셔터 1/60s)에서는 노출 중 클럽헤드가 <b>66.7cm</b> 이동합니다. 임팩트 프레임이 통째로 번져서 눈으로 판별하기 어렵습니다. 영상 영역에서 확인해보세요.</p>
+
+  <button class="themeBtn" onclick="toggleTheme()">🌓 라이트 / 다크 전환</button>
+</div>
+
+<script>
+/* ───────── 상태 ───────── */
+const RATES=[1,0.5,0.25];
+let fps=30, rateIdx=2, cur=0, step=0, playing=false, timer=null;
+const DUR=3.0;                      // 데모 영상 길이(초)
+const marks={};
+const META=[
+  {key:'start',title:'백스윙을 시작하는 순간',hint:'클럽이 움직이기 시작하는 지점',label:'시작',btn:'여기가 시작이에요'},
+  {key:'top',  title:'클럽이 가장 높은 순간',  hint:'느리게 재생하며 프레임을 찾아보세요',label:'탑',btn:'여기가 탑이에요'},
+  {key:'impact',title:'공에 맞는 순간',        hint:'◀ ▶ 버튼으로 한 프레임씩 맞출 수 있어요',label:'임팩트',btn:'여기가 임팩트예요'},
+];
+/* 실제 스윙 타이밍 (3:1) — 데모 애니메이션 기준 */
+const T_START=0.60, T_TOP=1.40, T_IMPACT=1.667;
+
+/* ───────── 화면 전환 ───────── */
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');}
+function startMarking(){show('s-mark');cur=0;step=0;
+  for(const k in marks)delete marks[k];render();}
+function reset(){show('s-pick');cur=0;step=0;playing=false;clearInterval(timer);
+  for(const k in marks)delete marks[k];}
+
+/* ───────── fps / 배속 ───────── */
+function setFps(v){
+  fps=v;
+  document.querySelectorAll('.fpsBtn').forEach((b,i)=>b.classList.toggle('on',[30,60,120,240][i]===v));
+  const e={30:'일반 촬영. 다운스윙이 8프레임뿐이라 소수점은 잡음입니다 → "약 3:1"로 표시.',
+           60:'조금 낫습니다. 소수점을 보여주되 ±0.1을 병기합니다.',
+           120:'소수 첫째자리가 의미를 갖기 시작합니다.',
+           240:'슬로모. 오차 ±0.02로 소수점이 확실히 신뢰됩니다.'}[v];
+  document.getElementById('fpsExplain').textContent=e;
+  render();
+}
+function setRate(i){rateIdx=i;
+  document.querySelectorAll('.rate').forEach((b,j)=>b.classList.toggle('on',i===j));
+  if(playing){clearInterval(timer);startTimer();}}
+
+/* ───────── 재생 / 탐색 ───────── */
+function startTimer(){
+  const stepMs=30;
+  timer=setInterval(()=>{
+    cur+=(stepMs/1000)*RATES[rateIdx];
+    if(cur>=DUR){cur=DUR;togglePlay();}
+    render();
+  },stepMs);
+}
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('playBtn').textContent=playing?'일시정지':'재생';
+  if(playing)startTimer(); else clearInterval(timer);
+}
+function stepFrame(d){
+  if(playing)togglePlay();
+  cur=Math.max(minSec(),Math.min(DUR,cur+d/fps));
+  render();
+}
+function minSec(){return step>0&&marks[META[step-1].key]!==undefined?marks[META[step-1].key]+1/fps:0;}
+
+document.getElementById('tl').addEventListener('click',e=>{
+  if(playing)togglePlay();
+  const r=e.currentTarget.getBoundingClientRect();
+  cur=Math.max(minSec(),Math.min(DUR,((e.clientX-r.left)/r.width)*DUR));
+  render();
+});
+
+/* ───────── 마킹 ───────── */
+function markHere(){
+  marks[META[step].key]=cur;
+  if(step<2){step++;cur=Math.min(DUR,cur+2/fps);render();return;}
+  showResult();
+}
+function undo(){
+  if(step===0){reset();return;}
+  step--;delete marks[META[step].key];
+  if(marks[META[step].key]!==undefined)cur=marks[META[step].key];
+  render();
+}
+
+/* ───────── 렌더 ───────── */
+function render(){
+  document.getElementById('stepNo').textContent=`${step+1} / 3`;
+  document.getElementById('mTitle').textContent=META[step].title;
+  document.getElementById('mHint').textContent=META[step].hint;
+  document.getElementById('markBtn').textContent=META[step].btn;
+  document.getElementById('tSec').textContent=cur.toFixed(3)+'초';
+  document.getElementById('tFrame').textContent=`프레임 ${Math.round(cur*fps)} · ${fps}fps`;
+  document.getElementById('tlHead').style.left=(cur/DUR*100)+'%';
+
+  // 찍은 지점 표시
+  document.querySelectorAll('.tlMark').forEach(n=>n.remove());
+  const tl=document.getElementById('tl');
+  META.forEach((m,i)=>{
+    if(marks[m.key]===undefined)return;
+    const d=document.createElement('div');
+    d.className='tlMark';
+    d.style.left=(marks[m.key]/DUR*100)+'%';
+    d.style.background=i===2?'var(--accent)':'var(--primary)';
+    tl.appendChild(d);
+  });
+
+  document.getElementById('summary').innerHTML=META.map(m=>
+    `<div class="sitem"><div class="slabel">${m.label}</div>
+     <div class="sval">${marks[m.key]!==undefined?marks[m.key].toFixed(3)+'s':'— —'}</div></div>`).join('');
+
+  drawFrame();
+}
+
+/* 스윙 애니메이션 + 모션 블러 시뮬레이션 */
+function drawFrame(){
+  const cv=document.getElementById('fakeVideo'),x=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  x.fillStyle='#20261e';x.fillRect(0,0,W,H);
+  // 지면
+  x.fillStyle='#2d3529';x.fillRect(0,H-40,W,40);
+  // 공
+  x.fillStyle='#F7F1E0';x.beginPath();x.arc(W/2,H-46,7,0,7);x.fill();
+
+  // 프레임에 스냅 (실제 영상처럼 이산적으로 움직인다)
+  const snapped=Math.round(cur*fps)/fps;
+  // 클럽 각도: 시작 0 → 탑 -160도 → 임팩트 0
+  let ang;
+  if(snapped<T_START) ang=0;
+  else if(snapped<T_TOP) ang=-160*((snapped-T_START)/(T_TOP-T_START));
+  else if(snapped<T_IMPACT) ang=-160*(1-(snapped-T_TOP)/(T_IMPACT-T_TOP));
+  else ang=40*((snapped-T_IMPACT)/0.3);
+
+  // 모션 블러 — 셔터 동안 클럽이 지나간 경로를 겹쳐 그린다
+  const shutter=1/(fps*2);
+  const speed=Math.abs(angVel(snapped));
+  const blurSpan=speed*shutter;              // 노출 중 회전량(도)
+  const layers=Math.max(1,Math.min(24,Math.round(blurSpan/3)));
+  for(let i=0;i<layers;i++){
+    const a=ang-blurSpan/2+blurSpan*(i/Math.max(1,layers-1));
+    drawClub(x,W/2,H-46,a,`rgba(220,225,215,${0.85/layers*2.2})`);
+  }
+  drawClub(x,W/2,H-46,ang,layers>6?'rgba(220,225,215,0.25)':'#dce1d7');
+
+  const cm=(40*shutter*100).toFixed(0);
+  document.getElementById('blurNote').textContent=
+    `${fps}fps · 셔터 1/${Math.round(1/shutter)}s → 노출 중 헤드 이동 약 ${cm}cm`
+    + (layers>6?' — 임팩트 프레임이 번져 판별이 어렵습니다':'');
+}
+function angVel(t){ // 도/초
+  if(t<T_START)return 0;
+  if(t<T_TOP)return -160/(T_TOP-T_START);
+  if(t<T_IMPACT)return 160/(T_IMPACT-T_TOP);
+  return 40/0.3;
+}
+function drawClub(x,cx,cy,deg,color){
+  const r=deg*Math.PI/180, L=150;
+  const hx=cx+Math.sin(r)*L*0.1, hy=cy-Math.cos(r)*0;
+  x.save();x.translate(cx,cy-4);x.rotate(r);
+  x.strokeStyle=color;x.lineWidth=4;x.lineCap='round';
+  x.beginPath();x.moveTo(0,0);x.lineTo(0,-L);x.stroke();
+  x.fillStyle=color;x.fillRect(-9,-L-8,18,10);
+  x.restore();
+}
+
+/* ───────── 결과 ───────── */
+function showResult(){
+  const bs=marks.top-marks.start, ds=Math.max(0.05,marks.impact-marks.top);
+  const ratio=bs/ds;
+  const prec = fps>=120?'exact' : fps>=60?'approximate' : 'coarse';
+  const txt = prec==='coarse' ? `약 ${Math.round(ratio)}:1` : `${Math.round(ratio*10)/10}:1`;
+
+  document.getElementById('rRatio').textContent=txt;
+  document.getElementById('rRatio').style.fontSize=prec==='coarse'?'42px':'52px';
+  document.getElementById('rTol').textContent=prec==='approximate'?'±0.1':'';
+  document.getElementById('rSecs').textContent=`${bs.toFixed(2)}s : ${ds.toFixed(2)}s`;
+
+  const ch = ratio<2.75?['\'균형형\'에 가까운 리듬이에요','올리고 내리는 속도가 고르게 이어지는 편입니다.']
+           : ratio<=3.25?['\'안정형\'에 가까운 리듬이에요','천천히 올렸다가 정확하게 내려놓는 편입니다.']
+           : ['\'파워형\'에 가까운 리듬이에요','길게 끌어 올렸다가 빠르게 내려치는 편입니다.'];
+  document.getElementById('rHead').textContent=ch[0];
+  document.getElementById('rDetail').textContent=ch[1];
+
+  const sm=document.getElementById('rSlowmo');
+  if(prec!=='exact'){
+    sm.style.display='block';
+    sm.textContent='더 정확한 값을 보고 싶다면 슬로모로 촬영해보세요. 아이폰은 카메라 → 슬로모, 갤럭시는 카메라 → 더보기 → 슬로우 모션입니다.';
+  } else sm.style.display='none';
+
+  // 링
+  const C=2*Math.PI*92, gap=10;
+  const total=360-2*gap, longS=total*(ratio/(ratio+1)), shortS=total*(1/(ratio+1));
+  document.getElementById('ringLong').setAttribute('d',arc(110,110,92,-90+gap/2,-90+gap/2+longS));
+  document.getElementById('ringShort').setAttribute('d',arc(110,110,92,-90+gap/2+longS+gap,-90+gap/2+longS+gap+shortS));
+
+  show('s-result');
+}
+function arc(cx,cy,r,a1,a2){
+  const p=(a)=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];
+  const [x1,y1]=p(a1),[x2,y2]=p(a2);
+  const large=((a2-a1)%360)>180?1:0;
+  return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+}
+
+function toggleTheme(){
+  const b=document.body;
+  b.dataset.theme=b.dataset.theme==='dark'?'light':'dark';
+  drawFrame();
+}
+
+setFps(30);
+render();
+</script>
+</body>
+</html>

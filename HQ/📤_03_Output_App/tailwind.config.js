@@ -1,11 +1,15 @@
 /**
- * WBS 1.5/1.6 — NativeWind 설정. 색 토큰 근거:
- * HQ/📑_02_Workspace/product_design/design-guideline-v2-dark.md (다크)
- * HQ/📑_02_Workspace/product_design/light-dark-mode-guideline.md (라이트/토글)
+ * 마이템포 디자인 토큰 — 2026-07-31 프리미엄 리디자인 반영
  *
- * 규칙: 클래스 접두어 없음 = 라이트(기본), `dark:` 접두어 = 다크.
- * 예: className="bg-bg dark:bg-bgDark text-ink dark:text-inkDark"
- * 라이트 값은 WBS 1.4에서 이미 확정했던 원래 플랫 팔레트를 그대로 재사용한 것 — 새로 디자인하지 않음.
+ * 근거 시안: HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/
+ *   - `MYTEMPO Premium.dc.html` (Turn 4) — 토큰(색·간격·라운드·타입) 원본
+ *   - `MYTEMPO App UI.dc.html` (Turn 3) — 화면별 적용 예
+ *
+ * 규칙: 접두어 없음 = 라이트(기본), `dark:` 접두어 = 다크.
+ *   예) className="bg-bg dark:bg-bgDark text-ink dark:text-inkDark"
+ *
+ * 이전 팔레트(#436437 / #D4AF37 / #FAF8F2)에서 톤을 다시 잡은 값이다.
+ * 브랜드 정체성(그린+골드)은 유지하되 채도를 낮추고 먹색을 더 짙게 가져간다.
  */
 module.exports = {
   content: ['./app/**/*.{js,jsx,ts,tsx}', './components/**/*.{js,jsx,ts,tsx}'],
@@ -15,47 +19,84 @@ module.exports = {
     extend: {
       fontFamily: {
         /**
-         * WBS 1.8: 나눔고딕. RN은 굵기별로 별도 폰트 파일/이름을 쓰므로
-         * font-bold 유틸(fontWeight:'700')만으로는 실제로 굵어 보이지 않는다 —
-         * 반드시 font-nanum-bold / font-nanum-extrabold 클래스로 폰트 자체를 바꿔야 함.
+         * RN은 굵기별로 별도 폰트 파일/이름을 쓰므로 font-bold 유틸(fontWeight:'700')만으로는
+         * 한글이 실제로 굵어지지 않는다 — 반드시 아래 클래스로 폰트 자체를 바꿀 것.
+         *
+         * 본문/UI = Noto Sans KR, 숫자·라틴 디스플레이("3:1", "MYTEMPO") = Space Grotesk.
+         * 시안(App UI / Renewal / Logos)이 실제로 이 두 폰트 조합으로 렌더링돼 있다.
          */
-        sans: ['NanumGothic_400Regular'],
-        'nanum-bold': ['NanumGothic_700Bold'],
-        'nanum-extrabold': ['NanumGothic_800ExtraBold'],
+        sans: ['NotoSansKR_400Regular'],
+        'kr-medium': ['NotoSansKR_500Medium'],
+        'kr-bold': ['NotoSansKR_700Bold'],
+        'kr-black': ['NotoSansKR_900Black'],
+        display: ['SpaceGrotesk_500Medium'],
+        'display-bold': ['SpaceGrotesk_700Bold'],
       },
       colors: {
-        // 라이트(기본) — WBS 1.4 팔레트 재사용
-        bg: '#FAF8F2',
+        /* ───────── 라이트 (Turn 4 COLOR TOKENS) ───────── */
+        bg: '#FBFAF6',
         surface: '#FFFFFF',
-        surface2: '#F3EFE2',
-        line: '#E3DFD1',
-        ink: '#26331F',
-        muted: '#6E7C66',
-        disabled: '#B9C2B2',
-        onAccent: '#F7F1E0',
-        // 다크 — WBS 1.5 네온 리뉴얼
-        bgDark: '#101410',
-        surfaceDark: '#181D17',
-        surface2Dark: '#20261F',
-        lineDark: '#2B322A',
-        inkDark: '#F5F7F2',
-        mutedDark: '#A9B3A5',
-        disabledDark: '#5C6459',
-        onAccentDark: '#0A0F09',
-        // 포인트 컬러: 라이트=차분한 톤(DEFAULT), 다크=네온 톤
-        green: {
-          DEFAULT: '#436437',
-          neon: '#5FC639',
-          bright: '#75D553',
+        surface2: '#F2F0E8',
+        line: '#E7E4D9',
+        ink: '#16211A',
+        muted: '#5F6C5C',
+        subtle: '#8A9382',
+        track: '#F0EEE6',
+        onPrimary: '#F2F5EE',
+
+        /* ───────── 다크 ───────── */
+        bgDark: '#0D110D',
+        surfaceDark: '#161C15',
+        surface2Dark: '#222A20',
+        lineDark: '#2C3629',
+        inkDark: '#F2F5EE',
+        mutedDark: '#7E8A79',
+        subtleDark: '#5C6659',
+        trackDark: '#232C21',
+        onPrimaryDark: '#0A0F09',
+
+        /**
+         * BRAND ROLES (Turn 4)
+         * - primary: 리듬·안정. 이동/확정 액션 전부.
+         * - accent(골드): 재생·성공·최고기록 전용. **화면당 최대 1곳**.
+         * - warning: 의도적으로 없음 — 실패를 보여주지 않는 습관 앱이라 경고색이 브랜드와 충돌.
+         */
+        primary: {
+          DEFAULT: '#3F6136',
+          deep: '#2E4A24',
+          soft: '#4A7040',
+          neon: '#7ED45C',
+          neonDim: '#4E8C39',
         },
-        gold: {
-          DEFAULT: '#D4AF37',
-          neon: '#EFC94D',
-          bright: '#F7D464',
+        accent: {
+          DEFAULT: '#D9B84A',
+          deep: '#C9A431',
+          neon: '#E9CE6C',
+          neonDim: '#E4C863',
         },
       },
       borderRadius: {
-        card: '16px',
+        /* RADIUS 12 · 18 · 24 · 999 */
+        sm: '12px',
+        card: '18px',
+        lg: '24px',
+        pill: '999px',
+      },
+      spacing: {
+        /* SPACING (8pt 그리드) 8 · 16 · 24 · 32 · 48 */
+        s1: '8px',
+        s2: '16px',
+        s3: '24px',
+        s4: '32px',
+        s6: '48px',
+      },
+      fontSize: {
+        /* TYPE — Hero 72/800 · H1 22/700 · Body 15/400 · Caption 12/500 */
+        hero: ['72px', { lineHeight: '72px', letterSpacing: '-3px' }],
+        h1: ['22px', { lineHeight: '30px', letterSpacing: '-0.4px' }],
+        h2: ['18px', { lineHeight: '26px' }],
+        body: ['15px', { lineHeight: '24px' }],
+        caption: ['12px', { lineHeight: '18px' }],
       },
     },
   },
