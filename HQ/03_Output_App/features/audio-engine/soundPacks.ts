@@ -32,6 +32,27 @@
  */
 export type SoundPackId = 'wood' | 'string' | 'drum' | 'rhythm';
 
+/* ───────────────────────── 루프 구조 (진실의 출처) ───────────────────────── */
+
+/**
+ * 루프 한 바퀴 길이 (초) — `scripts/generate-sound-packs.py`의 `CYCLE`과 같은 값.
+ *
+ * ⚠️ 2026-08-06 신설. 이전엔 이 숫자가 파이썬 스크립트·`practice.tsx`의 `CYCLE_MS`·
+ * `TempoRing`의 기본 prop 세 곳에 각각 박혀 있었고, 실제로 **어긋난 적이 있다**
+ * (2026-08-01 오디오를 2.0초로 재생성하며 화면만 고치고 컴포넌트 기본값 2600을
+ * 놓쳤다 — AOS 리뷰 V-4). 앱 쪽 진실의 출처를 여기 하나로 모은다.
+ */
+export const CYCLE_SEC = 2.0;
+
+/**
+ * 백스윙 시작 → 임팩트까지의 길이 (초). 스크립트의 `SWING`과 같은 값.
+ * 임팩트 진동을 소리에 맞춰 예약할 때 쓴다.
+ */
+export const SWING_SEC = 1.1;
+
+export const CYCLE_MS = CYCLE_SEC * 1000;
+export const IMPACT_AT_MS = SWING_SEC * 1000;
+
 export type SoundPack = {
   id: SoundPackId;
   label: string;
@@ -41,10 +62,24 @@ export type SoundPack = {
    * true인 팩은 마커음 3개 외에 일정한 펄스가 더 들린다.
    */
   hasPulse?: boolean;
+  /**
+   * 무료 티어에서 쓸 수 있는가 (2026-08-06, Premium 게이팅).
+   *
+   * [[v1.0-출시사양]]의 Premium 3종 중 하나가 "사운드팩 전체"다.
+   * 무료로 여는 건 **기본팩(나무) 하나** — 이 팩이 곧 브랜드 사운드라
+   * 무료 사용자도 제품의 소리 정체성은 온전히 경험한다. 나머지 3종은
+   * 취향·환경에 맞춘 선택지이므로 유료로 둔다.
+   */
+  free?: boolean;
 };
 
 export const SOUND_PACKS: SoundPack[] = [
-  { id: 'wood', label: '나무', description: '나무를 두드리는 소리 — 가장 자연스러워요' },
+  {
+    id: 'wood',
+    label: '나무',
+    description: '나무를 두드리는 소리 — 가장 자연스러워요',
+    free: true,
+  },
   { id: 'string', label: '현', description: '뜯는 현 — 여운이 남아 리듬이 이어져요' },
   { id: 'drum', label: '북', description: '낮은 타격 — 시끄러운 실내에서도 잘 들려요' },
   {
@@ -54,6 +89,13 @@ export const SOUND_PACKS: SoundPack[] = [
     hasPulse: true,
   },
 ];
+
+/** 무료 티어의 기본 사운드팩 — 체험이 끝나면 여기로 되돌린다 */
+export const FREE_SOUND_PACK: SoundPackId = 'wood';
+
+export function isPackFree(id: SoundPackId): boolean {
+  return SOUND_PACKS.find((p) => p.id === id)?.free === true;
+}
 /**
  * 템포 × 사운드팩 조합 오디오.
  * require는 정적 경로만 받으므로 전부 나열한다(번들러 제약).
@@ -149,12 +191,28 @@ export type ShotIntervalSec = 0 | 15 | 25 | 40;
 
 export const SHOT_INTERVALS: {
   value: ShotIntervalSec; label: string; hint: string;
+  /**
+   * 무료 티어에서 쓸 수 있는가 (2026-08-06, Premium 게이팅).
+   *
+   * [[v1.0-출시사양]]의 Premium 항목은 "어드레스 대기시간 **커스텀**"이다.
+   * 그래서 두 가지 기본 모드는 무료로 연다 — 빈 스윙(연속)과 기본 간격(25초).
+   * 이 둘만으로도 앱의 핵심 훈련 루프가 온전히 돌아간다. 유료로 두는 건
+   * "내 타석 사이클에 맞게 조절하는" 부분이다.
+   */
+  free?: boolean;
 }[] = [
-  { value: 0,  label: '연속',  hint: '공 없이 빈 스윙을 반복할 때' },
+  { value: 0,  label: '연속',  hint: '공 없이 빈 스윙을 반복할 때', free: true },
   { value: 15, label: '15초',  hint: '공이 빨리 올라오는 타석' },
-  { value: 25, label: '25초',  hint: '기본 — 결과를 확인하고 다시 준비할 여유' },
+  { value: 25, label: '25초',  hint: '기본 — 결과를 확인하고 다시 준비할 여유', free: true },
   { value: 40, label: '40초',  hint: '프리샷 루틴을 온전히 지킬 때' },
 ];
+
+/** 무료 티어의 기본 샷 간격 — 체험이 끝나면 여기로 되돌린다 */
+export const FREE_SHOT_INTERVAL: ShotIntervalSec = 25;
+
+export function isIntervalFree(v: ShotIntervalSec): boolean {
+  return SHOT_INTERVALS.find((s) => s.value === v)?.free === true;
+}
 
 /* 매 샷 직전 울리는 카운트인 */
 /**

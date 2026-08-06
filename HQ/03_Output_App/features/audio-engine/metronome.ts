@@ -27,6 +27,28 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioStatu
  *   있는 기종이라면 ②가 안전망 역할을 한다. 실기기 확인 시 특히 "루프 경계에서 박자가
  *   끊기거나 튀는지"를 반드시 체크할 것.
  */
+/**
+ * 상태 이벤트 주기 (ms).
+ *
+ * 기본값은 500ms인데, 그 정도로는 2초 루프의 경계를 최대 0.5초 늦게 잡는다.
+ * 스윙 카운트는 경계를 **놓치지만 않으면** 되지만, 임팩트 진동을 경계에 맞춰
+ * 다시 예약하려면 지연이 작아야 한다. 100ms면 경계 검출 오차가 ±100ms이고,
+ * 검출 시점의 `currentTime`으로 그 오차마저 보정할 수 있다(아래 emitCycle 참고).
+ *
+ * 더 줄이지 않는 이유: 이벤트가 JS 브리지를 타므로 주기를 낮출수록 부하가 는다.
+ * 연습 화면은 20~40분 켜두는 화면이라 배터리도 고려해야 한다.
+ */
+const STATUS_INTERVAL_MS = 100;
+
+/**
+ * 루프 경계 판정 임계값 (초).
+ *
+ * 재생 위치가 이만큼 "뒤로 튀면" 한 바퀴 돈 것으로 본다. 2초 루프에서 0.25초는
+ * 정상 진행(100ms)의 두 배 이상이라 오검출이 나지 않고, 배속 2.0배에서도
+ * 한 이벤트 간 진행량(0.2초)보다 커서 놓치지 않는다.
+ */
+const CYCLE_WRAP_SEC = 0.25;
+
 export class Metronome {
   private player: AudioPlayer | null = null;
   private loadedAudioFile: any = null;
@@ -34,12 +56,65 @@ export class Metronome {
   /** 매 샷 직전 카운트인 전용 플레이어 (2026-08-01) */
   private countIn: AudioPlayer | null = null;
 
+  /* ── 스윙 카운트를 오디오에서 뽑기 위한 상태 (2026-08-06, AOS 리뷰 P-3) ── */
+  /** 루프 한 바퀴가 돌 때마다 호출된다. 인자는 "경계로부터 이미 지난 초". */
+  private onCycle: ((lateSec: number) => void) | null = null;
+  /** 지금 루프(연속) 모드인가 — 샷 사이클 모드에서는 경계를 세지 않는다 */
+  private looping = false;
+  /** 직전 이벤트의 재생 위치 */
+  private lastTime = 0;
+  /** seek 직후에는 위치가 뒤로 튀므로 잠깐 경계 판정을 쉰다 */
+  private suppressWrapUntil = 0;
+
   async configureAudioMode() {
     await setAudioModeAsync({
       playsInSilentMode: true,
-      shouldPlayInBackground: true,
+      /**
+       * 2026-08-06 `true` → `false` (AOS 리뷰 Q-5).
+       *
+       * 설정과 실제 동작이 반대를 향하고 있었다. 여기서는 백그라운드 재생을
+       * 허용해두고, `practice.tsx`는 백그라운드 진입 시 **무조건 정지**한다.
+       * 정지시키는 판단 자체는 옳다(경과 시간이 JS 타이머라 백그라운드에서
+       * 스로틀링돼 화면과 실제가 어긋나고, 배터리도 먹는다).
+       *
+       * 게다가 안드로이드는 포그라운드 서비스 없이는 백그라운드 오디오가
+       * 어차피 제한되고, 쓰지도 않는 백그라운드 오디오 권한은 스토어 심사에서
+       * 설명을 요구받는다. 동작에 설정을 맞춘다.
+       */
+      shouldPlayInBackground: false,
       interruptionMode: 'duckOthers', // 기존 expo-av의 shouldDuckAndroid와 동등한 동작(다른 앱 소리를 줄임, 정지시키지 않음)
     });
+  }
+
+  /**
+   * 루프 한 바퀴(= 스윙 1회)마다 호출될 콜백을 등록한다. (2026-08-06 신설)
+   *
+   * ## 왜 필요했나 — NSM의 입력값이 JS 타이머였다
+   *
+   * 이전에는 `practice.tsx`가 `setInterval(CYCLE_MS / rate)`로 스윙을 셌다.
+   * 문제가 세 겹이었다.
+   *   ① JS 타이머는 기기 부하에 따라 드리프트한다 — 오디오와 조금씩 어긋난다
+   *   ② 재생 중 설정(진동·속도)을 바꾸면 effect가 재생성되며 **카운트 위상이 초기화**된다
+   *   ③ 그 숫자가 곧 NSM("스윙 20회 이상 = 완료")의 원천 데이터다
+   *
+   * 즉 유일한 출시 게이트(D30 리텐션)를 판정할 숫자를 오디오와 무관한 타이머로
+   * 세고 있었다. 이제 **오디오가 진실의 출처**다 — 소리가 한 바퀴 돌아야 1스윙이다.
+   *
+   * ⚠️ `setOnCycle`은 상태를 갈아끼우지 않는다(재생 중 호출해도 카운트가 리셋되지 않는다).
+   * 위 ②를 구조적으로 막기 위한 것이므로 이 성질을 깨지 말 것.
+   */
+  setOnCycle(fn: ((lateSec: number) => void) | null) {
+    this.onCycle = fn;
+  }
+
+  private emitCycle(positionSec: number) {
+    if (!this.looping) return;
+    /*
+      경계를 최대 STATUS_INTERVAL_MS 늦게 잡으므로, "이미 얼마나 지났는지"를
+      함께 넘긴다. 호출부는 이 값으로 임팩트 진동 예약 시간을 보정한다 —
+      매 사이클 오디오 기준으로 다시 잡히므로 오차가 누적되지 않는다.
+    */
+    this.onCycle?.(Math.max(0, positionSec));
   }
 
   async load(audioFile: any, volume = 1) {
@@ -49,31 +124,56 @@ export class Metronome {
     }
     await this.unload();
 
-    const player = createAudioPlayer(audioFile);
+    const player = createAudioPlayer(audioFile, { updateInterval: STATUS_INTERVAL_MS });
     player.loop = true;
     player.shouldCorrectPitch = true;
     player.volume = Math.min(1, Math.max(0, volume));
 
-    // 방어적 폴백 — 위 클래스 주석 참고. 네이티브 loop 큐잉이 매끄럽지 않은 기종 대비.
     const subscription = player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+      const now = Date.now();
+      const prev = this.lastTime;
+      this.lastTime = status.currentTime;
+
+      if (!status.playing) return;
+
+      // 방어적 폴백 — 위 클래스 주석 참고. 네이티브 loop 큐잉이 매끄럽지 않은 기종 대비.
       if (status.didJustFinish && player.loop) {
         player.seekTo(0);
         player.play();
+        this.emitCycle(0);
+        this.lastTime = 0;
+        this.suppressWrapUntil = now + STATUS_INTERVAL_MS * 2;
+        return;
+      }
+
+      /*
+        네이티브 loop가 정상인 기종에서는 didJustFinish가 뜨지 않고 재생 위치만
+        조용히 0으로 돌아간다. 그래서 "위치가 뒤로 튀었는가"로 경계를 잡는다.
+        seek 직후는 정상적으로 뒤로 튀므로 제외한다.
+      */
+      if (now >= this.suppressWrapUntil && status.currentTime + CYCLE_WRAP_SEC < prev) {
+        this.emitCycle(status.currentTime);
       }
     });
     this.removeStatusListener = () => subscription.remove();
 
     this.player = player;
     this.loadedAudioFile = audioFile;
+    this.lastTime = 0;
   }
 
   async play(rate = 1.0) {
     if (!this.player) return;
     this.stopShotCycle();
+    this.looping = true;
     this.player.loop = true;
     this.player.seekTo(0);
     this.player.setPlaybackRate(rate);
     this.player.play();
+    this.lastTime = 0;
+    this.suppressWrapUntil = Date.now() + STATUS_INTERVAL_MS * 2;
+    // 재생을 누른 순간이 첫 스윙 신호다 — 첫 바퀴도 세어야 카운트가 소리와 일치한다.
+    this.emitCycle(0);
   }
 
   /* ─────────────────── 샷 사이클 모드 (2026-08-01, WBS 2.15) ─────────────────── */
@@ -108,6 +208,11 @@ export class Metronome {
     this.stopShotCycle();
     if (!this.player) return;
     this.player.loop = false;
+    /*
+      샷 모드는 루프가 아니라 "한 번 재생"의 반복이다. 경계 검출을 끄고,
+      스윙 카운트는 아래 onSwing이 담당한다 — 세는 곳이 둘이면 이중 계수가 난다.
+    */
+    this.looping = false;
 
     const gen = ++this.shotGen;
     const alive = () => gen === this.shotGen;
@@ -178,6 +283,7 @@ export class Metronome {
 
   async stop() {
     this.stopShotCycle();
+    this.looping = false;
     if (!this.player) return;
     this.player.pause();
   }
@@ -195,6 +301,8 @@ export class Metronome {
 
   async unload() {
     this.stopShotCycle();
+    this.looping = false;
+    this.onCycle = null;
     if (!this.player) return;
     try {
       this.removeStatusListener?.();
