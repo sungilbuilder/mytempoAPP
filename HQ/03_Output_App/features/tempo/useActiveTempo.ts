@@ -10,10 +10,19 @@ import { loopAudio, type SoundPackId } from '../audio-engine/soundPacks';
 
 export type ActiveTempo = {
   label: string;
-  /** 부제 — "내 스윙 · 7/24 저장" 같은 보조 문구 */
+  /** 부제 — "내 스윙 · 7/24 등록" 같은 보조 문구 */
   sublabel: string;
   ratio: number;
   isOwnSwing: boolean;
+  /**
+   * 사용자가 실제로 무언가 고른 적이 있는가. (2026-08-06 신설, AOS 리뷰 P-4)
+   *
+   * false면 지금 값은 **기본값일 뿐 "이어서 할 것"이 아니다.** 홈이 처음 켠
+   * 사용자에게도 "이어서 연습 / 프리셋 · 3:1"이라고 말하고 있었는데,
+   * 이어갈 게 없는데 이어서 하라고 하는 셈이다. 홈이 첫인상을 만드는 화면이라
+   * 여기서 나는 위화감이 특히 아깝다.
+   */
+  hasHistory: boolean;
   /**
    * 오디오를 고를 때 쓰는 프리셋 id (2026-08-01, 사운드 팩 도입).
    * 내 스윙은 비율이 임의라 가장 가까운 프리셋의 오디오를 빌려 쓴다.
@@ -37,23 +46,27 @@ export function useActiveTempo(): ActiveTempo {
       const near = nearestPreset(swing.ratio);
       return {
         label: swing.name,
-        sublabel: `내 스윙 · ${d.getMonth() + 1}/${d.getDate()} 저장`,
+        /* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */
+        sublabel: `내 스윙 · ${d.getMonth() + 1}/${d.getDate()} 등록`,
         ratio: swing.ratio,
         isOwnSwing: true,
+        hasHistory: true,
         presetIdForAudio: near.id,
         audioFileFor: (pack: SoundPackId) => loopAudio(near.id, pack),
       };
     }
   }
 
-  const preset =
-    (source?.kind === 'preset' ? getPresetById(source.presetId) : undefined) ?? TEMPO_PRESETS[0];
+  const chosen = source?.kind === 'preset' ? getPresetById(source.presetId) : undefined;
+  const preset = chosen ?? TEMPO_PRESETS[0];
 
   return {
     label: preset.alias,
     sublabel: `프리셋 · ${preset.ratioLabel}`,
     ratio: preset.ratioBackswing / preset.ratioDownswing,
     isOwnSwing: false,
+    /* 고른 적이 없으면 기본값을 돌려주되, 그 사실을 화면이 알 수 있게 한다 */
+    hasHistory: chosen !== undefined,
     presetIdForAudio: preset.id,
     audioFileFor: (pack: SoundPackId) => loopAudio(preset.id, pack),
   };

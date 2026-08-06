@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../constants/theme';
 import { TempoRing } from '../components/TempoRing';
-import { Caption, koreanWrap } from '../components/ui';
+import { Caption, MIN_TOUCH, koreanWrap, numeralScaling, textScaling } from '../components/ui';
 import {
   SLOWMO_HINT,
   characterForRatio,
@@ -14,8 +14,10 @@ import {
   precisionForFps,
 } from '../features/tempo/character';
 import { recommendSwingSpeed } from '../features/tempo/swingSpeeds';
+import { playCue } from '../features/audio-engine/cues';
 import { computeTempo, useSwingStore } from '../store/useSwingStore';
 import { usePracticeStore } from '../store/usePracticeStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 /**
  * "기준 리듬"으로 쓸 프리셋. 비율이 3:1 근처로 모인다는 관찰이 반복 확인되는
@@ -48,10 +50,24 @@ export default function ResultScreen() {
     fps?: string;
   }>();
 
+  /**
+   * ⚠️ 2026-08-06 딥링크 방어 (AOS 리뷰 Q-3)
+   *
+   * 이전엔 파라미터가 없으면 개발용 더미값(top 0.56 / impact 0.74)으로 떨어졌다.
+   * `mytempo://` scheme이 매니페스트에 선언돼 있어 **`mytempo://result`로 바로
+   * 들어올 수 있고**, 그러면 아무도 측정하지 않은 "약 3:1" 가짜 결과가 만들어져
+   * 저장까지 됐다. 실사용 빈도는 낮지만 사용자 데이터를 오염시키는 경로다.
+   *
+   * 마킹 값이 없으면 결과 화면이 존재할 이유가 없으므로 마킹 화면으로 보낸다.
+   * (에러를 띄우지 않는 이유: 사용자 잘못이 아니고, 할 일이 명확하다)
+   */
+  const hasMarks =
+    params.start !== undefined && params.top !== undefined && params.impact !== undefined;
+
   const marks = {
     start: Number(params.start ?? 0),
-    top: Number(params.top ?? 0.56),
-    impact: Number(params.impact ?? 0.74),
+    top: Number(params.top ?? 0),
+    impact: Number(params.impact ?? 0),
   };
   const { backswingSec, downswingSec, ratio, suspicious } = computeTempo(marks);
   const character = characterForRatio(ratio);
@@ -69,6 +85,8 @@ export default function ResultScreen() {
   const videoUri = params.videoUri || undefined;
 
   const [name, setName] = useState(defaultName());
+  const uiSounds = useSettingsStore((s) => s.uiSounds);
+  const beepVolume = useSettingsStore((s) => s.beepVolume);
   const addSwing = useSwingStore((s) => s.addSwing);
   const selectSwing = usePracticeStore((s) => s.selectSwing);
   const selectPreset = usePracticeStore((s) => s.selectPreset);
@@ -104,6 +122,13 @@ export default function ResultScreen() {
    */
   function save(mode: 'mine' | 'reference' | 'saveOnly') {
     const id = `swing-${Date.now()}`;
+    /*
+      등록 완료 확인음 (2026-08-06, T-24)
+      시그니처 사운드의 마지막 두 음(E3 → B4, 3:1)만 떼어 쓴다.
+      로고를 축약해 쓰는 것이라 들을 때마다 브랜드가 강화된다.
+      → scripts/generate-sound-packs.py §2-④
+    */
+    if (uiSounds) playCue('saved', beepVolume);
     addSwing({
       id,
       name: name.trim() || defaultName(),
@@ -127,6 +152,9 @@ export default function ResultScreen() {
     else router.replace('/practice');
   }
 
+  /* 훅을 전부 호출한 뒤에 분기한다 — 훅 순서가 조건에 따라 달라지면 안 된다 */
+  if (!hasMarks) return <Redirect href="/marking" />;
+
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
       {/*
@@ -149,26 +177,36 @@ export default function ResultScreen() {
             colors={{ primary: c.primary, accent: c.accent, track: c.track, dot: c.ink }}
           >
             <Text
+              {...numeralScaling}
+              accessibilityLabel={`측정 결과 ${display.text}`}
               className="font-display-bold text-ink dark:text-inkDark"
               style={{ fontSize: precision === 'coarse' ? 42 : 52 }}
             >
               {display.text}
             </Text>
             {display.tolerance && (
-              <Text className="font-display text-caption text-subtle dark:text-subtleDark pt-[2px]">
+              <Text
+                {...numeralScaling}
+                accessibilityLabel={`오차 범위 ${display.tolerance}`}
+                className="font-display text-caption text-muted dark:text-mutedDark pt-[2px]"
+              >
                 {display.tolerance}
               </Text>
             )}
           </TempoRing>
 
-          <Text className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s2">
+          <Text
+            {...numeralScaling}
+            accessibilityLabel={`백스윙 ${backswingSec.toFixed(2)}초, 다운스윙 ${downswingSec.toFixed(2)}초`}
+            className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s2"
+          >
             {formatSeconds(backswingSec)} : {formatSeconds(downswingSec)}
           </Text>
         </View>
 
         {/* 성향 한 줄 */}
         <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s2 mt-s4">
-          <Text className="font-kr-bold text-body text-ink dark:text-inkDark">
+          <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
             {character.headline}
           </Text>
           <Caption className="pt-[4px]">{character.detail}</Caption>
@@ -219,9 +257,12 @@ export default function ResultScreen() {
             value={name}
             onChangeText={setName}
             placeholder="7월 드라이버"
-            placeholderTextColor={c.subtle}
+            /* 2026-08-06: placeholder도 읽어야 하는 글자다 — subtle(3.19:1) → muted(5.55:1) */
+            placeholderTextColor={c.muted}
             maxLength={20}
             returnKeyType="done"
+            accessibilityLabel="스윙 이름"
+            {...textScaling}
             className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-s2 font-kr-medium text-body text-ink dark:text-inkDark"
           />
           {/*
@@ -247,40 +288,60 @@ export default function ResultScreen() {
         <View className="flex-row gap-[8px]">
           <Pressable
             onPress={() => save('mine')}
-            className="flex-1 rounded-card items-center py-s2 px-[6px] bg-primary dark:bg-primary-neon active:opacity-80"
+            accessibilityRole="button"
+            accessibilityLabel={`내 스윙 그대로 등록하고 연습하기. 비율 ${display.text}, 속도 ${pick ? pick.speed.label : '기본'}`}
+            style={{ minHeight: MIN_TOUCH }}
+            className="flex-1 rounded-card items-center justify-center py-s2 px-[6px] bg-primary dark:bg-primary-neon active:opacity-80"
           >
             <Text
               {...koreanWrap}
+              {...textScaling}
               className="font-kr-bold text-body text-onPrimary dark:text-onPrimaryDark text-center"
             >
               내 스윙 그대로
             </Text>
-            <Text className="font-kr-medium text-caption text-onPrimary dark:text-onPrimaryDark opacity-80 pt-[3px] text-center">
+            <Text
+              {...textScaling}
+              className="font-kr-medium text-caption text-onPrimary dark:text-onPrimaryDark opacity-80 pt-[3px] text-center"
+            >
               {`${display.text} · ${pick ? pick.speed.label : '기본'}`}
             </Text>
           </Pressable>
 
           <Pressable
             onPress={() => save('reference')}
-            className="flex-1 rounded-card items-center py-s2 px-[6px] bg-surface2 dark:bg-surface2Dark border border-line dark:border-lineDark active:opacity-80"
+            accessibilityRole="button"
+            accessibilityLabel="3대 1 기준 리듬으로 연습하기. 속도는 내 스윙에 맞춘 값을 유지합니다"
+            style={{ minHeight: MIN_TOUCH }}
+            className="flex-1 rounded-card items-center justify-center py-s2 px-[6px] bg-surface2 dark:bg-surface2Dark border border-line dark:border-lineDark active:opacity-80"
           >
             <Text
               {...koreanWrap}
+              {...textScaling}
               className="font-kr-bold text-body text-ink dark:text-inkDark text-center"
             >
               3:1 리듬으로
             </Text>
-            <Text className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-[3px] text-center">
+            <Text
+              {...textScaling}
+              className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-[3px] text-center"
+            >
               {pick ? `속도 ${pick.speed.label} 유지` : '비율만 기준으로'}
             </Text>
           </Pressable>
         </View>
 
+        {/* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */}
         <Pressable
           onPress={() => save('saveOnly')}
-          className="items-center py-s2 active:opacity-70"
+          accessibilityRole="button"
+          accessibilityLabel="등록만 하고 연습은 나중에"
+          style={{ minHeight: MIN_TOUCH }}
+          className="items-center justify-center py-s2 active:opacity-70"
         >
-          <Text className="font-kr-medium text-body text-muted dark:text-mutedDark">저장만 하기</Text>
+          <Text {...textScaling} className="font-kr-medium text-body text-muted dark:text-mutedDark">
+            등록만 하기
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>

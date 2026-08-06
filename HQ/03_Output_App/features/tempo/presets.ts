@@ -13,17 +13,25 @@ export type TempoPreset = {
 };
 
 /**
- * 프리셋 라벨링 방법론 (WBS 0.9, `preset-naming-methodology-proposal.md`):
+ * 프리셋 라벨링 방법론 (WBS 0.9, [[프리셋-라벨링-방법론]]):
  * - 비율(3:1 등)은 객관적 수치라 그대로 사용
  * - Tour Tempo 고유의 프레임 카운트 표기(21/7, 24/8 등)는 쓰지 않음 — 방법론 네이밍 유사성 회피
- * - 감성 별칭(안정형/균형형/파워형)은 PM 확정 전까지 잠정값
  *
- * 설명 문구는 2026-07-31 시안(Premium "프리셋" 화면)에서 가져왔다.
+ * ⚠️ 2026-08-06 별칭 교체 (AOS 리뷰 B-3 · 창업자 확정)
+ *   안정형 → 여유롭게 · 균형형 → 고르게 · 파워형 → 길게
+ *
+ * 이전 별칭은 우열이 있는 것처럼 읽혔다("파워형"이 좋아 보이고 "안정형"이
+ * 무난해 보인다). 하지만 이 셋을 가르는 건 **비율일 뿐 실력이 아니다.**
+ * 새 별칭은 동작을 그대로 서술하기만 한다. 자세한 근거는 `character.ts` 주석 참고.
+ *
+ * ⚠️ `character.ts`의 라벨과 **반드시 같아야 한다.** 프리셋 화면과 결과 화면에서
+ * 같은 비율이 다른 이름으로 불리면 사용자는 두 개념이라고 생각한다.
+ *   2.5:1 → 고르게 · 3:1 → 여유롭게 · 3.5:1 → 길게
  */
 export const TEMPO_PRESETS: TempoPreset[] = [
   {
     id: 'preset-3-1',
-    alias: '안정형',
+    alias: '여유롭게',
     ratioLabel: '3:1',
     // 2026-07-31: character.ts의 같은 라벨 설명과 표현을 맞췄다.
     // (두 곳에 다른 문장이 있어 프리셋 화면과 결과 화면에서 설명이 달라 보였다)
@@ -33,17 +41,17 @@ export const TEMPO_PRESETS: TempoPreset[] = [
   },
   {
     id: 'preset-2-5-1',
-    alias: '균형형',
+    alias: '고르게',
     ratioLabel: '2.5:1',
-    description: '올리고 내리는 속도가 고르게 이어지는 리듬',
+    description: '올리고 내리는 시간 차가 크지 않은 리듬',
     ratioBackswing: 2.5,
     ratioDownswing: 1,
   },
   {
     id: 'preset-3-5-1',
-    alias: '파워형',
+    alias: '길게',
     ratioLabel: '3.5:1',
-    description: '길게 끌어 올렸다가 빠르게 내려치는 리듬',
+    description: '길게 끌어 올렸다가 짧게 내려오는 리듬',
     ratioBackswing: 3.5,
     ratioDownswing: 1,
   },

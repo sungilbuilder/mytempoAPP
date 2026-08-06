@@ -23,6 +23,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { CYCLE_MS } from '../features/audio-engine/soundPacks';
 
 const R = 42;
 const CIRCUMFERENCE = 2 * Math.PI * R; // ≈ 263.9
@@ -36,7 +37,15 @@ export type TempoRingProps = {
   playing?: boolean;
   /** 배속 — 클수록 점이 빨리 돈다 */
   rate?: number;
-  /** 한 사이클(백스윙+다운스윙) 기준 시간(ms). 배속 1.0 기준 */
+  /**
+   * 한 사이클 기준 시간(ms). 배속 1.0 기준.
+   *
+   * ⚠️ 기본값은 오디오 루프 길이(`CYCLE_MS`)를 그대로 쓴다 (2026-08-06, AOS 리뷰 V-4).
+   * 이전 기본값 2600은 2026-08-01에 오디오를 2.0초로 재생성하면서 놓친 값이었다.
+   * 지금은 `practice.tsx`만 `playing`을 넘겨서 드러나지 않았지만, 홈 링에
+   * 애니메이션을 켜는 순간 **진행 점이 소리보다 30% 느리게 도는** 버그가 됐을 값이다.
+   * 숫자를 여기 다시 적지 말고 항상 오디오 상수를 가져다 쓸 것.
+   */
   cycleMs?: number;
   /** 링 색 */
   colors: {
@@ -58,7 +67,7 @@ export function TempoRing({
   size = 220,
   playing = false,
   rate = 1,
-  cycleMs = 2600,
+  cycleMs = CYCLE_MS,
   colors,
   children,
 }: TempoRingProps) {

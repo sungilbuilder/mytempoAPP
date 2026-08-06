@@ -1,14 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, PanResponder, Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import {
+  ActivityIndicator,
+  Alert,
+  BackHandler,
+  PanResponder,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { palette } from '../constants/theme';
-import { Button, Caption, IconChevronLeft, koreanWrap } from '../components/ui';
+import {
+  Button,
+  Caption,
+  IconButton,
+  IconChevronLeft,
+  MIN_TOUCH,
+  koreanWrap,
+  numeralScaling,
+  textScaling,
+} from '../components/ui';
+import { playCue } from '../features/audio-engine/cues';
 import { type SwingMarks } from '../store/useSwingStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 /** 재생 배속 프리셋 — 임팩트 구간이 워낙 짧아 0.25배속이 기본 작업 속도가 된다. */
 const RATES = [1, 0.5, 0.25] as const;
@@ -78,8 +97,24 @@ export default function MarkingScreen() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
+  const uiSounds = useSettingsStore((s) => s.uiSounds);
+  const beepVolume = useSettingsStore((s) => s.beepVolume);
 
-  const [videoUri, setVideoUri] = useState<string | null>(null);
+  /**
+   * 재마킹 진입 (2026-08-06 신설, AOS 리뷰 P-5)
+   *
+   * 저장된 스윙의 `videoUri`를 아무 데서도 쓰지 않고 있었다. 그래서 한 프레임을
+   * 잘못 찍으면 **삭제한 뒤 갤러리에서 처음부터** 다시 해야 했는데, 마킹은 이 앱에서
+   * 가장 비용이 큰 행위다(주석도 "몇 분이 든다"고 인정한다).
+   *
+   * 이 화면은 이미 `videoUri`만 있으면 동작하므로 파라미터만 열면 된다.
+   * 저비용·고효용 — "내 스윙"에서 [다시 마킹]으로 들어온다.
+   *
+   * ⚠️ uri는 카메라롤 참조라 원본이 지워졌을 수 있다. 그 경우 플레이어가 길이를
+   * 못 읽으므로 아래 `videoMissing`에서 안내하고 갤러리 선택으로 되돌린다.
+   */
+  const params = useLocalSearchParams<{ videoUri?: string }>();
+  const [videoUri, setVideoUri] = useState<string | null>(params.videoUri || null);
   const [durationSec, setDurationSec] = useState(0);
   const [fps, setFps] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -337,20 +372,61 @@ export default function MarkingScreen() {
     }
   }, [zoom, viewOffset.x, viewOffset.y]);
 
+  /**
+   * ⚠️ 2026-08-06 좌표 보정 (AOS 리뷰 U-2)
+   *
+   * 이전 계산은 `g.moveX / trackWidth`였다. `moveX`는 **화면 절대 좌표**인데
+   * `trackWidth`는 좌우 패딩(`px-s3` = 24px)을 제외한 트랙 자체의 폭이다.
+   * 트랙의 화면상 시작 X를 빼지 않아 **손가락과 스크러버가 계속 24px 어긋났다.**
+   *
+   * 폭 390px 기기에서 트랙 342px 기준 24px = 약 7%. 3초 영상이면 0.2초,
+   * 30fps로 6프레임이다. 왼쪽 끝을 아무리 밀어도 0초에 닿지 못하는 것도 같은 원인.
+   * 프레임 버튼이 있어 치명적이진 않았지만, **정확도가 존재 이유인 화면에서
+   * 드래그가 처음부터 틀린 곳을 짚고 있었다.**
+   *
+   * `measureInWindow`로 트랙의 화면상 X를 잡아 빼준다. onLayout뿐 아니라 터치를
+   * 잡는 순간에도 다시 재는 이유: 회전·글꼴 확대·스크롤로 위치가 바뀔 수 있고,
+   * 그때 onLayout이 항상 다시 오지는 않는다.
+   */
+  const trackRef = useRef<View>(null);
+  const trackX = useRef(0);
+  const measureTrack = useCallback(() => {
+    trackRef.current?.measureInWindow((x, _y, w) => {
+      trackX.current = x;
+      if (w > 0) trackWidth.current = w;
+    });
+  }, []);
+
+  /** 화면 절대 X → 영상 시각(초) */
+  const seekToPageX = useCallback((pageX: number) => {
+    const rel = pageX - trackX.current;
+    const ratio = Math.min(1, Math.max(0, rel / Math.max(1, trackWidth.current)));
+    const sec = ratio * durationRef.current;
+    seekRef.current(Math.max(minSecRef.current, sec));
+  }, []);
+
+  const seekToPageXRef = useRef(seekToPageX);
+  const measureTrackRef = useRef(measureTrack);
+  useEffect(() => {
+    seekToPageXRef.current = seekToPageX;
+    measureTrackRef.current = measureTrack;
+  }, [seekToPageX, measureTrack]);
+
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
+      onPanResponderGrant: (_, g) => {
         if (isPlayingRef.current) {
           playerRef.current?.pause();
           setIsPlaying(false);
         }
+        measureTrackRef.current();
+        // 트랙을 탭하면 그 자리로 바로 이동한다 — 끌기 시작 전에도 반응해야 자연스럽다.
+        seekToPageXRef.current(g.x0);
       },
       onPanResponderMove: (_, g) => {
-        const ratio = Math.min(1, Math.max(0, g.moveX / Math.max(1, trackWidth.current)));
-        const sec = ratio * durationRef.current;
-        seekRef.current(Math.max(minSecRef.current, sec));
+        seekToPageXRef.current(g.moveX);
       },
     })
   ).current;
@@ -375,6 +451,13 @@ export default function MarkingScreen() {
     const next = { ...marks, [meta.key]: currentSec };
     setMarks(next);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    /*
+      확인음 (2026-08-06, T-24)
+      마킹은 화면을 뚫어져라 보는 작업이라 "찍혔다"는 확인이 시각으로만 오면
+      눈이 한 번 더 일해야 한다. 짧은 나무 소리 한 번이 그 부담을 덜어준다.
+      영상 소리는 음소거돼 있어(player.muted) 겹칠 걱정이 없다.
+    */
+    if (uiSounds) playCue('mark', beepVolume);
 
     if (step < 2) {
       setStep((step + 1) as Step);
@@ -397,9 +480,36 @@ export default function MarkingScreen() {
     });
   }
 
+  /**
+   * 마킹 도중 이탈 확인 (2026-08-06 신설, AOS 리뷰 U-1 부수 항목)
+   *
+   * 뒤로가기·헤더 버튼 어느 쪽으로 나가든 **작업 손실을 한 번 확인한다.**
+   * 마킹은 영상을 프레임 단위로 훑는 작업이라 몇 분이 든다. 아무것도 안 찍었으면
+   * 잃을 게 없으므로 묻지 않고 그냥 나간다 — 의미 없는 확인창은 방해일 뿐이다.
+   */
+  const confirmLeave = useCallback(() => {
+    const marked = Object.keys(marks).length;
+    if (marked === 0) {
+      router.back();
+      return;
+    }
+    Alert.alert('마킹을 그만둘까요?', `지금까지 찍은 ${marked}개 지점이 사라져요.`, [
+      { text: '계속하기', style: 'cancel' },
+      { text: '그만두기', style: 'destructive', onPress: () => router.back() },
+    ]);
+  }, [marks, router]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      confirmLeave();
+      return true;
+    });
+    return () => sub.remove();
+  }, [confirmLeave]);
+
   function undo() {
     if (step === 0) {
-      router.back();
+      confirmLeave();
       return;
     }
     const prev = (step - 1) as Step;
@@ -420,13 +530,18 @@ export default function MarkingScreen() {
     return (
       <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-s3 pt-s1 pb-s2">
-          <Pressable onPress={() => router.back()} hitSlop={14}>
+          <IconButton label="뒤로" onPress={() => router.back()}>
             <IconChevronLeft color={c.ink} size={22} />
-          </Pressable>
+          </IconButton>
         </View>
 
         <View className="flex-1 px-s3 justify-center gap-s3">
-          <Text {...koreanWrap} className="font-kr-black text-h1 text-ink dark:text-inkDark leading-[32px]">
+          <Text
+            {...koreanWrap}
+            {...textScaling}
+            accessibilityRole="header"
+            className="font-kr-black text-h1 text-ink dark:text-inkDark leading-[32px]"
+          >
             스윙 영상을 골라주세요
           </Text>
           <Caption>
@@ -451,17 +566,42 @@ export default function MarkingScreen() {
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
       {/* 헤더 — 진행 단계 + 되돌리기 상시 노출 */}
       <View className="flex-row items-center justify-between px-s3 pt-s1 pb-s2">
-        <Pressable onPress={() => router.back()} hitSlop={14}>
+        <IconButton
+          label="마킹 그만두기"
+          hint="지금까지 찍은 지점이 사라집니다"
+          onPress={confirmLeave}
+        >
           <IconChevronLeft color={c.ink} size={22} />
-        </Pressable>
-        <Text className="font-display-bold text-body text-ink dark:text-inkDark">{step + 1} / 3</Text>
-        <Pressable onPress={undo} hitSlop={14}>
-          <Text className="font-kr-medium text-caption text-muted dark:text-mutedDark">되돌리기</Text>
+        </IconButton>
+        <Text
+          {...numeralScaling}
+          accessibilityLabel={`3단계 중 ${step + 1}단계`}
+          className="font-display-bold text-body text-ink dark:text-inkDark"
+        >
+          {step + 1} / 3
+        </Text>
+        <Pressable
+          onPress={undo}
+          accessibilityRole="button"
+          accessibilityLabel={step === 0 ? '마킹 그만두기' : '직전 단계로 되돌리기'}
+          hitSlop={14}
+          style={{ minHeight: MIN_TOUCH, minWidth: 48 }}
+          className="items-end justify-center"
+        >
+          <Text {...textScaling} className="font-kr-medium text-caption text-muted dark:text-mutedDark">
+            되돌리기
+          </Text>
         </Pressable>
       </View>
 
       <View className="px-s3">
-        <Text className="font-kr-bold text-h1 text-ink dark:text-inkDark">{meta.title}</Text>
+        <Text
+          {...textScaling}
+          accessibilityRole="header"
+          className="font-kr-bold text-h1 text-ink dark:text-inkDark"
+        >
+          {meta.title}
+        </Text>
         <Caption className="pt-[6px]">{meta.hint}</Caption>
       </View>
 
@@ -540,26 +680,58 @@ export default function MarkingScreen() {
         {zoom > 1.02 && (
           <Pressable
             onPress={() => setZoom(1)}
-            hitSlop={8}
-            className="flex-row items-center gap-[4px] bg-surface2 dark:bg-surface2Dark rounded-pill px-s1 py-[5px] active:opacity-70"
+            accessibilityRole="button"
+            accessibilityLabel={`확대 ${zoom.toFixed(1)}배, 탭하면 원래 크기로`}
+            hitSlop={12}
+            style={{ minHeight: MIN_TOUCH }}
+            className="flex-row items-center justify-center gap-[4px] bg-surface2 dark:bg-surface2Dark rounded-pill px-s1 active:opacity-70"
           >
-            <Text className="font-display-bold text-caption text-ink dark:text-inkDark">
+            <Text
+              {...numeralScaling}
+              className="font-display-bold text-caption text-ink dark:text-inkDark"
+            >
               {zoom.toFixed(1)}x
             </Text>
-            <Text className="font-kr-medium text-caption text-muted dark:text-mutedDark">해제</Text>
+            <Text {...textScaling} className="font-kr-medium text-caption text-muted dark:text-mutedDark">
+              해제
+            </Text>
           </Pressable>
         )}
 
-        <View className="flex-row items-center gap-[6px]">
+        {/*
+          ⚠️ 2026-08-06 두 가지 수정 (AOS 리뷰 V-2 · A-4)
+
+          ① `dark:bg-primaryNeon` → `dark:bg-primary-neon`
+             토큰이 `primary.neon`이라 클래스는 하이픈이어야 한다. 코드베이스의
+             다른 7곳은 전부 올바른데 여기 한 곳만 틀려 있었고, NativeWind는
+             모르는 클래스를 조용히 무시하므로 **다크 모드에서 선택된 배속이
+             배경과 구분되지 않았다**(2.74:1 → 의도했던 10.56:1).
+             `tsc --noEmit`은 이런 종류를 잡지 못한다.
+
+          ② 높이 30dp → 48dp. 마킹의 기본 작업 속도가 0.25배속이라 이 버튼은
+             장식이 아니라 **핵심 조작**이다.
+        */}
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="재생 배속"
+          className="flex-row items-center gap-[6px]"
+        >
           {RATES.map((r, i) => (
             <Pressable
               key={r}
               onPress={() => setRateIndex(i)}
-              className={`px-s1 py-[6px] rounded-card ${
-                i === rateIndex ? 'bg-primary dark:bg-primaryNeon' : 'bg-surface2 dark:bg-surface2Dark'
+              accessibilityRole="radio"
+              accessibilityLabel={`${r}배속`}
+              accessibilityState={{ checked: i === rateIndex, selected: i === rateIndex }}
+              style={{ minHeight: MIN_TOUCH, minWidth: 44 }}
+              className={`px-s1 rounded-card items-center justify-center ${
+                i === rateIndex
+                  ? 'bg-primary dark:bg-primary-neon'
+                  : 'bg-surface2 dark:bg-surface2Dark'
               }`}
             >
               <Text
+                {...numeralScaling}
                 className="font-display-bold text-caption"
                 style={{ color: i === rateIndex ? c.onPrimary : c.muted }}
               >
@@ -573,11 +745,20 @@ export default function MarkingScreen() {
       {/* 타임라인 스크러버 */}
       <View className="px-s3">
         <View
+          ref={trackRef}
           {...pan.panHandlers}
           onLayout={(e) => {
             trackWidth.current = e.nativeEvent.layout.width;
+            // 레이아웃이 확정된 뒤 화면상 X를 잡는다 (좌표 보정의 기준점)
+            measureTrack();
           }}
-          className="h-[44px] justify-center"
+          accessibilityRole="adjustable"
+          accessibilityLabel="영상 타임라인"
+          accessibilityHint="좌우로 밀어 대략 맞춘 뒤 아래 프레임 버튼으로 조정하세요"
+          accessibilityValue={{
+            text: `${currentSec.toFixed(2)}초, ${frameNo}번째 프레임`,
+          }}
+          className="h-[48px] justify-center"
         >
           <View className="h-[6px] rounded-pill bg-track dark:bg-trackDark" />
 
@@ -607,29 +788,54 @@ export default function MarkingScreen() {
           />
         </View>
 
-        {/* 프레임 이동 + 재생 — 드래그로 도달할 수 없는 정밀도를 여기서 확보한다 */}
+        {/*
+          프레임 이동 + 재생 — 드래그로 도달할 수 없는 정밀도를 여기서 확보한다.
+
+          2026-08-06 접근성 (AOS 리뷰 A-1): "◀ 1프레임"은 TalkBack이 기호를
+          이상하게 읽는다("검은 왼쪽 삼각형 1프레임"). 화면 글자는 그대로 두고
+          읽히는 이름만 따로 준다.
+        */}
         <View className="flex-row items-center justify-center gap-s2 py-s1">
           <Pressable
             onPress={() => stepFrame(-1)}
-            className="px-s2 py-[10px] rounded-card bg-surface2 dark:bg-surface2Dark active:opacity-70"
+            accessibilityRole="button"
+            accessibilityLabel="한 프레임 뒤로"
+            style={{ minHeight: MIN_TOUCH }}
+            className="px-s2 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
-            <Text className="font-display-bold text-body text-ink dark:text-inkDark">◀ 1프레임</Text>
+            <Text
+              {...numeralScaling}
+              className="font-display-bold text-body text-ink dark:text-inkDark"
+            >
+              ◀ 1프레임
+            </Text>
           </Pressable>
 
           <Pressable
             onPress={togglePlay}
-            className="px-s2 py-[10px] rounded-card bg-surface2 dark:bg-surface2Dark active:opacity-70"
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? '영상 일시정지' : '영상 재생'}
+            style={{ minHeight: MIN_TOUCH }}
+            className="px-s2 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
-            <Text className="font-kr-bold text-body text-ink dark:text-inkDark">
+            <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
               {isPlaying ? '일시정지' : '재생'}
             </Text>
           </Pressable>
 
           <Pressable
             onPress={() => stepFrame(1)}
-            className="px-s2 py-[10px] rounded-card bg-surface2 dark:bg-surface2Dark active:opacity-70"
+            accessibilityRole="button"
+            accessibilityLabel="한 프레임 앞으로"
+            style={{ minHeight: MIN_TOUCH }}
+            className="px-s2 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
-            <Text className="font-display-bold text-body text-ink dark:text-inkDark">1프레임 ▶</Text>
+            <Text
+              {...numeralScaling}
+              className="font-display-bold text-body text-ink dark:text-inkDark"
+            >
+              1프레임 ▶
+            </Text>
           </Pressable>
         </View>
 
@@ -637,7 +843,11 @@ export default function MarkingScreen() {
           조작 안내를 상시 노출로 분리 (2026-07-31 리뷰 반영).
           단계별 힌트에 섞여 있으면 단계가 바뀔 때마다 문구가 달라져 오히려 안 읽힌다.
         */}
-        <Text {...koreanWrap} className="font-kr-medium text-caption text-subtle dark:text-subtleDark text-center pb-[2px]">
+        <Text
+          {...koreanWrap}
+          {...textScaling}
+          className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pb-[2px]"
+        >
           막대를 밀어 대략 맞춘 뒤, 버튼으로 한 프레임씩 조정하세요{'\n'}
           영상은 두 손가락으로 확대할 수 있어요
         </Text>

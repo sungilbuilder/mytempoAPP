@@ -19,6 +19,15 @@ type SettingsState = {
   /** 연습 중 화면 자동 잠금 방지 */
   keepAwake: boolean;
   fontScale: FontScale;
+  /**
+   * 확인음 (2026-08-06 신설, T-24)
+   *
+   * 마킹 확정·스윙 등록·20스윙 달성에서 나는 짧은 확인음.
+   * 기본값 true — 이 제품은 소리가 본체이고, 확인음은 화면을 안 보고도
+   * "됐다"를 알게 해준다. 다만 도서관·회의실처럼 소리를 낼 수 없는 곳에서는
+   * 끌 수 있어야 하므로 토글을 둔다(메트로놈 볼륨과는 별개 축이다).
+   */
+  uiSounds: boolean;
   /** 메트로놈 음색 (2026-08-01) */
   soundPack: SoundPackId;
   /** 재생을 눌러도 이만큼 카운트인 후 시작한다 (2026-08-01) */
@@ -32,6 +41,7 @@ type SettingsState = {
   toggleHaptic: () => void;
   toggleKeepAwake: () => void;
   setFontScale: (s: FontScale) => void;
+  toggleUiSounds: () => void;
   setSoundPack: (p: SoundPackId) => void;
   setShotInterval: (s: ShotIntervalSec) => void;
 };
@@ -43,6 +53,8 @@ export const useSettingsStore = create<SettingsState>()(
     hapticOnImpact: true,
     keepAwake: true,
     fontScale: 'normal',
+    // 2026-08-06 신설 — 확인음 (T-24)
+    uiSounds: true,
     // 2026-08-01 신설 — 사운드 팩 / 어드레스 대기 (WBS 2.8)
     soundPack: 'wood',
     shotIntervalSec: 25,
@@ -51,6 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
     toggleHaptic: () => set((s) => ({ hapticOnImpact: !s.hapticOnImpact })),
     toggleKeepAwake: () => set((s) => ({ keepAwake: !s.keepAwake })),
     setFontScale: (fontScale) => set({ fontScale }),
+    toggleUiSounds: () => set((s) => ({ uiSounds: !s.uiSounds })),
     setSoundPack: (soundPack) => set({ soundPack }),
     setShotInterval: (shotIntervalSec) => set({ shotIntervalSec }),
   }))

@@ -43,6 +43,11 @@ module.exports = {
         subtle: '#8A9382',
         track: '#F0EEE6',
         onPrimary: '#F2F5EE',
+        /**
+         * 골드(accent) 위 텍스트 (2026-08-06, AOS 리뷰 V-1).
+         * 라이트에서 골드 위 흰색은 1.93:1로 AA의 절반도 안 된다 → 먹색 8.61:1.
+         */
+        onAccent: '#16211A',
 
         /* ───────── 다크 ───────── */
         bgDark: '#0D110D',
@@ -50,10 +55,12 @@ module.exports = {
         surface2Dark: '#222A20',
         lineDark: '#2C3629',
         inkDark: '#F2F5EE',
-        mutedDark: '#7E8A79',
+        /* 2026-08-06: #7E8A79는 surface2 위에서 4.08:1 미달이었다 → 4.81:1 */
+        mutedDark: '#8A9782',
         subtleDark: '#5C6659',
         trackDark: '#232C21',
         onPrimaryDark: '#0A0F09',
+        onAccentDark: '#0A0F09',
 
         /**
          * BRAND ROLES (Turn 4)

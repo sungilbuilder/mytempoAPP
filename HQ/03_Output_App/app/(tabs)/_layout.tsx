@@ -39,7 +39,13 @@ export default function TabsLayout() {
       headerShown: false,
       tabBarLabelStyle: { fontFamily: 'NotoSansKR_500Medium', fontSize: 11 },
       tabBarActiveTintColor: c.primary,
-      tabBarInactiveTintColor: c.subtle,
+      /*
+        2026-08-06: subtle → muted (AOS 리뷰 V-3).
+        비활성 탭 라벨은 11px 텍스트다. subtle은 bg 위에서 라이트 3.06 / 다크 3.17로
+        AA(4.5) 미달이었다. 탭 라벨은 "지금 어디에 있고 어디로 갈 수 있는가"를
+        말하는 글자라 흐릿하면 길을 잃는다. muted는 5.31 / 6.19로 통과한다.
+      */
+      tabBarInactiveTintColor: c.muted,
       tabBarStyle: {
         backgroundColor: c.bg,
         borderTopColor: c.line,
@@ -48,7 +54,7 @@ export default function TabsLayout() {
         paddingBottom: 8,
       },
     }),
-    [c.primary, c.subtle, c.bg, c.line]
+    [c.primary, c.muted, c.bg, c.line]
   );
 
   return (

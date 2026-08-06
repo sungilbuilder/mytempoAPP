@@ -25,9 +25,48 @@ export const koreanWrap = {
   textBreakStrategy: 'highQuality',
 } as const;
 
+/**
+ * 시스템 글꼴 확대 대응 (2026-08-06 신설, AOS 리뷰 A-3)
+ *
+ * ## 왜 "확대를 끄지 않고 상한만 두는가"
+ *
+ * 이 앱의 페르소나는 5060이다. `allowFontScaling={false}`로 확대를 막으면
+ * 접근성 설정을 켠 사용자에게 앱만 작게 남는다 — 페르소나를 정면으로 배신한다.
+ * 반대로 RN 기본값(무제한)을 그대로 두면, 폰트 크기가 Tailwind 토큰에 하드코딩돼
+ * 있고 컨테이너 높이가 `h-[44px]` 같은 고정값이라 안드로이드 "가장 크게"(2.0배)에서
+ * 글자가 컨테이너를 뚫는다.
+ *
+ * 그래서 **확대는 허용하되 배율에 상한을 둔다.** 상한은 두 단계로 나눈다.
+ *   · 본문·설명 = 1.5배까지 — 읽어야 하는 글자라 최대한 키운다
+ *   · 숫자·배지 = 1.25배까지 — 링 안 비율("3:1")이나 배지처럼 **자리가 정해진** 글자.
+ *     여기가 커지면 레이아웃이 깨져 오히려 못 읽는다
+ *
+ * ⚠️ 상한을 두는 것으로 "대응 완료"가 되지 않는다. 실기기에서 시스템 글꼴을
+ * 최대로 켜고 전 화면을 한 번 훑는 검증이 반드시 필요하다 → T-06.
+ */
+export const MAX_TEXT_SCALE = 1.5;
+export const MAX_NUMERAL_SCALE = 1.25;
+
+/** 본문 계열 텍스트에 공통으로 붙이는 props */
+export const textScaling = {
+  allowFontScaling: true,
+  maxFontSizeMultiplier: MAX_TEXT_SCALE,
+} as const;
+
+/** 자리가 정해진 숫자·배지용 */
+export const numeralScaling = {
+  allowFontScaling: true,
+  maxFontSizeMultiplier: MAX_NUMERAL_SCALE,
+} as const;
+
 export function H1({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <Text {...koreanWrap} className={`font-kr-bold text-h1 text-ink dark:text-inkDark ${className}`}>
+    <Text
+      {...koreanWrap}
+      {...textScaling}
+      accessibilityRole="header"
+      className={`font-kr-bold text-h1 text-ink dark:text-inkDark ${className}`}
+    >
       {children}
     </Text>
   );
@@ -35,12 +74,28 @@ export function H1({ children, className = '' }: { children: React.ReactNode; cl
 
 export function Body({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <Text {...koreanWrap} className={`text-body text-muted dark:text-mutedDark ${className}`}>
+    <Text
+      {...koreanWrap}
+      {...textScaling}
+      className={`text-body text-muted dark:text-mutedDark ${className}`}
+    >
       {children}
     </Text>
   );
 }
 
+/**
+ * 설명·힌트 텍스트.
+ *
+ * ⚠️ 2026-08-06 기본색 변경: `subtle` → `muted` (AOS 리뷰 V-3).
+ * Caption은 마킹 단계 안내·프리셋 설명·빈 상태·추천 근거 등 **앱이 사용자에게
+ * 무언가를 설명하려는 거의 모든 자리**에 쓰인다. 그런데 `subtle`은 라이트·다크
+ * 양쪽 전 조합에서 2.46~3.19:1이라 12px 텍스트 기준(4.5:1)에 한참 못 미쳤다.
+ * 즉 **설명할 때마다 가장 안 읽히는 색으로 말하고 있었다.**
+ *
+ * `subtle`은 이제 구분선·비활성 아이콘 같은 **장식 요소 전용**이다.
+ * 텍스트에 `subtle`을 쓰려면 그 텍스트가 안 읽혀도 되는지 먼저 자문할 것.
+ */
 export function Caption({
   children,
   className = '',
@@ -51,7 +106,8 @@ export function Caption({
   return (
     <Text
       {...koreanWrap}
-      className={`font-kr-medium text-caption text-subtle dark:text-subtleDark ${className}`}
+      {...textScaling}
+      className={`font-kr-medium text-caption text-muted dark:text-mutedDark ${className}`}
     >
       {children}
     </Text>
@@ -69,7 +125,11 @@ export function Numeral({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <Text className={`font-display-bold text-ink dark:text-inkDark ${className}`}>{children}</Text>;
+  return (
+    <Text {...numeralScaling} className={`font-display-bold text-ink dark:text-inkDark ${className}`}>
+      {children}
+    </Text>
+  );
 }
 
 /* ───────────────────────── 카드 ───────────────────────── */
@@ -87,14 +147,34 @@ export function Card({ className = '', children, ...rest }: ViewProps & { classN
 
 /* ───────────────────────── 버튼 ───────────────────────── */
 
+/**
+ * 최소 터치 타겟 (2026-08-06, AOS 리뷰 A-4)
+ *
+ * Android Material·WCAG 2.2 Target Size(Minimum) 모두 44~48dp를 요구한다.
+ * 손 떨림이 있는 5060 사용자, 그리고 연습장에서 장갑을 낀 채 조작하는 상황을
+ * 생각하면 이건 규격 준수가 아니라 실사용 문제다.
+ */
+export const MIN_TOUCH = 48;
+
 type ButtonProps = PressableProps & {
   label: string;
   /** primary = 확정/이동 액션. accent = 재생 전용(화면당 1곳). ghost = 보조 */
   variant?: 'primary' | 'accent' | 'ghost';
   className?: string;
+  /** 스크린리더가 읽을 이름. 생략하면 label을 그대로 읽는다. */
+  a11yLabel?: string;
+  /** 버튼을 눌렀을 때 무슨 일이 일어나는지 (TalkBack 힌트) */
+  a11yHint?: string;
 };
 
-export function Button({ label, variant = 'primary', className = '', ...rest }: ButtonProps) {
+export function Button({
+  label,
+  variant = 'primary',
+  className = '',
+  a11yLabel,
+  a11yHint,
+  ...rest
+}: ButtonProps) {
   const base = 'rounded-card items-center justify-center py-s2 active:opacity-80';
   const styles =
     variant === 'primary'
@@ -103,26 +183,97 @@ export function Button({ label, variant = 'primary', className = '', ...rest }: 
         ? 'bg-accent dark:bg-accent-neon'
         : 'bg-surface2 dark:bg-surface2Dark border border-line dark:border-lineDark';
 
+  /**
+   * 2026-08-06 대비 수정 (AOS 리뷰 V-1).
+   * accent(골드) 위에 onPrimary(#F2F5EE)를 얹으면 라이트에서 **1.75:1**이었다.
+   * 골드 위 텍스트는 전용 토큰 onAccent를 쓴다 → 라이트 8.61 / 다크 12.45.
+   */
   const textStyles =
     variant === 'ghost'
       ? 'text-ink dark:text-inkDark'
-      : 'text-onPrimary dark:text-onPrimaryDark';
+      : variant === 'accent'
+        ? 'text-onAccent dark:text-onAccentDark'
+        : 'text-onPrimary dark:text-onPrimaryDark';
 
   return (
-    <Pressable className={`${base} ${styles} ${className}`} {...rest}>
-      <Text className={`font-kr-bold text-body ${textStyles}`}>{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel ?? label}
+      accessibilityHint={a11yHint}
+      style={{ minHeight: MIN_TOUCH }}
+      className={`${base} ${styles} ${className}`}
+      {...rest}
+    >
+      <Text {...textScaling} className={`font-kr-bold text-body ${textStyles}`}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * 아이콘만 있는 버튼 (2026-08-06 신설, AOS 리뷰 A-1)
+ *
+ * 리뷰에서 나온 문제: 코드베이스의 Pressable 39개 중 접근성 속성이 붙은 건 1개뿐이라
+ * TalkBack이 닫기(X)·뒤로(<)·삭제 같은 **아이콘 전용 버튼을 이름 없이** 읽었다.
+ * 그중에는 연습 세션을 저장하는 닫기 버튼과 되돌릴 수 없는 삭제 버튼도 있었다.
+ *
+ * 그래서 아이콘 버튼을 컴포넌트로 만들고 **라벨을 필수 prop으로** 강제한다.
+ * 라벨을 빼먹으면 타입 에러가 나므로 같은 실수가 구조적으로 반복되지 않는다.
+ * 48dp 최소 터치 영역도 여기서 한 번에 보장한다.
+ */
+export function IconButton({
+  label,
+  hint,
+  onPress,
+  children,
+  className = '',
+  disabled,
+}: {
+  /** ⚠️ 필수 — TalkBack이 읽을 이름 */
+  label: string;
+  hint?: string;
+  onPress: () => void;
+  children: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      accessibilityState={{ disabled: !!disabled }}
+      hitSlop={12}
+      style={{ minWidth: MIN_TOUCH, minHeight: MIN_TOUCH }}
+      className={`items-center justify-center active:opacity-60 ${className}`}
+    >
+      {children}
     </Pressable>
   );
 }
 
 /* ───────────────────────── 토글 / 세그먼트 ───────────────────────── */
 
-export function Switch({ value, onPress }: { value: boolean; onPress: () => void }) {
+export function Switch({
+  value,
+  onPress,
+  label,
+}: {
+  value: boolean;
+  onPress: () => void;
+  /** 스크린리더용 이름. 설정 Row의 라벨을 그대로 넘기면 된다. */
+  label?: string;
+}) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="switch"
+      accessibilityLabel={label}
       accessibilityState={{ checked: value }}
+      hitSlop={12}
       className={`w-[52px] h-[30px] rounded-pill px-[3px] justify-center ${
         value ? 'bg-primary dark:bg-primary-neon' : 'bg-surface2 dark:bg-surface2Dark'
       }`}
@@ -140,24 +291,36 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  a11yLabel,
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
+  a11yLabel?: string;
 }) {
   return (
-    <View className="flex-row bg-surface2 dark:bg-surface2Dark rounded-sm p-[3px]">
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={a11yLabel}
+      className="flex-row bg-surface2 dark:bg-surface2Dark rounded-sm p-[3px]"
+    >
       {options.map((opt) => {
         const active = opt.value === value;
         return (
           <Pressable
             key={opt.value}
             onPress={() => onChange(opt.value)}
-            className={`flex-1 py-[9px] rounded-[10px] items-center ${
+            accessibilityRole="radio"
+            accessibilityLabel={opt.label}
+            /* 선택 상태를 checked/selected 양쪽으로 준다 — TalkBack이 둘 중 하나만 읽는 기기가 있다 */
+            accessibilityState={{ checked: active, selected: active }}
+            style={{ minHeight: 40 }}
+            className={`flex-1 py-[9px] rounded-[10px] items-center justify-center ${
               active ? 'bg-surface dark:bg-surfaceDark' : ''
             }`}
           >
             <Text
+              {...textScaling}
               className={`text-caption ${
                 active
                   ? 'font-kr-bold text-ink dark:text-inkDark'
@@ -226,6 +389,13 @@ export function Wordmark({
 }) {
   return (
     <Text
+      /*
+        로고는 글꼴 확대를 따르지 않는다 (2026-08-06).
+        워드마크는 문장이 아니라 **고정 비율의 상표**다. 시스템 확대를 따르면
+        심볼과 자간 비율이 깨져 로고가 아니게 된다. 대신 심볼과 묶어 한 덩어리로
+        읽히도록 Logo 쪽에 accessibilityLabel을 둔다.
+      */
+      allowFontScaling={false}
       className={`font-display-bold text-ink dark:text-inkDark ${className}`}
       style={{ fontSize: size, letterSpacing: size * 0.04 }}
     >
@@ -247,7 +417,14 @@ export function Logo({
   className?: string;
 }) {
   return (
-    <View className={`flex-row items-center ${className}`} style={{ gap: size * 0.4 }}>
+    <View
+      /* 심볼과 워드마크를 한 덩어리로 읽는다 — 따로 읽으면 "mytempo"가 두 번 나온다 */
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel="마이템포"
+      className={`flex-row items-center ${className}`}
+      style={{ gap: size * 0.4 }}
+    >
       <TempoMark size={size} color={color} accentColor={accentColor} />
       <Wordmark size={size * 0.78} />
     </View>

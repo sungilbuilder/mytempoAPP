@@ -3,7 +3,17 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../../constants/theme';
-import { Button, Caption, IconCheck, IconClose, IconTarget, koreanWrap } from '../../components/ui';
+import {
+  Button,
+  Caption,
+  IconButton,
+  IconCheck,
+  IconClose,
+  IconTarget,
+  koreanWrap,
+  numeralScaling,
+  textScaling,
+} from '../../components/ui';
 import { useSwingStore } from '../../store/useSwingStore';
 import { usePracticeStore } from '../../store/usePracticeStore';
 import { characterForRatio, formatRatio, formatSeconds } from '../../features/tempo/character';
@@ -42,17 +52,28 @@ export default function MySwingsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 32 }}>
-        <Text className="font-kr-bold text-h1 text-ink dark:text-inkDark">내 스윙</Text>
+        <Text
+          {...textScaling}
+          accessibilityRole="header"
+          className="font-kr-bold text-h1 text-ink dark:text-inkDark"
+        >
+          내 스윙
+        </Text>
+        {/* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */}
         <Caption className="pt-[6px]">
-          가장 잘 맞은 스윙 하나를 저장해두면, 그 리듬으로 반복 연습할 수 있어요
+          가장 잘 맞은 스윙 하나를 등록해두면, 그 리듬으로 반복 연습할 수 있어요
         </Caption>
 
         {swings.length === 0 ? (
           /* 빈 상태 — 실패가 아니라 다음 할 일을 보여준다 */
           <View className="items-center bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg px-s3 py-s6 mt-s3">
-            <IconTarget color={c.subtle} size={34} />
-            <Text {...koreanWrap} className="font-kr-bold text-body text-ink dark:text-inkDark pt-s2">
-              아직 저장한 스윙이 없어요
+            <IconTarget color={c.muted} size={34} />
+            <Text
+              {...koreanWrap}
+              {...textScaling}
+              className="font-kr-bold text-body text-ink dark:text-inkDark pt-s2"
+            >
+              아직 등록한 스윙이 없어요
             </Text>
             <Caption className="pt-[6px] text-center">
               영상에서 백스윙 시작·탑·임팩트{'\n'}세 지점만 찍으면 됩니다
@@ -76,6 +97,10 @@ export default function MySwingsScreen() {
                       selectSwing(swing.id);
                       router.push('/practice');
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${swing.name}, 비율 ${formatRatio(swing.ratio)}, ${char.label}`}
+                    accessibilityHint="이 리듬으로 연습을 시작합니다"
+                    accessibilityState={{ selected: active }}
                     className={`rounded-lg p-s2 active:opacity-85 ${
                       active
                         ? 'bg-surface dark:bg-surfaceDark border-2 border-primary dark:border-primary-neon'
@@ -85,15 +110,18 @@ export default function MySwingsScreen() {
                     <View className="flex-row items-center justify-between">
                       <View className="flex-1 pr-s2">
                         <View className="flex-row items-center gap-[8px]">
-                          <Text className="font-kr-bold text-h2 text-ink dark:text-inkDark">
+                          <Text
+                            {...textScaling}
+                            className="font-kr-bold text-h2 text-ink dark:text-inkDark"
+                          >
                             {swing.name}
                           </Text>
                           {active && (
-                            <View className="w-[20px] h-[20px] rounded-pill items-center justify-center bg-primary dark:bg-primary-neon">
-                              <IconCheck
-                                color={colorScheme === 'dark' ? c.onPrimary : '#FFFFFF'}
-                                size={13}
-                              />
+                            <View
+                              accessibilityLabel="현재 연습 중인 템포"
+                              className="w-[20px] h-[20px] rounded-pill items-center justify-center bg-primary dark:bg-primary-neon"
+                            >
+                              <IconCheck color={c.onPrimary} size={13} />
                             </View>
                           )}
                         </View>
@@ -101,22 +129,57 @@ export default function MySwingsScreen() {
                           {char.label} · {formatSeconds(swing.backswingSec)} :{' '}
                           {formatSeconds(swing.downswingSec)}
                         </Caption>
+                        {/* 2026-08-06 용어 통일: 저장 → 등록 (AOS 리뷰 B-2) */}
                         <Caption className="pt-[2px]">
-                          {humanDate(swing.createdAt.slice(0, 10))} 저장
+                          {humanDate(swing.createdAt.slice(0, 10))} 등록
                         </Caption>
                       </View>
                       <View className="items-end">
-                        <Text className="font-display-bold text-[26px] text-ink dark:text-inkDark">
+                        <Text
+                          {...numeralScaling}
+                          className="font-display-bold text-[26px] text-ink dark:text-inkDark"
+                        >
                           {formatRatio(swing.ratio)}
                         </Text>
-                        {/* 삭제 — 카드 탭(연습 시작)과 겹치지 않게 별도 영역 */}
-                        <Pressable
-                          onPress={() => confirmDelete(swing.id, swing.name)}
-                          hitSlop={16}
-                          className="pt-[8px] active:opacity-60"
-                        >
-                          <IconClose color={c.subtle} size={17} />
-                        </Pressable>
+                        <View className="flex-row items-center pt-[4px]">
+                          {/*
+                            다시 마킹 (2026-08-06 신설, AOS 리뷰 P-5)
+
+                            한 프레임을 잘못 찍으면 이전에는 **삭제 후 갤러리에서
+                            처음부터** 해야 했다. 마킹은 이 앱에서 가장 비용이 큰
+                            행위인데(몇 분), 그 결과를 고칠 방법이 없었다.
+                            원본 영상 참조가 남아 있을 때만 노출한다 — 카메라롤에서
+                            지워진 영상에 버튼을 띄우면 눌러도 아무 일이 안 일어난다.
+                          */}
+                          {swing.videoUri ? (
+                            <IconButton
+                              label={`${swing.name} 다시 마킹`}
+                              hint="원본 영상에서 세 지점을 다시 찍습니다"
+                              onPress={() =>
+                                router.push({
+                                  pathname: '/marking',
+                                  params: { videoUri: swing.videoUri as string },
+                                })
+                              }
+                            >
+                              <Text
+                                {...textScaling}
+                                className="font-kr-medium text-caption text-muted dark:text-mutedDark"
+                              >
+                                다시 마킹
+                              </Text>
+                            </IconButton>
+                          ) : null}
+
+                          {/* 삭제 — 카드 탭(연습 시작)과 겹치지 않게 별도 영역 */}
+                          <IconButton
+                            label={`${swing.name} 삭제`}
+                            hint="되돌릴 수 없습니다"
+                            onPress={() => confirmDelete(swing.id, swing.name)}
+                          >
+                            <IconClose color={c.muted} size={17} />
+                          </IconButton>
+                        </View>
                       </View>
                     </View>
                   </Pressable>

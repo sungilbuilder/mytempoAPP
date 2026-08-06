@@ -3,7 +3,15 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../constants/theme';
-import { Button, Caption, IconCheck, IconChevronLeft } from '../components/ui';
+import {
+  Button,
+  Caption,
+  IconButton,
+  IconCheck,
+  IconChevronLeft,
+  numeralScaling,
+  textScaling,
+} from '../components/ui';
 import { TEMPO_PRESETS, ratioToBackswingPercent } from '../features/tempo/presets';
 import { usePracticeStore } from '../store/usePracticeStore';
 
@@ -29,16 +37,22 @@ export default function PresetsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-s3 pt-s1 pb-s2">
-        <Pressable onPress={() => router.back()} hitSlop={14}>
+        <IconButton label="뒤로" onPress={() => router.back()}>
           <IconChevronLeft color={c.ink} size={22} />
-        </Pressable>
+        </IconButton>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
-        <Text className="font-kr-bold text-h1 text-ink dark:text-inkDark">템포 고르기</Text>
+        <Text
+          {...textScaling}
+          accessibilityRole="header"
+          className="font-kr-bold text-h1 text-ink dark:text-inkDark"
+        >
+          템포 고르기
+        </Text>
         <Caption className="pt-[6px]">먼저 고르고, 나중에 내 스윙으로 바꿀 수 있어요</Caption>
 
-        <View className="gap-[12px] pt-s3">
+        <View accessibilityRole="radiogroup" accessibilityLabel="기준 리듬" className="gap-[12px] pt-s3">
           {TEMPO_PRESETS.map((preset) => {
             const active = preset.id === selectedId;
             const backPct = ratioToBackswingPercent(preset);
@@ -47,6 +61,9 @@ export default function PresetsScreen() {
               <Pressable
                 key={preset.id}
                 onPress={() => selectPreset(preset.id)}
+                accessibilityRole="radio"
+                accessibilityLabel={`${preset.alias}, ${preset.ratioLabel}, ${preset.description}`}
+                accessibilityState={{ checked: active, selected: active }}
                 className={`rounded-lg p-s2 active:opacity-85 ${
                   active
                     ? 'bg-surface dark:bg-surfaceDark border-2 border-primary dark:border-primary-neon'
@@ -56,18 +73,24 @@ export default function PresetsScreen() {
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1 pr-s2">
                     <View className="flex-row items-center gap-[8px]">
-                      <Text className="font-kr-bold text-h2 text-ink dark:text-inkDark">
+                      <Text
+                        {...textScaling}
+                        className="font-kr-bold text-h2 text-ink dark:text-inkDark"
+                      >
                         {preset.alias}
                       </Text>
                       {active && (
                         <View className="w-[20px] h-[20px] rounded-pill items-center justify-center bg-primary dark:bg-primary-neon">
-                          <IconCheck color={colorScheme === 'dark' ? c.onPrimary : '#FFFFFF'} size={13} />
+                          <IconCheck color={c.onPrimary} size={13} />
                         </View>
                       )}
                     </View>
                     <Caption className="pt-[4px]">{preset.description}</Caption>
                   </View>
-                  <Text className="font-display-bold text-[26px] text-ink dark:text-inkDark">
+                  <Text
+                    {...numeralScaling}
+                    className="font-display-bold text-[26px] text-ink dark:text-inkDark"
+                  >
                     {preset.ratioLabel}
                   </Text>
                 </View>
@@ -86,9 +109,17 @@ export default function PresetsScreen() {
         </View>
       </ScrollView>
 
+      {/*
+        2026-08-06 라벨 수정 (AOS 리뷰 U-5)
+
+        카드를 탭하는 순간 `selectPreset()`이 이미 적용되므로 뒤로 나가도 결과가 같다.
+        즉 이 버튼은 실제로 "연습 화면으로 이동"만 한다. 라벨을 동작에 맞춘다 —
+        선택과 확정이 이중 경로처럼 보이면 사용자는 "눌러야 저장되나?"를 고민한다.
+      */}
       <View className="px-s3 pb-s2">
         <Button
-          label="이 템포로 연습"
+          label="연습 시작"
+          a11yHint="고른 리듬으로 연습 화면을 엽니다"
           onPress={() => router.replace('/practice')}
         />
       </View>
