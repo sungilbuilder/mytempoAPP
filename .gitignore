@@ -9,8 +9,11 @@ web-build/
 *.jsbundle
 
 # 네이티브 빌드 산출물
-/ios
-/android
+# 주의: 선행 슬래시는 레포 루트에만 매칭된다. 앱은 HQ/03_Output_App/ 아래 있으므로
+# 슬래시 없는 패턴을 써야 어느 깊이에서든 잡힌다. (android/app/build 만 839MB)
+# 이 디렉터리는 app.json 설정으로부터 `expo prebuild`가 재생성하므로 커밋 불필요.
+ios/
+android/
 *.orig.*
 *.apk
 *.aab
@@ -29,10 +32,15 @@ yarn-error.*
 Icon?
 ._*
 
-# 에디터
+# 에디터 / 에이전트 로컬 설정
 .vscode/
 .idea/
 *.swp
+.claude/settings.local.json
+
+# 파이썬 도구 캐시 (scripts/*.py)
+__pycache__/
+*.py[cod]
 
 # 환경변수 / 비밀키 (현재 없지만 실수 방지용으로 미리 차단)
 .env
