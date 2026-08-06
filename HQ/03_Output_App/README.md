@@ -9,7 +9,7 @@
 폰도 Wi-Fi도 필요 없습니다. `app/` 폴더의 **실제 화면 코드**가 크롬에서 그대로 돕니다.
 
 ```bash
-cd "/Users/josungil/Desktop/claude projects/golf-tempo-app/HQ/📤_03_Output_App"
+cd "/Users/josungil/Desktop/claude projects/golf-tempo-app/HQ/03_Output_App"
 ```
 
 ```bash
@@ -30,7 +30,7 @@ npm run web
 **1. 앱 폴더로 이동** — 절대경로라 어디서 실행해도 됩니다.
 
 ```bash
-cd "/Users/josungil/Desktop/claude projects/golf-tempo-app/HQ/📤_03_Output_App"
+cd "/Users/josungil/Desktop/claude projects/golf-tempo-app/HQ/03_Output_App"
 ```
 
 이모지 때문에 붙여넣기가 깨지면 이걸 쓰세요. 같은 곳으로 갑니다.
@@ -63,6 +63,41 @@ npm run go:tunnel
 
 ---
 
+## 고치기 전에 — `npm run audit`
+
+```bash
+npm run audit
+```
+
+대비(WCAG) · NativeWind 클래스 오타 · 접근성 라벨 · 오디오(루프 이음매·LUFS·트루피크) ·
+`app.json` 스토어 필수값 · TypeScript를 한 번에 검사합니다. **실패 0건이 기본 상태입니다.**
+
+2026-08-06 통합 리뷰의 결론이 *"만든 것을 확인하는 루프가 없었다"*였습니다.
+P0 8건 중 절반이 "한 번 계산해봤으면 / 한 번 눌러봤으면" 나왔을 것들이라,
+고치는 것과 함께 이 스크립트를 심었습니다. 사람이 기억해서 하는 검사는 언젠가 빠집니다.
+
+소리를 바꿨다면:
+
+```bash
+npm run sounds    # 전 사운드 재생성 (seed 고정 — 결과가 항상 같습니다)
+```
+
+> ⚠️ audit이 통과해도 **Verified가 아닙니다.** 실기기 확인 항목은 볼트의 `T-06`에 있습니다.
+
+### 문서는 이 저장소에 없습니다
+
+기획·브랜드·법무 문서는 전부 옵시디언 볼트(`~/Documents/Obsidian Vault/MYTEMPO/`)에 있습니다.
+자주 찾게 되는 것만:
+
+| 궁금한 것 | 문서 |
+|---|---|
+| 소리를 왜 이렇게 만들었나 | `03_브랜드/사운드-아이덴티티.md` |
+| **`app.json` 권한을 왜 이렇게 잡았나** (JSON이라 주석을 못 답니다) | `10_TODO/T-05-...권한.md` |
+| 최근에 무엇을 왜 고쳤나 | `02_제품/_근거/AOS리뷰-반영-2026-08-06.md` |
+| 무료/유료 경계 | `02_제품/v1.0-출시사양.md` · `10_TODO/T-09-...확정.md` |
+
+---
+
 ## 2026-07-31 디자인 리뉴얼로 바뀐 것
 
 - **탭 구조**: `프리셋 · 내 스윙 · 연습` → **`홈 · 내 스윙 · 기록`**
@@ -81,10 +116,13 @@ npm run go:tunnel
 
 - [ ] 템포 링이 그려지고, 재생 중 점이 링을 따라 도는지
 - [ ] 라이트 ↔ 다크 전환 (설정 → 테마)
-- [ ] **앱을 완전히 껐다 켠 뒤에도** 설정·저장한 스윙·기록이 남아있는지
+- [ ] **앱을 완전히 껐다 켠 뒤에도** 설정·등록한 스윙·기록이 남아있는지
 - [ ] 임팩트에 진동이 오는지 (설정에서 끌 수 있음)
-- [ ] 마킹 → 결과 → 저장 → 연습 → 기록 이 끝까지 이어지는지
+- [ ] 마킹 → 결과 → 등록 → 연습 → 기록 이 끝까지 이어지는지
 - [ ] 연습 10초 이상 후 나가면 기록 탭에 남는지
+- [ ] **시스템 뒤로가기로 나가도** 기록에 남는지 ← 2026-08-06 최우선
+
+전체 검증 목록은 볼트의 `10_TODO/T-06-실기기-핵심검증-GalaxyS25.md`에 있습니다.
 
 ---
 
@@ -118,13 +156,33 @@ components/
   TempoRing.tsx      시그니처 컴포넌트
   ui.tsx             버튼·카드·스위치·아이콘
 
+components/
+  Toast.tsx          화면을 막지 않는 한 줄 알림
+
 features/
   tempo/             프리셋·성향판정·활성템포 훅
-  audio-engine/      메트로놈 (expo-av)
+  audio-engine/      메트로놈 · 사운드팩 · 확인음 (expo-audio)
+  premium/           저장된 설정을 "지금 쓸 수 있는 값"으로 좁히는 훅
 
 store/               zustand + AsyncStorage 영속
+  useEntitlementStore.ts   역방향 체험 7일 · 유료 경계
 constants/theme.ts   raw hex (className 못 쓰는 곳용)
 tailwind.config.js   디자인 토큰 원본
+
+scripts/
+  generate-sound-packs.py  전 사운드 생성 (npm run sounds)
+  audio_tools.py           LUFS·트루피크·루프 진단
+  audit.py                 자동 검증 (npm run audit)
 ```
 
-**색을 바꿀 땐 `tailwind.config.js`와 `constants/theme.ts`를 반드시 같이 고치세요.** 한쪽만 고치면 라이트/다크가 어긋납니다.
+## 고칠 때 지켜야 하는 것
+
+- **색을 바꿀 땐 `tailwind.config.js`와 `constants/theme.ts`를 반드시 같이 고치세요.**
+  한쪽만 고치면 라이트/다크가 어긋납니다. 고친 뒤 `npm run audit`으로 대비를 확인하세요.
+- **골드(accent) 배경 위 텍스트는 `onAccent` 토큰만 씁니다.** 화면에서
+  `colorScheme === 'dark' ? ... : '#FFFFFF'`로 조합하지 마세요 — 그게 주 CTA 대비가
+  1.93:1이 됐던 이유입니다.
+- **`subtle`은 장식 전용입니다.** 설명 텍스트에는 `muted`를 쓰세요.
+- **루프 길이(2.0초)는 바꾸지 마세요.** 스윙 카운트와 링 애니메이션이 여기 묶여 있습니다.
+  값은 `features/audio-engine/soundPacks.ts`의 `CYCLE_SEC` 하나뿐입니다.
+- **아이콘만 있는 버튼은 `IconButton`을 쓰세요.** 라벨이 필수 prop이라 빼먹으면 타입 에러가 납니다.

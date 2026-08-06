@@ -9,7 +9,7 @@ model: inherit
 
 ## 시작 전 필수 확인
 - `~/Documents/Obsidian Vault/MYTEMPO/02_제품/_근거/서비스기획서-PLANNING.md` 6절(기술 아키텍처), 폴더 구조
-- `HQ/📤_03_Output_App/` — 실제 코드가 위치할 디렉토리
+- `HQ/03_Output_App/` — 실제 코드가 위치할 디렉토리
 - `~/Documents/Obsidian Vault/MYTEMPO/09_조직/회사-메모리-현황.md` — 오늘 프로토타입 빌드 순서 확인
 
 ## 역할

@@ -58,7 +58,7 @@
 
 ## 저장소에 남아 있는 것
 
-- `HQ/📤_03_Output_App/` — 앱 소스 (Expo SDK 54)
+- `HQ/03_Output_App/` — 앱 소스 (Expo SDK 54)
 - `HQ/📑_02_Workspace/product_design/brand-system-v2/svg-final/` — **확정 로고 SVG**
 - `HQ/📑_02_Workspace/product_design/brand-icons/store-assets/` — 스토어 아이콘 (최신)
 - `HQ/📑_02_Workspace/strategy/*.xlsx` — WBS/Daily_Report, D-30 체크리스트

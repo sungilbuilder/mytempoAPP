@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="HQ/📤_03_Output_App/assets/images/icon.png" width="120" alt="MYTEMPO 앱 아이콘" />
+<img src="HQ/03_Output_App/assets/images/icon.png" width="120" alt="MYTEMPO 앱 아이콘" />
 
 # 🏌️ MYTEMPO (마이템포)
 
@@ -9,8 +9,8 @@
 Tour Tempo 개념(백스윙 시작 → 탑 → 임팩트, 3구간 비율 템포)에서 영감을 받은
 React Native(Expo) 기반 iOS/Android 크로스플랫폼 골프 스윙 템포 트레이닝 앱
 
-[![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white)](HQ/📤_03_Output_App/package.json)
-[![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react&logoColor=black)](HQ/📤_03_Output_App/package.json)
+[![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white)](HQ/03_Output_App/package.json)
+[![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react&logoColor=black)](HQ/03_Output_App/package.json)
 [![Status](https://img.shields.io/badge/Status-Design%20Renewal%20Complete-brightgreen)](#-진행-상황)
 [![Platform](https://img.shields.io/badge/Platform-Android%20우선%20%7C%20iOS%20예정-lightgrey)](#)
 
@@ -55,7 +55,7 @@ React Native(Expo) 기반 iOS/Android 크로스플랫폼 골프 스윙 템포 �
 ├── HQ/                          # 프로젝트 운영 허브 (AI 에이전트 조직 기반)
 │   ├── 🏢_01_Management/        # 조직 운영, 보고 프로토콜, company-memory(진행 히스토리 원장)
 │   ├── 📑_02_Workspace/         # 부서별 산출물 (기획/디자인/엔지니어링/재무법무/전략)
-│   └── 📤_03_Output_App/        # ⭐ 실제 Expo 앱 소스 코드
+│   └── 03_Output_App/        # ⭐ 실제 Expo 앱 소스 코드
 │       ├── app/                 #   화면 (홈/프리셋/내스윙/히스토리/연습/마킹/결과/설정/온보딩)
 │       ├── components/          #   TempoRing 등 공용 컴포넌트
 │       ├── features/            #   템포 계산, 오디오 엔진
@@ -70,7 +70,7 @@ React Native(Expo) 기반 iOS/Android 크로스플랫폼 골프 스윙 템포 �
 ## 🚀 시작하기
 
 ```bash
-cd "HQ/📤_03_Output_App"
+cd "HQ/03_Output_App"
 npm run setup
 npm run go
 ```

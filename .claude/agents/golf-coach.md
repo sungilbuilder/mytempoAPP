@@ -9,7 +9,7 @@ model: inherit
 
 ## 시작 전 필수 확인
 - `~/Documents/Obsidian Vault/MYTEMPO/02_제품/_근거/서비스기획서-PLANNING.md` — 핵심 가치 제안(내 최고의 스윙 리듬을 저장·반복)과 MVP 기능 정의
-- `features/tempo/presets.ts`, `features/tempo/character.ts` (`HQ/📤_03_Output_App/`) — 현재 프리셋 비율(2.5:1/3:1/3.5:1)과 성향 판정 임계값
+- `features/tempo/presets.ts`, `features/tempo/character.ts` (`HQ/03_Output_App/`) — 현재 프리셋 비율(2.5:1/3:1/3.5:1)과 성향 판정 임계값
 - `~/Documents/Obsidian Vault/MYTEMPO/02_제품/_근거/프리셋-라벨링-방법론.md` — 프리셋 라벨링 방법론(승인 대기 중)
 - `~/Documents/Obsidian Vault/MYTEMPO/09_조직/회사-메모리-현황.md`
 

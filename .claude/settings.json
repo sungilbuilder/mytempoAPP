@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew --version)",
+      "Bash(mas account *)",
+      "Bash(brew list *)",
+      "Bash(find '/Users/josungil/Documents/Obsidian Vault/MYTEMPO/02_제품' -type f -iname *.md)"
+    ]
+  }
+}
