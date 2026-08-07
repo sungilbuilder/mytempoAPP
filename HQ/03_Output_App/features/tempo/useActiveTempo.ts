@@ -3,6 +3,7 @@
  * 프리셋이든 내 스윙이든 화면 입장에선 {라벨, 비율, 오디오} 하나면 되기 때문에
  * 분기를 이 훅 한 곳에만 두고 홈·연습·기록 화면은 결과만 받아 쓴다.
  */
+import type { AudioSource } from 'expo-audio';
 import { usePracticeStore } from '../../store/usePracticeStore';
 import { useSwingStore, getSwingById } from '../../store/useSwingStore';
 import { TEMPO_PRESETS, getPresetById, nearestPreset } from './presets';
@@ -36,7 +37,7 @@ export type ActiveTempo = {
    * 따로 렌더링했기 때문이다(`soundPacks.ts` 주석 참고). 호출부는 속도가
    * 바뀌면 반드시 다시 로드해야 한다.
    */
-  audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) => any;
+  audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) => AudioSource;
 };
 
 /** 아무것도 고른 적 없으면 첫 프리셋(3:1 안정형)을 기본으로 준다. */

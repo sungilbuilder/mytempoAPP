@@ -2,6 +2,7 @@ import {
   createAudioPlayer,
   setAudioModeAsync,
   type AudioPlayer,
+  type AudioSource,
   type AudioStatus,
 } from 'expo-audio';
 
@@ -72,7 +73,7 @@ const CYCLE_WRAP_SEC = 0.25;
 
 export class Metronome {
   private player: AudioPlayer | null = null;
-  private loadedAudioFile: any = null;
+  private loadedAudioFile: AudioSource = null;
   private removeStatusListener: (() => void) | null = null;
   /** 매 샷 직전 카운트인 전용 플레이어 (2026-08-01) */
   private countIn: AudioPlayer | null = null;
@@ -138,7 +139,7 @@ export class Metronome {
     this.onCycle?.(Math.max(0, positionSec));
   }
 
-  async load(audioFile: any, volume = 1) {
+  async load(audioFile: AudioSource, volume = 1) {
     if (this.loadedAudioFile === audioFile && this.player) {
       await this.setVolume(volume);
       return;
@@ -222,7 +223,7 @@ export class Metronome {
    * 필요 없는 곳을 구분해서 쓴다.
    */
   startShotCycle(opts: {
-    countInFile: unknown;
+    countInFile: AudioSource;
     countInSec: number;
     intervalSec: number;
     /** 지금 로드된 루프 파일 한 바퀴 길이 — `soundPacks.cycleSec(속도)` */
@@ -247,7 +248,7 @@ export class Metronome {
       // ① 카운트인 — "지금 어드레스" 신호
       try {
         this.countIn?.remove();
-        const p = createAudioPlayer(opts.countInFile as never);
+        const p = createAudioPlayer(opts.countInFile);
         p.volume = this.player.volume;
         this.countIn = p;
         p.play();

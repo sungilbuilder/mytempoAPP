@@ -35,7 +35,7 @@ export function useSoundPreview() {
     (pack: SoundPackId, volume = 1) => {
       cleanup(); // 연속 탭 시 이전 소리를 끊는다
       try {
-        const p = createAudioPlayer(previewAudio(pack) as never);
+        const p = createAudioPlayer(previewAudio(pack));
         p.volume = Math.min(1, Math.max(0, volume));
         playerRef.current = p;
         p.play();

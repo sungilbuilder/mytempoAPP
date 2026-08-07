@@ -30,6 +30,7 @@
  * 이제 전부 **E3(164.81Hz) 한 음** 위에 음색만 다르게 얹는다.
  * 자세한 근거와 생성 로직은 `scripts/generate-sound-packs.py` 주석 참고.
  */
+import type { AudioSource } from 'expo-audio';
 import {
   BASE_SWING_SEC,
   DEFAULT_SWING_SPEED,
@@ -145,7 +146,7 @@ export function isPackFree(id: SoundPackId): boolean {
  * 이 표는 `scripts/generate-sound-packs.py`가 만드는 파일명과 1:1로 맞아야 한다:
  *   `{비율}__{팩}__{속도}.wav`
  */
-const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, unknown>>> = {
+const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, AudioSource>>> = {
   'preset-3-1': {
     wood: {
       s133: require('../../assets/audio/tempo_3_1__wood__s133.wav'),
@@ -232,7 +233,11 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, unknown>>> 
  * 알 수 없는 값(구버전 저장값 등)은 조용히 기본으로 떨어진다 — 소리가 안 나는
  * 것보다 다른 소리가 나는 편이 낫다.
  */
-export function loopAudio(presetId: string, pack: SoundPackId, speedId: SwingSpeedId): unknown {
+export function loopAudio(
+  presetId: string,
+  pack: SoundPackId,
+  speedId: SwingSpeedId,
+): AudioSource {
   const byPack = LOOPS[presetId] ?? LOOPS['preset-3-1'];
   const bySpeed = byPack[pack] ?? byPack[FREE_SOUND_PACK];
   return bySpeed[speedId] ?? bySpeed[DEFAULT_SWING_SPEED];
@@ -245,7 +250,7 @@ export function loopAudio(presetId: string, pack: SoundPackId, speedId: SwingSpe
  * 들어 있어 탭한 뒤 소리가 나기까지 뜸을 들이고, 2초로 길다. 미리듣기는
  * 시작·탑·임팩트 3박만 1.5초 안에 빠르게 들려준다.
  */
-const PREVIEWS: Record<SoundPackId, unknown> = {
+const PREVIEWS: Record<SoundPackId, AudioSource> = {
   wood: require('../../assets/audio/preview_wood.wav'),
   string: require('../../assets/audio/preview_string.wav'),
   drum: require('../../assets/audio/preview_drum.wav'),
@@ -254,7 +259,7 @@ const PREVIEWS: Record<SoundPackId, unknown> = {
 
 export const PREVIEW_MS = 1500;
 
-export function previewAudio(pack: SoundPackId): unknown {
+export function previewAudio(pack: SoundPackId): AudioSource {
   // 구버전 저장값(beep/click)이 들어와도 조용히 기본 팩으로 떨어진다.
   return PREVIEWS[pack] ?? PREVIEWS.wood;
 }
@@ -337,6 +342,6 @@ export function isIntervalFree(v: ShotIntervalSec): boolean {
 export const COUNT_IN_SEC = 5;
 const COUNT_IN = require('../../assets/audio/countin_5s.wav');
 
-export function countInAudio(): unknown {
+export function countInAudio(): AudioSource {
   return COUNT_IN;
 }
