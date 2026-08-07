@@ -244,6 +244,17 @@ export default function MarkingScreen() {
     }
   }, [player, rateIndex]);
 
+  /**
+   * 순서 가드 — 임팩트를 탑보다 앞서 찍는 등 돌발 순서를 원천 차단한다.
+   * 마킹은 반드시 시간 순서(시작 < 탑 < 임팩트)여야 한다.
+   *
+   * `seekTo`보다 먼저 선언한다 — 아래 `stepFrame`의 deps 배열이 이 값을
+   * 참조하는데, deps는 useCallback 호출 시점에 바로 평가되므로 이 상수가
+   * 그 시점 이전에 이미 초기화돼 있어야 한다(아니면 TDZ 에러).
+   */
+  const prevMarkSec = step > 0 ? marks[STEP_META[step - 1].key] : undefined;
+  const minSec = prevMarkSec !== undefined ? prevMarkSec + frameSec : 0;
+
   /* ── 탐색 ─────────────────────────────────────────── */
   const seekTo = useCallback(
     (sec: number) => {
@@ -267,9 +278,10 @@ export default function MarkingScreen() {
         setIsPlaying(false);
       }
       Haptics.selectionAsync().catch(() => {});
-      seekTo(currentSec + dir * frameSec);
+      // 순서 가드 — 이전 마크보다 앞으로는 못 가게 한다 (드래그 쪽 minSec 클램프와 동일 규칙).
+      seekTo(Math.max(minSec, currentSec + dir * frameSec));
     },
-    [currentSec, frameSec, isPlaying, player, seekTo],
+    [currentSec, frameSec, isPlaying, minSec, player, seekTo],
   );
 
   const togglePlay = useCallback(() => {
@@ -284,13 +296,6 @@ export default function MarkingScreen() {
   }, [player, isPlaying]);
 
   /* ── 타임라인 드래그 ──────────────────────────────── */
-  /**
-   * 순서 가드 — 임팩트를 탑보다 앞서 찍는 등 돌발 순서를 원천 차단한다.
-   * 마킹은 반드시 시간 순서(시작 < 탑 < 임팩트)여야 한다.
-   */
-  const prevMarkSec = step > 0 ? marks[STEP_META[step - 1].key] : undefined;
-  const minSec = prevMarkSec !== undefined ? prevMarkSec + frameSec : 0;
-
   /**
    * 영상 확대/이동 제스처 (2026-08-01)
    *
@@ -449,6 +454,11 @@ export default function MarkingScreen() {
 
   /* ── 마킹 ─────────────────────────────────────────── */
   function markHere() {
+    // 순서 가드 — 프레임 버튼으로 이전 마크보다 앞까지 되돌아온 채로 확인을 누르는 경우를 막는다.
+    if (currentSec < minSec) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
     const meta = STEP_META[step];
     const next = { ...marks, [meta.key]: currentSec };
     setMarks(next);
