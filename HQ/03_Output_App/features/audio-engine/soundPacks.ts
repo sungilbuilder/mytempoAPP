@@ -232,11 +232,7 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, unknown>>> 
  * 알 수 없는 값(구버전 저장값 등)은 조용히 기본으로 떨어진다 — 소리가 안 나는
  * 것보다 다른 소리가 나는 편이 낫다.
  */
-export function loopAudio(
-  presetId: string,
-  pack: SoundPackId,
-  speedId: SwingSpeedId
-): unknown {
+export function loopAudio(presetId: string, pack: SoundPackId, speedId: SwingSpeedId): unknown {
   const byPack = LOOPS[presetId] ?? LOOPS['preset-3-1'];
   const bySpeed = byPack[pack] ?? byPack[FREE_SOUND_PACK];
   return bySpeed[speedId] ?? bySpeed[DEFAULT_SWING_SPEED];
@@ -306,7 +302,9 @@ export function previewAudio(pack: SoundPackId): unknown {
 export type ShotIntervalSec = 0 | 15 | 25 | 40;
 
 export const SHOT_INTERVALS: {
-  value: ShotIntervalSec; label: string; hint: string;
+  value: ShotIntervalSec;
+  label: string;
+  hint: string;
   /**
    * 무료 티어에서 쓸 수 있는가 (2026-08-06, Premium 게이팅).
    *
@@ -317,10 +315,10 @@ export const SHOT_INTERVALS: {
    */
   free?: boolean;
 }[] = [
-  { value: 0,  label: '연속',  hint: '공 없이 빈 스윙을 반복할 때', free: true },
-  { value: 15, label: '15초',  hint: '공이 빨리 올라오는 타석' },
-  { value: 25, label: '25초',  hint: '기본 — 결과를 확인하고 다시 준비할 여유', free: true },
-  { value: 40, label: '40초',  hint: '프리샷 루틴을 온전히 지킬 때' },
+  { value: 0, label: '연속', hint: '공 없이 빈 스윙을 반복할 때', free: true },
+  { value: 15, label: '15초', hint: '공이 빨리 올라오는 타석' },
+  { value: 25, label: '25초', hint: '기본 — 결과를 확인하고 다시 준비할 여유', free: true },
+  { value: 40, label: '40초', hint: '프리샷 루틴을 온전히 지킬 때' },
 ];
 
 /** 무료 티어의 기본 샷 간격 — 체험이 끝나면 여기로 되돌린다 */

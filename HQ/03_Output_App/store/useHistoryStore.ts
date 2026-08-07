@@ -72,12 +72,11 @@ export const useHistoryStore = create<HistoryState>()(
     'history',
     (set) => ({
       sessions: [],
-      addSession: (session) =>
-        set((s) => ({ sessions: [session, ...s.sessions].slice(0, 500) })),
+      addSession: (session) => set((s) => ({ sessions: [session, ...s.sessions].slice(0, 500) })),
       clearAll: () => set({ sessions: [] }),
     }),
-    { partialize: (s) => ({ sessions: s.sessions }) }
-  )
+    { partialize: (s) => ({ sessions: s.sessions }) },
+  ),
 );
 
 /* ───────────────────────── 집계 함수 ───────────────────────── */
@@ -130,9 +129,7 @@ function summarizeRange(sessions: PracticeSession[], fromDaysAgo: number, toDays
   /** NSM — "완료한 연습"이 있었던 날 수 */
   const completedDays = new Set(inRange.filter(isCompleted).map((s) => s.date)).size;
   const avgRatio =
-    inRange.length > 0
-      ? inRange.reduce((acc, s) => acc + s.ratio, 0) / inRange.length
-      : 0;
+    inRange.length > 0 ? inRange.reduce((acc, s) => acc + s.ratio, 0) / inRange.length : 0;
 
   return {
     dayCount,
@@ -180,9 +177,7 @@ export function summarize(sessions: PracticeSession[]): HistorySummary {
     weekCompletedDays: thisWeek.completedDays,
     avgRatio: thisWeek.avgRatio,
     ratioDelta:
-      thisWeek.count > 0 && lastWeek.count > 0
-        ? thisWeek.avgRatio - lastWeek.avgRatio
-        : null,
+      thisWeek.count > 0 && lastWeek.count > 0 ? thisWeek.avgRatio - lastWeek.avgRatio : null,
     streak: computeStreak(sessions),
   };
 }
@@ -204,7 +199,7 @@ export const FREE_HISTORY_DAYS = 7;
 export function visibleSessions(
   sessions: PracticeSession[],
   full: boolean,
-  days = FREE_HISTORY_DAYS
+  days = FREE_HISTORY_DAYS,
 ): PracticeSession[] {
   if (full) return sessions;
   const keys = new Set<string>();

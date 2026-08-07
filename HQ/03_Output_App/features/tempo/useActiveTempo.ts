@@ -59,8 +59,7 @@ export function useActiveTempo(): ActiveTempo {
         isOwnSwing: true,
         hasHistory: true,
         presetIdForAudio: near.id,
-        audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) =>
-          loopAudio(near.id, pack, speed),
+        audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) => loopAudio(near.id, pack, speed),
       };
     }
   }
@@ -76,7 +75,6 @@ export function useActiveTempo(): ActiveTempo {
     /* 고른 적이 없으면 기본값을 돌려주되, 그 사실을 화면이 알 수 있게 한다 */
     hasHistory: chosen !== undefined,
     presetIdForAudio: preset.id,
-    audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) =>
-      loopAudio(preset.id, pack, speed),
+    audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) => loopAudio(preset.id, pack, speed),
   };
 }

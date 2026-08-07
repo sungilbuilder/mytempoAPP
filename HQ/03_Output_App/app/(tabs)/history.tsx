@@ -111,9 +111,7 @@ export default function HistoryScreen() {
             <Text {...koreanWrap} className="font-kr-bold text-body text-ink dark:text-inkDark">
               아직 연습 기록이 없어요
             </Text>
-            <Caption className="pt-[6px] text-center">
-              한 번만 연습해도 여기에 남습니다
-            </Caption>
+            <Caption className="pt-[6px] text-center">한 번만 연습해도 여기에 남습니다</Caption>
           </View>
         ) : (
           <View className="pt-s3">
@@ -125,7 +123,10 @@ export default function HistoryScreen() {
                 className="flex-row items-center justify-between py-s2 border-b border-line dark:border-lineDark"
               >
                 <View className="flex-1 pr-s2">
-                  <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
+                  <Text
+                    {...textScaling}
+                    className="font-kr-bold text-body text-ink dark:text-inkDark"
+                  >
                     {humanDate(s.date)}
                   </Text>
                   {/*

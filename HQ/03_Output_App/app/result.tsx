@@ -227,7 +227,10 @@ export default function ResultScreen() {
         */}
         {pick && (
           <View className="bg-surface2 dark:bg-surface2Dark rounded-card p-s2 mt-s2">
-            <Text {...koreanWrap} className="font-kr-medium text-caption text-ink dark:text-inkDark">
+            <Text
+              {...koreanWrap}
+              className="font-kr-medium text-caption text-ink dark:text-inkDark"
+            >
               {pick.outOfRange
                 ? `스윙 전체가 ${pick.measuredSec.toFixed(2)}초예요. 준비된 단계 중에서는 ${pick.speed.label}가 가장 가깝지만 차이가 있는 편이에요.`
                 : `스윙 전체가 ${pick.measuredSec.toFixed(2)}초예요. ${pick.speed.label} 단계로 연습하면 지금 리듬 그대로 익힐 수 있어요.`}
@@ -339,7 +342,10 @@ export default function ResultScreen() {
           style={{ minHeight: MIN_TOUCH }}
           className="items-center justify-center py-s2 active:opacity-70"
         >
-          <Text {...textScaling} className="font-kr-medium text-body text-muted dark:text-mutedDark">
+          <Text
+            {...textScaling}
+            className="font-kr-medium text-body text-muted dark:text-mutedDark"
+          >
             등록만 하기
           </Text>
         </Pressable>

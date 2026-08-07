@@ -41,7 +41,7 @@ export function useRenderTrace(name: string, extra?: Record<string, unknown>) {
   } else if (count.current === BURST_LIMIT && !warned.current) {
     warned.current = true;
     console.warn(
-      `[렌더추적] 🔴 ${name} 이(가) 1초 안에 ${BURST_LIMIT}회 렌더됐습니다 — 여기가 루프의 진원지입니다.${detail}`
+      `[렌더추적] 🔴 ${name} 이(가) 1초 안에 ${BURST_LIMIT}회 렌더됐습니다 — 여기가 루프의 진원지입니다.${detail}`,
     );
   }
 }

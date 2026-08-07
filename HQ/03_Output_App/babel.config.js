@@ -7,10 +7,7 @@ module.exports = function (api) {
      * (2026-07-30 수정) 이전에는 metro의 withNativeWind만 설정하고 이 부분이 빠져 있어서
      * className이 전부 무시될 수 있었다 — 실기기에서 스타일이 하나도 안 먹던 원인 중 하나.
      */
-    presets: [
-      ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
-      'nativewind/babel',
-    ],
+    presets: [['babel-preset-expo', { jsxImportSource: 'nativewind' }], 'nativewind/babel'],
     /**
      * (2026-07-30, SDK54 업그레이드) Reanimated v4부터 워크릿 처리가 react-native-worklets로
      * 분리되어 babel 플러그인도 'react-native-reanimated/plugin' 대신

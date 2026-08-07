@@ -310,7 +310,7 @@ export default function PracticeScreen() {
       // 확인음 플레이어가 남아 있으면 해제한다 (expo-audio는 자동 해제되지 않는다)
       releaseCues();
     },
-    []
+    [],
   );
 
   /**
@@ -579,50 +579,50 @@ export default function PracticeScreen() {
 
         {/* 하단 컨트롤 — 주 버튼은 항상 같은 자리 */}
         <View className="px-s3 pb-s2">
-        <Pressable
-          onPress={toggle}
-          accessibilityRole="button"
-          accessibilityLabel={isPlaying ? '연습 정지' : '연습 재생'}
-          accessibilityHint={
-            isPlaying ? '메트로놈 소리를 멈춥니다' : '선택한 템포로 소리가 반복 재생됩니다'
-          }
-          accessibilityState={{ busy: isPlaying }}
-          className="flex-row items-center justify-center gap-[8px] bg-accent dark:bg-accent-neon rounded-lg py-s3 active:opacity-85"
-          style={{
-            minHeight: 56,
-            shadowColor: c.accent,
-            shadowOpacity: 0.45,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 6 },
-            elevation: 6,
-          }}
-        >
-          {isPlaying ? (
-            <IconStop color={onAccentText} size={22} />
-          ) : (
-            <IconPlay color={onAccentText} size={22} />
-          )}
-          <Text {...textScaling} className="font-kr-bold text-h2" style={{ color: onAccentText }}>
-            {isPlaying ? '정지' : '재생'}
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={toggle}
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? '연습 정지' : '연습 재생'}
+            accessibilityHint={
+              isPlaying ? '메트로놈 소리를 멈춥니다' : '선택한 템포로 소리가 반복 재생됩니다'
+            }
+            accessibilityState={{ busy: isPlaying }}
+            className="flex-row items-center justify-center gap-[8px] bg-accent dark:bg-accent-neon rounded-lg py-s3 active:opacity-85"
+            style={{
+              minHeight: 56,
+              shadowColor: c.accent,
+              shadowOpacity: 0.45,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 6,
+            }}
+          >
+            {isPlaying ? (
+              <IconStop color={onAccentText} size={22} />
+            ) : (
+              <IconPlay color={onAccentText} size={22} />
+            )}
+            <Text {...textScaling} className="font-kr-bold text-h2" style={{ color: onAccentText }}>
+              {isPlaying ? '정지' : '재생'}
+            </Text>
+          </Pressable>
 
-        {/*
+          {/*
           샷 간격 모드 안내 (2026-08-01)
           이 모드는 소리가 오랫동안 안 나는 구간이 있어서, 설명이 없으면
           "고장 났나" 싶어진다. 그래서 재생 전후 모두 상시 노출한다.
         */}
-        {shotIntervalSec > 0 && (
-          <Text
-            {...koreanWrap}
-            {...textScaling}
-            className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
-          >
-            {`${shotIntervalSec}초마다 한 번 · 카운트인 ${COUNT_IN_SEC}초가 울리면 어드레스`}
-          </Text>
-        )}
+          {shotIntervalSec > 0 && (
+            <Text
+              {...koreanWrap}
+              {...textScaling}
+              className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
+            >
+              {`${shotIntervalSec}초마다 한 번 · 카운트인 ${COUNT_IN_SEC}초가 울리면 어드레스`}
+            </Text>
+          )}
 
-        {/*
+          {/*
           스윙 속도 (2026-08-01 — 기존 "느리게 / 1.0x / 빠르게" 배속 스테퍼를 대체)
 
           바꾼 이유: 이전엔 "1.0x"라는 숫자만 보여줬는데, 이건 골퍼에게 아무 의미가
@@ -630,86 +630,88 @@ export default function PracticeScreen() {
           하나가 몇 초에 끝나는가**를 그대로 보여준다. 비율(3:1)은 그대로 두고
           절대 속도만 바뀐다는 점이 화면에서 바로 읽혀야 한다. (features/tempo/swingSpeeds.ts)
         */}
-        <View className="pt-s3">
-          <Caption className="text-center pb-[8px]">
-            스윙 속도 — 빠른 게 더 좋은 건 아니에요
-          </Caption>
-          <View className="flex-row gap-[6px]">
-            {SWING_SPEEDS.map((s) => {
-              const active = s.id === swingSpeed;
-              const isPick = s.id === recommendation?.speed.id;
-              return (
-                <Pressable
-                  key={s.id}
-                  onPress={() => changeSpeed(s.id)}
-                  accessibilityRole="radio"
-                  accessibilityLabel={`스윙 속도 ${s.label}${isPick ? ', 내 템포 추천' : ''}`}
-                  accessibilityState={{ checked: active, selected: active }}
-                  className={`flex-1 items-center justify-center py-[10px] rounded-card ${
-                    active ? 'bg-primary dark:bg-primary-neon' : 'bg-surface2 dark:bg-surface2Dark'
-                  } active:opacity-80`}
-                  style={[
-                    { minHeight: 56 },
-                    /* 추천 단계는 선택돼 있지 않아도 테두리로 표시해 눈에 띄게 한다 */
-                    !active && isPick ? { borderWidth: 1, borderColor: c.accent } : null,
-                  ]}
-                >
-                  {/* 초를 주인공으로 — 형용사가 아니라 사실이 먼저 읽혀야 한다 */}
-                  <Text
-                    {...numeralScaling}
-                    className="font-display-bold text-body"
-                    style={{ color: active ? c.onPrimary : c.ink }}
+          <View className="pt-s3">
+            <Caption className="text-center pb-[8px]">
+              스윙 속도 — 빠른 게 더 좋은 건 아니에요
+            </Caption>
+            <View className="flex-row gap-[6px]">
+              {SWING_SPEEDS.map((s) => {
+                const active = s.id === swingSpeed;
+                const isPick = s.id === recommendation?.speed.id;
+                return (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => changeSpeed(s.id)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`스윙 속도 ${s.label}${isPick ? ', 내 템포 추천' : ''}`}
+                    accessibilityState={{ checked: active, selected: active }}
+                    className={`flex-1 items-center justify-center py-[10px] rounded-card ${
+                      active
+                        ? 'bg-primary dark:bg-primary-neon'
+                        : 'bg-surface2 dark:bg-surface2Dark'
+                    } active:opacity-80`}
+                    style={[
+                      { minHeight: 56 },
+                      /* 추천 단계는 선택돼 있지 않아도 테두리로 표시해 눈에 띄게 한다 */
+                      !active && isPick ? { borderWidth: 1, borderColor: c.accent } : null,
+                    ]}
                   >
-                    {s.label}
-                  </Text>
-                  <Text
-                    {...numeralScaling}
-                    className="font-kr-medium text-[11px] pt-[2px]"
-                    style={{ color: active ? c.onPrimary : c.muted }}
-                  >
-                    {isPick ? '내 템포' : s.nickname}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    {/* 초를 주인공으로 — 형용사가 아니라 사실이 먼저 읽혀야 한다 */}
+                    <Text
+                      {...numeralScaling}
+                      className="font-display-bold text-body"
+                      style={{ color: active ? c.onPrimary : c.ink }}
+                    >
+                      {s.label}
+                    </Text>
+                    <Text
+                      {...numeralScaling}
+                      className="font-kr-medium text-[11px] pt-[2px]"
+                      style={{ color: active ? c.onPrimary : c.muted }}
+                    >
+                      {isPick ? '내 템포' : s.nickname}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
-          {/*
+            {/*
             선택한 속도에서 백스윙·다운스윙이 각각 몇 초인지 사실대로 보여준다.
             "왜 이 속도를 골랐는지"를 스스로 설명할 수 있게 하는 장치다.
           */}
-          <Text
-            {...koreanWrap}
-            {...textScaling}
-            className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s2"
-          >
-            {`백스윙 ${breakdown.backswingSec.toFixed(2)}초 · 다운스윙 ${breakdown.downswingSec.toFixed(2)}초`}
-          </Text>
+            <Text
+              {...koreanWrap}
+              {...textScaling}
+              className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s2"
+            >
+              {`백스윙 ${breakdown.backswingSec.toFixed(2)}초 · 다운스윙 ${breakdown.downswingSec.toFixed(2)}초`}
+            </Text>
 
-          {/*
+            {/*
             추천 안내 (2026-08-01)
 
             추천은 "네가 도달해야 할 목표"가 아니라 **측정된 네 스윙에 가장 가까운
             출발점**이다. 그래서 근거가 된 실측값을 반드시 함께 보여준다 —
             숫자를 감추고 "이게 당신에게 맞아요"라고만 하면 근거 없는 단정이 된다.
           */}
-          {recommendation && recommendation.speed.id !== swingSpeed && (
-            <Pressable
-              onPress={() => changeSpeed(recommendation.speed.id)}
-              accessibilityRole="button"
-              accessibilityLabel={`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초입니다. 추천 속도 ${recommendation.speed.label}로 맞추기`}
-              style={{ minHeight: 48 }}
-              className="mt-s2 rounded-card border border-line dark:border-lineDark px-s2 py-[10px] justify-center active:opacity-70"
-            >
-              <Text
-                {...koreanWrap}
-                {...textScaling}
-                className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center"
+            {recommendation && recommendation.speed.id !== swingSpeed && (
+              <Pressable
+                onPress={() => changeSpeed(recommendation.speed.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초입니다. 추천 속도 ${recommendation.speed.label}로 맞추기`}
+                style={{ minHeight: 48 }}
+                className="mt-s2 rounded-card border border-line dark:border-lineDark px-s2 py-[10px] justify-center active:opacity-70"
               >
-                {`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초예요 · 탭하면 ${recommendation.speed.label}로 맞춰요`}
-              </Text>
-            </Pressable>
-          )}
+                <Text
+                  {...koreanWrap}
+                  {...textScaling}
+                  className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center"
+                >
+                  {`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초예요 · 탭하면 ${recommendation.speed.label}로 맞춰요`}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </ScrollView>

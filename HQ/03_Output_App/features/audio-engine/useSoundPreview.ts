@@ -46,7 +46,7 @@ export function useSoundPreview() {
         cleanup();
       }
     },
-    [cleanup]
+    [cleanup],
   );
 
   // 화면을 벗어나면 반드시 정리한다.

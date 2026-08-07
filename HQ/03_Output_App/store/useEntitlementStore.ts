@@ -71,8 +71,8 @@ export const useEntitlementStore = create<EntitlementState>()(
         isPremium: s.isPremium,
         trialEndSeen: s.trialEndSeen,
       }),
-    }
-  )
+    },
+  ),
 );
 
 export type Entitlement = {
@@ -96,7 +96,7 @@ export type Entitlement = {
 export function computeEntitlement(
   startedAt: string | null,
   isPremium: boolean,
-  now = Date.now()
+  now = Date.now(),
 ): Entitlement {
   if (isPremium) {
     return { full: true, trialActive: false, trialDaysLeft: 0, isPremium: true };

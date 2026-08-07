@@ -11,8 +11,7 @@ import { DEFAULT_SWING_SPEED, type SwingSpeedId } from '../features/tempo/swingS
 
 /** 연습 소스: 프리셋 3종 중 하나이거나, 저장해둔 내 스윙 */
 export type PracticeSource =
-  | { kind: 'preset'; presetId: string }
-  | { kind: 'swing'; swingId: string };
+  { kind: 'preset'; presetId: string } | { kind: 'swing'; swingId: string };
 
 type PracticeState = {
   source: PracticeSource | null;
@@ -47,10 +46,8 @@ export const usePracticeStore = create<PracticeState>()(
       source: null,
       swingSpeed: DEFAULT_SWING_SPEED,
       isPlaying: false,
-      selectPreset: (presetId) =>
-        set({ source: { kind: 'preset', presetId }, isPlaying: false }),
-      selectSwing: (swingId) =>
-        set({ source: { kind: 'swing', swingId }, isPlaying: false }),
+      selectPreset: (presetId) => set({ source: { kind: 'preset', presetId }, isPlaying: false }),
+      selectSwing: (swingId) => set({ source: { kind: 'swing', swingId }, isPlaying: false }),
       setSwingSpeed: (id) => set({ swingSpeed: id }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
     }),
@@ -67,6 +64,6 @@ export const usePracticeStore = create<PracticeState>()(
       migrate를 주지 않으면 zustand가 복원을 통째로 포기해 기존 사용자의
       "마지막 연습" 기록이 날아간다.
     */
-    { partialize: (s) => ({ source: s.source, swingSpeed: s.swingSpeed }) }
-  )
+    { partialize: (s) => ({ source: s.source, swingSpeed: s.swingSpeed }) },
+  ),
 );

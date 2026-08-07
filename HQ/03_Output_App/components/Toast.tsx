@@ -38,7 +38,7 @@ export function useToast() {
     () => () => {
       if (timer.current) clearTimeout(timer.current);
     },
-    []
+    [],
   );
 
   return { message, show };

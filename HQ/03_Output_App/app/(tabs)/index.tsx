@@ -244,7 +244,11 @@ export default function HomeScreen() {
         */}
         {!isPremium && trialActive && trialDaysLeft <= 1 && (
           <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-s2 mt-s2">
-            <Text {...koreanWrap} {...textScaling} className="font-kr-medium text-caption text-ink dark:text-inkDark">
+            <Text
+              {...koreanWrap}
+              {...textScaling}
+              className="font-kr-medium text-caption text-ink dark:text-inkDark"
+            >
               {trialDaysLeft === 0
                 ? '오늘까지 모든 소리와 샷 간격을 쓸 수 있어요'
                 : '내일까지 모든 소리와 샷 간격을 쓸 수 있어요'}

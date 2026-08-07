@@ -79,11 +79,7 @@ export function TempoRing({
     if (playing) {
       const duration = Math.max(300, cycleMs);
       spin.value = 0;
-      spin.value = withRepeat(
-        withTiming(360, { duration, easing: Easing.linear }),
-        -1,
-        false
-      );
+      spin.value = withRepeat(withTiming(360, { duration, easing: Easing.linear }), -1, false);
     } else {
       cancelAnimation(spin);
       spin.value = withTiming(0, { duration: 220 });

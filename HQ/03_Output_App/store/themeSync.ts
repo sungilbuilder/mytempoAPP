@@ -58,9 +58,11 @@ export function startThemeSync() {
 
   // 저장값 복원이 끝나면 그 값으로 다시 맞춘다.
   // (복원 전 첫 프레임엔 기본값 'auto'가 적용돼 있을 수 있다)
-  const persist = (useSettingsStore as unknown as {
-    persist?: { onFinishHydration: (fn: () => void) => () => void; hasHydrated: () => boolean };
-  }).persist;
+  const persist = (
+    useSettingsStore as unknown as {
+      persist?: { onFinishHydration: (fn: () => void) => () => void; hasHydrated: () => boolean };
+    }
+  ).persist;
 
   if (persist) {
     if (persist.hasHydrated()) {

@@ -1,4 +1,9 @@
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioStatus } from 'expo-audio';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from 'expo-audio';
 
 /**
  * 메트로놈 오디오 엔진 (2026-07-31 expo-audio 마이그레이션, WBS 2.0).
@@ -266,7 +271,7 @@ export class Metronome {
         // ③ 다음 샷까지 대기. 전체 간격에서 이미 흘려보낸 시간을 뺀다.
         const restMs = Math.max(
           500,
-          (opts.intervalSec - opts.countInSec - opts.swingCycleSec) * 1000
+          (opts.intervalSec - opts.countInSec - opts.swingCycleSec) * 1000,
         );
         this.shotTimer = setTimeout(runOnce, restMs);
       }, opts.countInSec * 1000);

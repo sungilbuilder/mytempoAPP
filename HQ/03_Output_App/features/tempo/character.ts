@@ -105,7 +105,7 @@ export function precisionForFps(fps: number | undefined): RatioPrecision {
  */
 export function formatRatioWithPrecision(
   ratio: number,
-  precision: RatioPrecision
+  precision: RatioPrecision,
 ): { text: string; tolerance?: string; canImprove: boolean } {
   if (precision === 'coarse') {
     return { text: `약 ${Math.round(ratio)}:1`, canImprove: true };

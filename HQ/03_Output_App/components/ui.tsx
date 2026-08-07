@@ -59,7 +59,13 @@ export const numeralScaling = {
   maxFontSizeMultiplier: MAX_NUMERAL_SCALE,
 } as const;
 
-export function H1({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function H1({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <Text
       {...koreanWrap}
@@ -72,7 +78,13 @@ export function H1({ children, className = '' }: { children: React.ReactNode; cl
   );
 }
 
-export function Body({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function Body({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <Text
       {...koreanWrap}
@@ -126,7 +138,10 @@ export function Numeral({
   className?: string;
 }) {
   return (
-    <Text {...numeralScaling} className={`font-display-bold text-ink dark:text-inkDark ${className}`}>
+    <Text
+      {...numeralScaling}
+      className={`font-display-bold text-ink dark:text-inkDark ${className}`}
+    >
       {children}
     </Text>
   );
@@ -380,13 +395,7 @@ export function TempoMark({
  * 창업자 전략: 앱 아이콘은 심볼만 단순하게, 앱 내부에서는 워드마크를 적극 노출.
  * Space Grotesk(font-display) + 넓은 자간이 "프리미엄 기기" 톤을 만든다.
  */
-export function Wordmark({
-  size = 15,
-  className = '',
-}: {
-  size?: number;
-  className?: string;
-}) {
+export function Wordmark({ size = 15, className = '' }: { size?: number; className?: string }) {
   return (
     <Text
       /*
@@ -467,7 +476,13 @@ export function IconTrend({ color, size = 24 }: IconProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <Path d="M16 6h5v5" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M16 6h5v5"
+        stroke={color}
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }

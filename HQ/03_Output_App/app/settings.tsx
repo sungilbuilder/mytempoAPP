@@ -143,7 +143,11 @@ export default function SettingsScreen() {
 
         <Group title="소리 · 진동">
           <Row label="소리 크기" hint={`${Math.round(beepVolume * 100)}%`}>
-            <View accessibilityRole="radiogroup" accessibilityLabel="소리 크기" className="flex-row gap-[6px]">
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel="소리 크기"
+              className="flex-row gap-[6px]"
+            >
               {VOLUME_STEPS.map((v) => {
                 const active = Math.abs(v - beepVolume) < 0.01;
                 return (
@@ -328,8 +332,8 @@ export default function SettingsScreen() {
           <View className="h-[1px] bg-line dark:bg-lineDark" />
           <View className="py-s2">
             <Caption>
-              연속을 뺀 나머지는 매 스윙 직전에 5초 카운트인이 울려요. 그 소리가 "지금
-              어드레스" 신호가 됩니다.
+              연속을 뺀 나머지는 매 스윙 직전에 5초 카운트인이 울려요. 그 소리가 “지금 어드레스”
+              신호가 됩니다.
             </Caption>
           </View>
         </Group>

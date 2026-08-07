@@ -53,8 +53,7 @@ export const useSwingStore = create<SwingState>()(
     (set) => ({
       swings: [],
       activeSwingId: null,
-      addSwing: (swing) =>
-        set((s) => ({ swings: [swing, ...s.swings], activeSwingId: swing.id })),
+      addSwing: (swing) => set((s) => ({ swings: [swing, ...s.swings], activeSwingId: swing.id })),
       renameSwing: (id, name) =>
         set((s) => ({
           swings: s.swings.map((w) => (w.id === id ? { ...w, name } : w)),
@@ -66,8 +65,8 @@ export const useSwingStore = create<SwingState>()(
         })),
       setActiveSwing: (activeSwingId) => set({ activeSwingId }),
     }),
-    { partialize: (s) => ({ swings: s.swings, activeSwingId: s.activeSwingId }) }
-  )
+    { partialize: (s) => ({ swings: s.swings, activeSwingId: s.activeSwingId }) },
+  ),
 );
 
 /** 마킹 3지점에서 구간 길이와 비율을 계산한다. */

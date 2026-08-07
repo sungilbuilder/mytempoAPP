@@ -52,7 +52,11 @@ export default function PresetsScreen() {
         </Text>
         <Caption className="pt-[6px]">먼저 고르고, 나중에 내 스윙으로 바꿀 수 있어요</Caption>
 
-        <View accessibilityRole="radiogroup" accessibilityLabel="기준 리듬" className="gap-[12px] pt-s3">
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="기준 리듬"
+          className="gap-[12px] pt-s3"
+        >
           {TEMPO_PRESETS.map((preset) => {
             const active = preset.id === selectedId;
             const backPct = ratioToBackswingPercent(preset);

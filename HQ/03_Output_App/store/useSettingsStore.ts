@@ -66,7 +66,7 @@ export const useSettingsStore = create<SettingsState>()(
     toggleUiSounds: () => set((s) => ({ uiSounds: !s.uiSounds })),
     setSoundPack: (soundPack) => set({ soundPack }),
     setShotInterval: (shotIntervalSec) => set({ shotIntervalSec }),
-  }))
+  })),
 );
 
 /** 글자 크기 배율 — Text의 크기를 직접 곱할 때 쓴다. */

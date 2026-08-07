@@ -54,7 +54,7 @@ export default function TabsLayout() {
         paddingBottom: 8,
       },
     }),
-    [c.primary, c.muted, c.bg, c.line]
+    [c.primary, c.muted, c.bg, c.line],
   );
 
   return (

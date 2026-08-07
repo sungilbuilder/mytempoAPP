@@ -48,13 +48,13 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
       <Text style={{ color: '#FF9C9C', fontSize: 12, letterSpacing: 2, marginBottom: 8 }}>
         RUNTIME ERROR
       </Text>
-      <Text selectable style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '700', lineHeight: 25 }}>
-        {error?.message ?? '알 수 없는 오류'}
-      </Text>
       <Text
         selectable
-        style={{ color: '#FFC9C9', fontSize: 11, lineHeight: 17, marginTop: 20 }}
+        style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '700', lineHeight: 25 }}
       >
+        {error?.message ?? '알 수 없는 오류'}
+      </Text>
+      <Text selectable style={{ color: '#FFC9C9', fontSize: 11, lineHeight: 17, marginTop: 20 }}>
         {error?.stack ?? ''}
       </Text>
       <Text

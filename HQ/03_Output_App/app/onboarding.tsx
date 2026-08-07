@@ -94,7 +94,7 @@ function PulseRing({ delay, color, active }: { delay: number; color: string; act
     }
     p.value = withDelay(
       delay,
-      withRepeat(withTiming(1, { duration: 2400, easing: Easing.out(Easing.ease) }), -1, false)
+      withRepeat(withTiming(1, { duration: 2400, easing: Easing.out(Easing.ease) }), -1, false),
     );
     return () => cancelAnimation(p);
   }, [active, delay, p]);
@@ -108,7 +108,10 @@ function PulseRing({ delay, color, active }: { delay: number; color: string; act
   return (
     <Animated.View
       pointerEvents="none"
-      style={[{ position: 'absolute', borderRadius: 999, borderWidth: 2, borderColor: color }, style]}
+      style={[
+        { position: 'absolute', borderRadius: 999, borderWidth: 2, borderColor: color },
+        style,
+      ]}
     />
   );
 }
@@ -398,7 +401,10 @@ export default function OnboardingScreen() {
           style={{ minHeight: MIN_TOUCH, minWidth: 48 }}
           className="items-end justify-center"
         >
-          <Text {...textScaling} className="font-kr-bold text-caption text-muted dark:text-mutedDark">
+          <Text
+            {...textScaling}
+            className="font-kr-bold text-caption text-muted dark:text-mutedDark"
+          >
             건너뛰기
           </Text>
         </Pressable>

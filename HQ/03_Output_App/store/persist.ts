@@ -37,7 +37,7 @@ export const storage = createJSONStorage(() => AsyncStorage);
 export function persisted<T>(
   name: string,
   initializer: StateCreator<T>,
-  options?: { partialize?: (state: T) => Partial<T>; version?: number }
+  options?: { partialize?: (state: T) => Partial<T>; version?: number },
 ) {
   const persistOptions: Record<string, unknown> = {
     name: `mytempo:${name}`,

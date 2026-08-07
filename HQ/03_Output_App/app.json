@@ -8,9 +8,7 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/icon.png",
     "backgroundColor": "#0D110D",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.mytempo.golf",
@@ -24,9 +22,7 @@
         "backgroundColor": "#436437"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": [
-        "android.permission.READ_MEDIA_VIDEO"
-      ],
+      "permissions": ["android.permission.READ_MEDIA_VIDEO"],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE",

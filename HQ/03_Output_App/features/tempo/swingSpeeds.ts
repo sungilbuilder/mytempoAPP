@@ -160,7 +160,7 @@ export type SpeedRecommendation = {
  * 잘못하면(임팩트를 놓치는 등) 평균은 통째로 끌려가지만 중앙값은 버틴다.
  */
 export function recommendSwingSpeed(
-  swings: { backswingSec: number; downswingSec: number }[]
+  swings: { backswingSec: number; downswingSec: number }[],
 ): SpeedRecommendation | null {
   const totals = swings
     .map((w) => w.backswingSec + w.downswingSec)
@@ -171,11 +171,10 @@ export function recommendSwingSpeed(
   if (totals.length === 0) return null;
 
   const mid = Math.floor(totals.length / 2);
-  const measuredSec =
-    totals.length % 2 === 1 ? totals[mid] : (totals[mid - 1] + totals[mid]) / 2;
+  const measuredSec = totals.length % 2 === 1 ? totals[mid] : (totals[mid - 1] + totals[mid]) / 2;
 
   const nearest = SWING_SPEEDS.reduce((best, s) =>
-    Math.abs(s.swingSec - measuredSec) < Math.abs(best.swingSec - measuredSec) ? s : best
+    Math.abs(s.swingSec - measuredSec) < Math.abs(best.swingSec - measuredSec) ? s : best,
   );
 
   const slowest = SWING_SPEEDS[0].swingSec;

@@ -40,12 +40,15 @@ const RATES = [1, 0.5, 0.25] as const;
  * "어디가 임팩트인지 안 보이면" 소용이 없다.
  *
  * 처음엔 1x/1.5x/2x/3x 버튼으로 만들었는데, 창업자가 **두 손가락으로 늘리고 줄이는**
- * 방식을 원해서 연속 배율로 바꿨다. 버튼도 남겨둔다 — 정확한 배율로 빠르게
- * 돌아가고 싶을 때가 있고, 한 손으로 조작할 때도 필요하다.
+ * 방식을 원해서 연속 배율로 바꿨다.
+ *
+ * TODO(미구현): 원래는 프리셋 버튼도 함께 남기기로 했다 — 정확한 배율로 빠르게
+ * 돌아가고 싶을 때가 있고, 한 손으로 조작할 때도 필요하다(아래 615~617행 주석 참조).
+ * 현재 프리셋 버튼 UI 가 없어 `ZOOM_PRESETS = [1, 2, 3]` 상수가 死코드로 남아 있었고
+ * 린트 도입 시 제거했다. 버튼을 붙일 때 상수도 함께 되살릴 것.
  */
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 5;
-const ZOOM_PRESETS = [1, 2, 3] as const;
 
 /** 두 손가락 사이 거리 */
 function touchDistance(touches: { pageX: number; pageY: number }[]) {
@@ -253,7 +256,7 @@ export default function MarkingScreen() {
         // seek 실패는 조용히 무시 — 다음 조작에서 복구된다.
       }
     },
-    [player, durationSec]
+    [player, durationSec],
   );
 
   /** 프레임 단위 이동. 드래그로는 도달할 수 없는 정밀도를 여기서 확보한다. */
@@ -266,7 +269,7 @@ export default function MarkingScreen() {
       Haptics.selectionAsync().catch(() => {});
       seekTo(currentSec + dir * frameSec);
     },
-    [currentSec, frameSec, isPlaying, player, seekTo]
+    [currentSec, frameSec, isPlaying, player, seekTo],
   );
 
   const togglePlay = useCallback(() => {
@@ -318,8 +321,7 @@ export default function MarkingScreen() {
       // 두 손가락은 항상 받고, 한 손가락은 확대 상태에서만 받는다.
       onStartShouldSetPanResponder: (e) =>
         e.nativeEvent.touches.length === 2 || zoomRef.current > 1,
-      onMoveShouldSetPanResponder: (e) =>
-        e.nativeEvent.touches.length === 2 || zoomRef.current > 1,
+      onMoveShouldSetPanResponder: (e) => e.nativeEvent.touches.length === 2 || zoomRef.current > 1,
 
       onPanResponderGrant: (e) => {
         offsetStart.current = offsetRef.current;
@@ -362,7 +364,7 @@ export default function MarkingScreen() {
       onPanResponderTerminate: () => {
         pinchStartDist.current = null;
       },
-    })
+    }),
   ).current;
 
   /** 1배율로 돌아오면 보던 위치도 원래대로 */
@@ -428,7 +430,7 @@ export default function MarkingScreen() {
       onPanResponderMove: (_, g) => {
         seekToPageXRef.current(g.moveX);
       },
-    })
+    }),
   ).current;
 
   // PanResponder는 생성 시점의 클로저를 붙들기 때문에 ref로 최신값을 넘긴다.
@@ -588,7 +590,10 @@ export default function MarkingScreen() {
           style={{ minHeight: MIN_TOUCH, minWidth: 48 }}
           className="items-end justify-center"
         >
-          <Text {...textScaling} className="font-kr-medium text-caption text-muted dark:text-mutedDark">
+          <Text
+            {...textScaling}
+            className="font-kr-medium text-caption text-muted dark:text-mutedDark"
+          >
             되돌리기
           </Text>
         </Pressable>
@@ -692,7 +697,10 @@ export default function MarkingScreen() {
             >
               {zoom.toFixed(1)}x
             </Text>
-            <Text {...textScaling} className="font-kr-medium text-caption text-muted dark:text-mutedDark">
+            <Text
+              {...textScaling}
+              className="font-kr-medium text-caption text-muted dark:text-mutedDark"
+            >
               해제
             </Text>
           </Pressable>
@@ -773,7 +781,7 @@ export default function MarkingScreen() {
                   backgroundColor: i === 2 ? c.accent : c.primary,
                 }}
               />
-            )
+            ),
           )}
 
           {/* 현재 위치 */}
@@ -865,7 +873,9 @@ export default function MarkingScreen() {
         </View>
 
         <Button
-          label={step === 2 ? '여기가 임팩트예요' : step === 1 ? '여기가 탑이에요' : '여기가 시작이에요'}
+          label={
+            step === 2 ? '여기가 임팩트예요' : step === 1 ? '여기가 탑이에요' : '여기가 시작이에요'
+          }
           onPress={markHere}
           className="mb-s2"
         />

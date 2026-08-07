@@ -25,6 +25,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       markOnboardingSeen: () => set({ hasSeenOnboarding: true }),
       resetOnboarding: () => set({ hasSeenOnboarding: false }),
     }),
-    { partialize: (s) => ({ hasSeenOnboarding: s.hasSeenOnboarding }) }
-  )
+    { partialize: (s) => ({ hasSeenOnboarding: s.hasSeenOnboarding }) },
+  ),
 );
