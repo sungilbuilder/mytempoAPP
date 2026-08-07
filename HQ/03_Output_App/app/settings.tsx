@@ -185,8 +185,6 @@ export default function SettingsScreen() {
 
           <View className="h-[1px] bg-line dark:bg-lineDark" />
 
-          <View className="h-[1px] bg-line dark:bg-lineDark" />
-
           {/*
             확인음 (2026-08-06, T-24)
             메트로놈 볼륨과 **다른 축**이라 별도 토글이다. 소리는 켜두고 싶지만
