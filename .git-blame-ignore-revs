@@ -1,0 +1,9 @@
+# 서식만 바꾼 커밋 목록 — git blame 에서 제외한다.
+#
+# 사용법 (레포당 한 번):
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub 은 이 파일이 레포 루트에 있으면 blame 화면에서 자동으로 적용한다.
+
+# style: Prettier 일괄 적용 및 ESLint 오류 3건 수정
+dbdd6978f8c1083e35eed501801a1ef3a000b48b
