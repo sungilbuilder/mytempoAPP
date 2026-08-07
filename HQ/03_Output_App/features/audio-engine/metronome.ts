@@ -311,6 +311,11 @@ export class Metronome {
     this.player.pause();
   }
 
+  /** 오디오가 로드되어 즉시 재생 가능한 상태인가. */
+  isReady(): boolean {
+    return this.player !== null;
+  }
+
   async getStatus() {
     if (!this.player) return null;
     // expo-audio는 getStatusAsync 같은 비동기 API 대신 player 속성을 동기적으로 노출한다.

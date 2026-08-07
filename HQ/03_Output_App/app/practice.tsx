@@ -333,7 +333,11 @@ export default function PracticeScreen() {
   async function toggle() {
     if (togglingRef.current) return;
     const m = metronomeRef.current;
-    if (!m) return;
+    // 로드 effect가 아직 안 끝났으면 조용히 무시한다 — 오디오 없이 재생 중으로
+    // 보이는 상태(링 스핀·타이머만 돌고 소리·스윙 카운트는 없음)를 막는다.
+    // 로드가 끝나면 사용자가 다시 탭하면 된다(수백 ms 내 완료가 보통이라 재탭
+    // 부담이 크지 않다).
+    if (!m || (!isPlaying && !m.isReady())) return;
     togglingRef.current = true;
     try {
       if (isPlaying) {
