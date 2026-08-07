@@ -214,7 +214,7 @@ export default function ResultScreen() {
 
         {suspicious && (
           <Caption className="pt-s2">
-            다운스윙 구간이 매우 짧게 찍혔어요. 마킹을 다시 확인해보는 걸 권합니다.
+            구간이 매우 짧게 찍혔어요. 마킹을 다시 확인해보는 걸 권합니다.
           </Caption>
         )}
 

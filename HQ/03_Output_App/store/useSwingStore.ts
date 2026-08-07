@@ -79,8 +79,12 @@ export function computeTempo(marks: SwingMarks) {
     backswingSec,
     downswingSec,
     ratio: backswingSec / safeDown,
-    /** 다운스윙이 0.05초 미만 = 마킹 오류 가능성 높음 */
-    suspicious: downswingSec < 0.05,
+    /**
+     * 다운스윙 또는 백스윙이 0.05초 미만 = 마킹 오류 가능성 높음.
+     * 백스윙 쪽은 주로 순서가 뒤바뀐 마킹(top 이 start 보다 앞섬)에서 발생하며,
+     * 그 경우 위 Math.max(0, ...) 클램프로 backswingSec 이 0에 가까워진다.
+     */
+    suspicious: downswingSec < 0.05 || backswingSec < 0.05,
   };
 }
 
