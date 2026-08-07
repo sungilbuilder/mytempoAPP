@@ -58,4 +58,8 @@ GoogleService-Info.plist
 .~lock.*#
 
 # 대용량 디자인 시안 산출물 — git 추적 대상에서 제외 (2026-08-07)
+# *.html 은 .dc.html 잔여물(같은 제안서의 부산물)도 함께 잡는다.
 HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/*.html
+HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/support.js
+HQ/📑_02_Workspace/product_design/mytempo-implemented-preview.html
+HQ/📑_02_Workspace/product_design/mytempo-ui-wireframes.html

@@ -62,4 +62,6 @@
 - `HQ/📑_02_Workspace/product_design/brand-system-v2/svg-final/` — **확정 로고 SVG**
 - `HQ/📑_02_Workspace/product_design/brand-icons/store-assets/` — 스토어 아이콘 (최신)
 - `HQ/📑_02_Workspace/strategy/*.xlsx` — WBS/Daily_Report, D-30 체크리스트
+- `HQ/📑_02_Workspace/finance_legal/cost_tracker.xlsx` — 비용 추적 스프레드시트 (2026-08-07 확인, 볼트로 이관하지 않음)
+- `HQ/04_Demo/` — 공유용 데모 HTML·스크린샷 (배포물. 개발 산출물이 아니라 그대로 둔다, 2026-08-07 확인)
 - `.claude/agents/` — 서브에이전트 정의 16개
