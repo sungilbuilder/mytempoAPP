@@ -233,11 +233,7 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, AudioSource
  * 알 수 없는 값(구버전 저장값 등)은 조용히 기본으로 떨어진다 — 소리가 안 나는
  * 것보다 다른 소리가 나는 편이 낫다.
  */
-export function loopAudio(
-  presetId: string,
-  pack: SoundPackId,
-  speedId: SwingSpeedId,
-): AudioSource {
+export function loopAudio(presetId: string, pack: SoundPackId, speedId: SwingSpeedId): AudioSource {
   const byPack = LOOPS[presetId] ?? LOOPS['preset-3-1'];
   const bySpeed = byPack[pack] ?? byPack[FREE_SOUND_PACK];
   return bySpeed[speedId] ?? bySpeed[DEFAULT_SWING_SPEED];
