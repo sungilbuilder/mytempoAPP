@@ -1,0 +1,15 @@
+node_modules
+android
+ios
+.expo
+dist
+web-build
+package-lock.json
+*.html
+*.wav
+*.png
+scripts
+
+# 마크다운은 제외한다. 한글 본문·표를 prettier 가 재배치하면
+# 의미 단위 줄바꿈이 깨지고 diff 가 커진다.
+*.md
