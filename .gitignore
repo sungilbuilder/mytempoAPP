@@ -56,3 +56,6 @@ GoogleService-Info.plist
 *.tmp
 ~$*
 .~lock.*#
+
+# 대용량 디자인 시안 산출물 — git 추적 대상에서 제외 (2026-08-07)
+HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/*.html
