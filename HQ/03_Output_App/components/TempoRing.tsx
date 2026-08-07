@@ -23,7 +23,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { CYCLE_MS } from '../features/audio-engine/soundPacks';
+import { DEFAULT_SWING_SPEED } from '../features/tempo/swingSpeeds';
+import { cycleMs as audioCycleMs } from '../features/audio-engine/soundPacks';
 
 const R = 42;
 const CIRCUMFERENCE = 2 * Math.PI * R; // ≈ 263.9
@@ -35,16 +36,18 @@ export type TempoRingProps = {
   size?: number;
   /** 재생 중이면 진행 점이 링을 따라 돈다 */
   playing?: boolean;
-  /** 배속 — 클수록 점이 빨리 돈다 */
-  rate?: number;
   /**
-   * 한 사이클 기준 시간(ms). 배속 1.0 기준.
+   * 한 사이클 시간(ms).
    *
-   * ⚠️ 기본값은 오디오 루프 길이(`CYCLE_MS`)를 그대로 쓴다 (2026-08-06, AOS 리뷰 V-4).
+   * ⚠️ 기본값은 오디오 루프 길이를 그대로 쓴다 (2026-08-06, AOS 리뷰 V-4).
    * 이전 기본값 2600은 2026-08-01에 오디오를 2.0초로 재생성하면서 놓친 값이었다.
-   * 지금은 `practice.tsx`만 `playing`을 넘겨서 드러나지 않았지만, 홈 링에
+   * 당시엔 `practice.tsx`만 `playing`을 넘겨서 드러나지 않았지만, 홈 링에
    * 애니메이션을 켜는 순간 **진행 점이 소리보다 30% 느리게 도는** 버그가 됐을 값이다.
-   * 숫자를 여기 다시 적지 말고 항상 오디오 상수를 가져다 쓸 것.
+   * 숫자를 여기 다시 적지 말고 항상 오디오 쪽 함수를 가져다 쓸 것.
+   *
+   * ⚠️ 2026-08-07: `rate` prop이 사라졌다. 배속 재생을 없애면서 루프 길이 자체가
+   * 속도별로 달라졌기 때문이다 — 호출부가 `cycleMs(속도)`를 그대로 넘긴다.
+   * 기본값도 상수가 아니라 기본 속도의 루프 길이다.
    */
   cycleMs?: number;
   /** 링 색 */
@@ -66,8 +69,7 @@ export function TempoRing({
   ratio,
   size = 220,
   playing = false,
-  rate = 1,
-  cycleMs = CYCLE_MS,
+  cycleMs = audioCycleMs(DEFAULT_SWING_SPEED),
   colors,
   children,
 }: TempoRingProps) {
@@ -75,7 +77,7 @@ export function TempoRing({
 
   useEffect(() => {
     if (playing) {
-      const duration = Math.max(300, cycleMs / Math.max(0.1, rate));
+      const duration = Math.max(300, cycleMs);
       spin.value = 0;
       spin.value = withRepeat(
         withTiming(360, { duration, easing: Easing.linear }),
@@ -87,7 +89,7 @@ export function TempoRing({
       spin.value = withTiming(0, { duration: 220 });
     }
     return () => cancelAnimation(spin);
-  }, [playing, rate, cycleMs, spin]);
+  }, [playing, cycleMs, spin]);
 
   const dotStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${spin.value}deg` }],

@@ -187,6 +187,11 @@ CUE_LUFS = -24.0         # 이전 -30.0. 루프보다 6dB 아래를 유지한다
 # 공간 (2026-08-07) — 훈련 신호라 아주 보수적으로
 REVERB_RT60 = 0.13
 REVERB_WET = 0.12
+# ⚠️ 룸톤은 **들리라고 넣는 게 아니다.** -80dBFS면 정규화 뒤에도 -73dBFS라
+# 어떤 환경에서도 인지되지 않는다. 공간감을 만드는 일은 위 잔향이 하고,
+# 룸톤이 하는 건 '진폭이 정확히 0인 구간'을 없애는 것뿐이다(양자화 거동에도 낫다).
+# 히스로 들리는 순간 손해가 훨씬 크므로 의도적으로 이 아래에 둔다.
+# 실기 청취에서 "소리 사이가 너무 비었다"는 반응이 나오면 그때 올릴 것.
 ROOM_TONE_DB = -80.0
 
 RATIOS = {'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
@@ -263,9 +268,9 @@ def wood(dur, f=E3, vel=1.0, rng=None):
            + (0.30 + 0.16*vel) * g() * np.sin(2*np.pi*f*3.9*d()*t) * env(n, 0.0012*ak, dur*0.22*dk)
            + (0.09 + 0.13*vel) * g() * np.sin(2*np.pi*f*9.2*d()*t) * env(n, 0.0008*ak, dur*0.11*dk))
 
-    sig += _transient(n, rng, 1500, 7500, gain=1.05, decay=42,
-                      mode_freqs=[2380, 4120, 6300], mode_decays=[0.016, 0.010, 0.006],
-                      mode_gains=[0.30, 0.19, 0.11], vel=vel)
+    sig += _transient(n, rng, 1500, 7500, gain=1.05, decay=34,
+                      mode_freqs=[2380, 4120, 6300], mode_decays=[0.020, 0.013, 0.008],
+                      mode_gains=[0.34, 0.22, 0.13], vel=vel)
     return sig
 
 
@@ -323,7 +328,7 @@ def drum(dur=0.18, f=E1, vel=1.0, rng=None):
     pk = 1.0 + rng.uniform(-0.03, 0.03)
     freq = f * (2.6 * pk) * np.exp(-t*20) + f
     body = np.sin(2*np.pi*np.cumsum(freq)/SR) * np.exp(-t*24*(1 + rng.uniform(-0.07, 0.07)))
-    sig = body + _transient(n, rng, 1300, 6000, gain=0.62, decay=110,
+    sig = body + _transient(n, rng, 1300, 6000, gain=0.85, decay=85,
                             mode_freqs=[1750, 3050, 4600], mode_decays=[0.009, 0.005, 0.003],
                             mode_gains=[0.13, 0.08, 0.05], vel=vel)
     atk = min(n, int(SR * 0.0015))

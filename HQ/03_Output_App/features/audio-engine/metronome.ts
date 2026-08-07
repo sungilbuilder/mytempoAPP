@@ -26,6 +26,22 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioStatu
  *   호출되지 않고(didJustFinish가 loop 전환 중엔 안 뜰 가능성이 높음), 혹시 갭/드리프트가
  *   있는 기종이라면 ②가 안전망 역할을 한다. 실기기 확인 시 특히 "루프 경계에서 박자가
  *   끊기거나 튀는지"를 반드시 체크할 것.
+ *
+ * ⚠️ 2026-08-07 — **배속 재생을 완전히 제거했다** (사운드 품질 Phase 1).
+ *
+ *   `setPlaybackRate()` + `shouldCorrectPitch = true` 조합이 음질을 가장 크게
+ *   깎고 있었다. 스윙 속도 4단계의 배속이 0.825 / 0.917 / 1.031 / 1.179라
+ *   **1.0이 하나도 없어서**, 사용자가 듣는 소리는 항상 위상 보코더를 통과한
+ *   결과였다. 타악기는 그 처리에 가장 취약한 신호다 — 어택이 뭉개지고
+ *   타격 직전에 프리에코가 낀다.
+ *
+ *   이제 속도별로 미리 렌더링한 파일을 그대로 재생한다(`soundPacks.loopAudio`).
+ *   호출부는 속도가 바뀌면 **다른 파일을 다시 `load()`** 해야 한다.
+ *   자세한 측정은 [[사운드품질-진단과개선계획-2026-08-07]].
+ *
+ *   ⛔ `setPlaybackRate` / `shouldCorrectPitch`를 다시 들여오지 말 것.
+ *      "파일 하나로 4속도를 커버하니 번들이 작다"는 유혹이 계속 있을 텐데,
+ *      그 절약분(약 7MB)이 정확히 이 앱의 유일한 소리를 망가뜨린 원인이었다.
  */
 /**
  * 상태 이벤트 주기 (ms).
@@ -126,7 +142,11 @@ export class Metronome {
 
     const player = createAudioPlayer(audioFile, { updateInterval: STATUS_INTERVAL_MS });
     player.loop = true;
-    player.shouldCorrectPitch = true;
+    /*
+      `shouldCorrectPitch`를 세팅하지 않는다 (2026-08-07).
+      배속이 항상 1.0이므로 아무 일도 하지 않는 설정인데, 남겨두면 "배속을
+      써도 되는구나"로 읽힌다. 위 클래스 주석 참고.
+    */
     player.volume = Math.min(1, Math.max(0, volume));
 
     const subscription = player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
@@ -162,13 +182,12 @@ export class Metronome {
     this.lastTime = 0;
   }
 
-  async play(rate = 1.0) {
+  async play() {
     if (!this.player) return;
     this.stopShotCycle();
     this.looping = true;
     this.player.loop = true;
     this.player.seekTo(0);
-    this.player.setPlaybackRate(rate);
     this.player.play();
     this.lastTime = 0;
     this.suppressWrapUntil = Date.now() + STATUS_INTERVAL_MS * 2;
@@ -201,8 +220,8 @@ export class Metronome {
     countInFile: unknown;
     countInSec: number;
     intervalSec: number;
+    /** 지금 로드된 루프 파일 한 바퀴 길이 — `soundPacks.cycleSec(속도)` */
     swingCycleSec: number;
-    rate: number;
     onSwing?: () => void;
   }) {
     this.stopShotCycle();
@@ -241,7 +260,6 @@ export class Metronome {
           /* 이미 해제됨 */
         }
         this.player.seekTo(0);
-        this.player.setPlaybackRate(opts.rate);
         this.player.play();
         opts.onSwing?.();
 
@@ -271,10 +289,10 @@ export class Metronome {
     this.countIn = null;
   }
 
-  async setRate(rate: number) {
-    if (!this.player) return;
-    this.player.setPlaybackRate(rate);
-  }
+  /*
+    `setRate()`는 2026-08-07에 삭제했다. 속도를 바꾸려면 그 속도로 렌더링된
+    파일을 `load()`한다. 위 클래스 주석의 ⛔ 항목 참고.
+  */
 
   async setVolume(volume: number) {
     if (!this.player) return;

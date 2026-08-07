@@ -251,38 +251,126 @@ def check_a11y():
 
 # ═══════════════════════ 4. 오디오 ═══════════════════════
 
+"""
+2026-08-07 확장 — 무엇을 더 보게 됐나
+
+[[사운드품질-진단과개선계획-2026-08-07]]에서 잡은 결함 두 가지는 **기존 검사를
+전부 통과하고 있었다.** LUFS도 맞고 트루피크도 맞고 이음매도 매끈한데 소리가
+저가로 들렸다. 검사가 "규격"만 보고 "음색"을 안 봤기 때문이다.
+
+  · 나무 팩의 4kHz 이상 에너지 **0.01%** — 타격 트랜지언트가 통째로 없었다
+  · 타격 간 상관계수 **0.9948** — 매 타격이 비트 단위로 같았다
+
+둘 다 숫자로 잡히는 것이었는데 재고 있지 않았다. 그래서 두 지표를 추가한다.
+이 값들이 회귀하면 음색이 조용히 예전으로 돌아간 것이다.
+
+세 번째로 **파일 길이와 앱 공식의 일치**를 본다. 배속 재생을 없애면서 루프
+길이가 속도마다 달라졌는데, 파이썬(`cycle_for`)과 TS(`cycleSec`) 두 곳이
+같은 공식을 들고 있다. 어긋나면 링이 소리와 다른 속도로 돈다 — 이 저장소는
+이미 같은 종류의 사고를 겪었다(AOS 리뷰 V-4).
+"""
+
+# 루프 목표 라우드니스 — generate-sound-packs.py의 LOOP_LUFS와 같아야 한다
+LOOP_LUFS_TARGET = -18.0
+
+# 4kHz 이상 에너지 하한(%). 나무는 개선 후 ~1.2%, 북 ~1.1%, 현·리듬 ~18%다.
+# 0.3%는 "트랜지언트가 사라졌는가"만 잡는 보수적 문턱이다 — 회귀 당시 값은 0.01%였다.
+HF_FLOOR_PCT = 0.30
+
+# 타격 간 어택 상관계수 상한. 개선 후 최댓값 0.40, 회귀 당시 0.995.
+HIT_SIM_CEIL = 0.75
+
+
+def parse_swing_speeds():
+    """`features/tempo/swingSpeeds.ts`에서 (속도 id, 스윙 길이)를 읽는다."""
+    src = open(os.path.join(APP, 'features', 'tempo', 'swingSpeeds.ts'), encoding='utf-8').read()
+    return dict((m[0], float(m[1])) for m in
+                re.findall(r"speed\('(\w+)',\s*([\d.]+)", strip_comments(src)))
+
+
 def check_audio():
-    head('4. 오디오 — 루프 경계 · 라우드니스 · 트루피크')
+    head('4. 오디오 — 루프 경계 · 라우드니스 · 트루피크 · 음색')
     try:
         sys.path.insert(0, HERE)
         import numpy as np
-        from audio_tools import lufs, loop_report, true_peak_db
+        from audio_tools import hf_ratio, hit_similarity, lufs, loop_report, true_peak_db
     except ImportError as e:
         print(f'  SKIP numpy 없음 ({e})')
         return
 
     audio = os.path.join(APP, 'assets', 'audio')
-    loop_lufs = []
+    speeds = parse_swing_speeds()
+    ratios = {'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
+    packs = ['wood', 'string', 'drum', 'rhythm']
+    base_swing, base_cycle = 1.1, 2.0
+
+    # ── ① 48개 조합이 다 있는가 ────────────────────────────
+    missing = [f'{r}__{p}__{s}.wav'
+               for r in ratios for p in packs for s in speeds
+               if not os.path.exists(os.path.join(audio, f'{r}__{p}__{s}.wav'))]
+    if missing:
+        print(f'  FAIL 루프 파일 {len(missing)}개 없음 — 예: {missing[0]}')
+        fails.append(f'루프 파일 누락 {len(missing)}개 (generate-sound-packs.py 재실행 필요)')
+    else:
+        print(f'  OK   루프 {len(ratios)*len(packs)*len(speeds)}개 조합 모두 존재')
+
+    loop_lufs, worst_hf, worst_sim = [], 999.0, 0.0
     for f in sorted(os.listdir(audio)):
+        if not f.endswith('.wav'):
+            continue
         with wave.open(os.path.join(audio, f)) as w:
+            sr = w.getframerate()
             d = np.frombuffer(w.readframes(w.getnframes()), '<i2').astype(np.float64) / 32768
         L, tp = lufs(d), true_peak_db(d)
 
         if tp > -1.0:
-            print(f'  FAIL {f:26s} 트루피크 {tp:.1f} dBTP (> -1.0)')
+            print(f'  FAIL {f:32s} 트루피크 {tp:.1f} dBTP (> -1.0)')
             fails.append(f'트루피크 초과: {f} {tp:.1f} dBTP')
 
-        if f.startswith('tempo_'):
-            loop_lufs.append(L)
-            step = abs(loop_report(d)['step'])
-            # 0.001 = 약 -60 dBFS. 이 아래면 들리지 않는다.
-            if step > 0.001:
-                print(f'  FAIL {f:26s} 루프 경계 계단 {step:.4f} — 매 바퀴 클릭')
-                fails.append(f'루프 불연속: {f} step={step:.4f}')
-            else:
-                print(f'  OK   {f:26s} {L:6.1f} LUFS  {tp:6.1f} dBTP  이음매 매끈')
+        if not f.startswith('tempo_'):
+            print(f'  OK   {f:32s} {L:6.1f} LUFS  {tp:5.1f} dBTP')
+            continue
+
+        loop_lufs.append(L)
+        ratio_name, pack, speed_id = f[:-4].split('__')
+        swing = speeds.get(speed_id)
+        problems = []
+
+        # ── ② 이음매 ──
+        step = abs(loop_report(d)['step'])
+        if step > 0.001:      # 0.001 = 약 -60 dBFS. 이 아래면 들리지 않는다.
+            problems.append(f'루프 경계 계단 {step:.4f} — 매 바퀴 클릭')
+
+        # ── ③ 길이가 앱 공식과 맞는가 (2026-08-07 신설) ──
+        if swing is None:
+            problems.append(f'swingSpeeds.ts에 없는 속도 id `{speed_id}`')
         else:
-            print(f'  OK   {f:26s} {L:6.1f} LUFS  {tp:6.1f} dBTP')
+            expected = base_cycle * swing / base_swing
+            actual = len(d) / sr
+            # 1ms = 44샘플. 이보다 크면 반올림이 아니라 공식이 어긋난 것이다.
+            if abs(actual - expected) > 0.001:
+                problems.append(f'길이 {actual:.4f}s ≠ cycleSec {expected:.4f}s')
+
+        # ── ④ 음색 회귀 (2026-08-07 신설) ──
+        hf = hf_ratio(d)
+        worst_hf = min(worst_hf, hf)
+        if hf < HF_FLOOR_PCT:
+            problems.append(f'4kHz 이상 에너지 {hf:.2f}% < {HF_FLOOR_PCT}% — 타격 트랜지언트 소실')
+
+        sim = 0.0
+        if swing is not None:
+            back = swing * (ratios[ratio_name] / (ratios[ratio_name] + 1))
+            sim = hit_similarity(d, [0.0, back, swing])
+            worst_sim = max(worst_sim, sim)
+            if sim > HIT_SIM_CEIL:
+                problems.append(f'타격 간 상관계수 {sim:.3f} > {HIT_SIM_CEIL} — 라운드로빈 소실')
+
+        if problems:
+            for p in problems:
+                print(f'  FAIL {f:32s} {p}')
+                fails.append(f'{f}: {p}')
+        else:
+            print(f'  OK   {f:32s} {L:6.1f} LUFS  {tp:5.1f} dBTP  HF{hf:5.2f}%  변주{sim:5.3f}')
 
     if loop_lufs:
         spread = max(loop_lufs) - min(loop_lufs)
@@ -291,6 +379,16 @@ def check_audio():
         print(f'  {status} 루프 팩 간 라우드니스 편차 {spread:.2f} dB (기준 1.0)')
         if spread > 1.0:
             fails.append(f'팩 간 라우드니스 편차 {spread:.2f} dB')
+
+        # 목표에서 벗어나면 리미터가 목표에 도달하지 못한 것이다 (audio_tools 주석 참고)
+        off = abs(sum(loop_lufs) / len(loop_lufs) - LOOP_LUFS_TARGET)
+        status = 'OK  ' if off <= 0.5 else 'FAIL'
+        print(f'  {status} 루프 평균 라우드니스 목표 {LOOP_LUFS_TARGET} LUFS 대비 {off:.2f} dB 이탈')
+        if off > 0.5:
+            fails.append(f'루프 라우드니스가 목표에서 {off:.2f} dB 벗어남')
+
+        print(f'  ---- 최저 HF {worst_hf:.2f}% (하한 {HF_FLOOR_PCT}) · '
+              f'최대 타격 상관 {worst_sim:.3f} (상한 {HIT_SIM_CEIL})')
 
 
 # ═══════════════════════ 5. 타입 ═══════════════════════

@@ -7,6 +7,7 @@ import { usePracticeStore } from '../../store/usePracticeStore';
 import { useSwingStore, getSwingById } from '../../store/useSwingStore';
 import { TEMPO_PRESETS, getPresetById, nearestPreset } from './presets';
 import { loopAudio, type SoundPackId } from '../audio-engine/soundPacks';
+import { type SwingSpeedId } from './swingSpeeds';
 
 export type ActiveTempo = {
   label: string;
@@ -28,8 +29,14 @@ export type ActiveTempo = {
    * 내 스윙은 비율이 임의라 가장 가까운 프리셋의 오디오를 빌려 쓴다.
    */
   presetIdForAudio: string;
-  /** 선택한 사운드 팩에 맞는 오디오 파일을 돌려준다. */
-  audioFileFor: (pack: SoundPackId) => any;
+  /**
+   * 선택한 사운드 팩·스윙 속도에 맞는 오디오 파일을 돌려준다.
+   *
+   * ⚠️ 2026-08-07: 속도 인자가 늘었다. 배속 재생을 없애고 속도별로 파일을
+   * 따로 렌더링했기 때문이다(`soundPacks.ts` 주석 참고). 호출부는 속도가
+   * 바뀌면 반드시 다시 로드해야 한다.
+   */
+  audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) => any;
 };
 
 /** 아무것도 고른 적 없으면 첫 프리셋(3:1 안정형)을 기본으로 준다. */
@@ -52,7 +59,8 @@ export function useActiveTempo(): ActiveTempo {
         isOwnSwing: true,
         hasHistory: true,
         presetIdForAudio: near.id,
-        audioFileFor: (pack: SoundPackId) => loopAudio(near.id, pack),
+        audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) =>
+          loopAudio(near.id, pack, speed),
       };
     }
   }
@@ -68,6 +76,7 @@ export function useActiveTempo(): ActiveTempo {
     /* 고른 적이 없으면 기본값을 돌려주되, 그 사실을 화면이 알 수 있게 한다 */
     hasHistory: chosen !== undefined,
     presetIdForAudio: preset.id,
-    audioFileFor: (pack: SoundPackId) => loopAudio(preset.id, pack),
+    audioFileFor: (pack: SoundPackId, speed: SwingSpeedId) =>
+      loopAudio(preset.id, pack, speed),
   };
 }

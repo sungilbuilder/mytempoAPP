@@ -21,10 +21,11 @@ import { Toast, useToast } from '../components/Toast';
 import { Metronome } from '../features/audio-engine/metronome';
 import { playCue, releaseCues } from '../features/audio-engine/cues';
 import {
-  CYCLE_MS,
   COUNT_IN_SEC,
-  IMPACT_AT_MS,
   countInAudio,
+  cycleMs,
+  cycleSec,
+  impactAtMs,
 } from '../features/audio-engine/soundPacks';
 import { useGatedShotInterval, useGatedSoundPack } from '../features/premium/useGatedSettings';
 import { useActiveTempo } from '../features/tempo/useActiveTempo';
@@ -65,11 +66,11 @@ export default function PracticeScreen() {
   const swingSpeed = usePracticeStore((s) => s.swingSpeed);
   const setSwingSpeed = usePracticeStore((s) => s.setSwingSpeed);
   /**
-   * 배속은 스윙 속도에서 파생시킨다 — 상태로 따로 들고 있지 않는다.
-   * (둘 다 상태로 두면 재시작 시 서로 어긋난다. usePracticeStore 주석 참고)
+   * ⚠️ 2026-08-07: 여기 있던 `rate`(재생 배속)가 사라졌다.
+   * 이제 속도는 **어느 오디오 파일을 로드하는가**로만 표현된다.
+   * 배속 재생이 음질을 망치고 있었기 때문이다 — `swingSpeeds.ts` 주석 참고.
    */
   const speed = getSwingSpeed(swingSpeed);
-  const rate = speed.rate;
   const isPlaying = usePracticeStore((s) => s.isPlaying);
   const setIsPlaying = usePracticeStore((s) => s.setIsPlaying);
 
@@ -89,6 +90,16 @@ export default function PracticeScreen() {
   const swings = useSwingStore((s) => s.swings);
 
   const metronomeRef = useRef<Metronome | null>(null);
+  /**
+   * 로드 effect가 쓰는 최신 콜백들 (2026-08-07 신설).
+   *
+   * 로드 effect는 파일 위쪽에 있고 두 함수는 아래쪽에서 정의된다. 그렇다고
+   * effect 의존성에 함수를 넣으면 **함수가 새로 만들어질 때마다 오디오가
+   * 통째로 재로드**되므로, 렌더 중에 ref로 흘려보낸다(대입은 각 정의 바로 뒤).
+   * effect 콜백은 렌더가 끝난 뒤 실행되니 항상 최신값을 본다.
+   */
+  const onSwingSignalRef = useRef<(lateSec?: number) => void>(() => {});
+  const startPlaybackRef = useRef<(m: Metronome) => Promise<void>>(async () => {});
   const [elapsedSec, setElapsedSec] = useState(0);
   const [swingCount, setSwingCount] = useState(0);
   const { message: toastMessage, show: showToast } = useToast();
@@ -134,8 +145,24 @@ export default function PracticeScreen() {
     (async () => {
       try {
         await m.configureAudioMode();
-        // 2026-08-01: 사운드 팩을 반영한 오디오를 쓴다.
-        if (!cancelled) await m.load(tempo.audioFileFor(soundPack), beepVolume);
+        // 2026-08-01: 사운드 팩 / 2026-08-07: 스윙 속도까지 반영한 오디오를 쓴다.
+        if (cancelled) return;
+        await m.load(tempo.audioFileFor(soundPack, swingSpeedRef.current), beepVolume);
+        if (cancelled) return;
+        m.setOnCycle(onSwingSignalRef.current);
+        /*
+          재생 중이었다면 이어서 다시 튼다 (2026-08-07 신설).
+
+          속도를 바꾸면 **다른 파일**을 로드해야 하므로 이 effect가 다시 돈다.
+          이전(배속 재생)에는 끊김 없이 그 자리에서 빨라지거나 느려졌는데,
+          이제는 로드 시간만큼 짧은 공백이 생긴다. 위상 보코더를 없앤 값으로는
+          받아들일 만한 대가라고 봤다 — 속도 변경은 연습 중 자주 하는 조작이
+          아니고, 어차피 다음 사이클 첫 박부터 새 속도가 맞는 편이 자연스럽다.
+
+          ⚠️ `swingCount`는 리셋되지 않는다(React 상태라 재로드와 무관하다).
+          NSM의 원천 데이터라 여기서 초기화되면 지표가 어긋난다.
+        */
+        if (isPlayingRef.current) await startPlaybackRef.current(m);
       } catch (e) {
         console.warn('[마이템포] 메트로놈 로드 실패', e);
       }
@@ -146,8 +173,8 @@ export default function PracticeScreen() {
       m.unload();
       metronomeRef.current = null;
     };
-    // 연습 대상이나 사운드 팩이 바뀌면 다시 로드해야 한다.
-  }, [tempo.presetIdForAudio, soundPack]);
+    // 연습 대상·사운드 팩·**스윙 속도**가 바뀌면 다시 로드해야 한다.
+  }, [tempo.presetIdForAudio, soundPack, swingSpeed]);
 
   // 볼륨은 재로드 없이 반영
   useEffect(() => {
@@ -172,17 +199,25 @@ export default function PracticeScreen() {
     return () => clearInterval(tick);
   }, [isPlaying]);
 
-  /* ── 임팩트 진동 — 설정을 ref로 읽어 effect 재생성을 막는다 ── */
+  /* ── 설정을 ref로 읽어 effect 재생성을 막는다 ──
+     `swingSpeedRef`·`shotIntervalRef`·`isPlayingRef`는 2026-08-07 신설이다.
+     속도를 바꾸면 오디오를 다시 로드해야 하는데(배속 재생 제거), 재로드 뒤
+     재생을 이어붙이려면 로드 effect가 이 값들을 알아야 한다. 상태를 직접
+     의존성에 넣으면 재생/정지할 때마다 오디오가 통째로 재로드된다. */
   const hapticRef = useRef(hapticOnImpact);
-  const rateRef = useRef(rate);
   const uiSoundsRef = useRef(uiSounds);
   const volumeRef = useRef(beepVolume);
+  const swingSpeedRef = useRef(swingSpeed);
+  const shotIntervalRef = useRef(shotIntervalSec);
+  const isPlayingRef = useRef(isPlaying);
   useEffect(() => {
     hapticRef.current = hapticOnImpact;
-    rateRef.current = rate;
     uiSoundsRef.current = uiSounds;
     volumeRef.current = beepVolume;
-  }, [hapticOnImpact, rate, uiSounds, beepVolume]);
+    swingSpeedRef.current = swingSpeed;
+    shotIntervalRef.current = shotIntervalSec;
+    isPlayingRef.current = isPlaying;
+  }, [hapticOnImpact, uiSounds, beepVolume, swingSpeed, shotIntervalSec, isPlaying]);
 
   const impactTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -215,7 +250,11 @@ export default function PracticeScreen() {
     if (!hapticRef.current) return;
 
     if (impactTimer.current) clearTimeout(impactTimer.current);
-    const delay = IMPACT_AT_MS / Math.max(0.1, rateRef.current) - lateSec * 1000;
+    /*
+      2026-08-07: 배속으로 나누던 계산이 사라졌다. 이제 파일 자체가 그 속도로
+      렌더링돼 있으므로 임팩트 시각은 속도에서 바로 나온다.
+    */
+    const delay = impactAtMs(swingSpeedRef.current) - lateSec * 1000;
     if (delay <= 0) {
       // 이미 임팩트가 지났으면 굳이 늦게 울리지 않는다 — 틀린 신호가 없느니만 못하다.
       return;
@@ -224,11 +263,46 @@ export default function PracticeScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }, delay);
   }, []);
+  onSwingSignalRef.current = onSwingSignal;
+
+  /**
+   * 재생 시작 한 곳으로 모으기 (2026-08-07 신설).
+   *
+   * 재생 버튼과 **속도 변경 후 재로드** 두 경로에서 똑같이 불린다.
+   * 이전에는 재생 경로가 `toggle()` 안에만 있었는데, 이제 재로드 뒤에도
+   * 이어서 틀어야 해서 분기가 두 곳으로 갈라질 뻔했다. 모드(연속/샷 사이클)를
+   * 고르는 규칙이 두 곳에 있으면 언젠가 어긋난다.
+   */
+  const startPlayback = useCallback(async (m: Metronome) => {
+    const speedId = swingSpeedRef.current;
+    if (shotIntervalRef.current > 0) {
+      /**
+       * 샷 사이클 모드 (2026-08-01 재설계)
+       *
+       * [대기] → [카운트인 5초] → [스윙 신호] 를 계속 반복한다.
+       * 공을 치는 상황에서는 한 샷의 전체 사이클이 15~40초라, 스윙 신호만
+       * 2초마다 울려서는 쓸 수가 없다. 자세한 근거는 soundPacks.ts 주석 참고.
+       */
+      m.startShotCycle({
+        countInFile: countInAudio(),
+        countInSec: COUNT_IN_SEC,
+        intervalSec: shotIntervalRef.current,
+        // 2026-08-07: 루프 길이가 속도마다 다르므로 상수가 아니라 함수로 구한다
+        swingCycleSec: cycleSec(speedId),
+        /* 샷 모드에서도 카운트·진동 경로를 하나로 유지한다 (2026-08-06) */
+        onSwing: () => onSwingSignalRef.current(0),
+      });
+    } else {
+      // 연속(빈 스윙) — 네이티브 루프에 맡긴다
+      await m.play();
+    }
+  }, []);
+  startPlaybackRef.current = startPlayback;
 
   /** 오디오 엔진에 카운트 콜백을 물린다. 재생 중 갈아끼워도 카운트는 유지된다. */
   useEffect(() => {
     metronomeRef.current?.setOnCycle(onSwingSignal);
-  }, [onSwingSignal, soundPack, tempo.presetIdForAudio]);
+  }, [onSwingSignal, soundPack, swingSpeed, tempo.presetIdForAudio]);
 
   useEffect(
     () => () => {
@@ -257,27 +331,9 @@ export default function PracticeScreen() {
         await m.stop();
         if (impactTimer.current) clearTimeout(impactTimer.current);
         setIsPlaying(false);
-      } else if (shotIntervalSec > 0) {
-        /**
-         * 샷 사이클 모드 (2026-08-01 재설계)
-         *
-         * [대기] → [카운트인 5초] → [스윙 신호] 를 계속 반복한다.
-         * 공을 치는 상황에서는 한 샷의 전체 사이클이 15~40초라, 스윙 신호만
-         * 2초마다 울려서는 쓸 수가 없다. 자세한 근거는 soundPacks.ts 주석 참고.
-         */
-        m.startShotCycle({
-          countInFile: countInAudio(),
-          countInSec: COUNT_IN_SEC,
-          intervalSec: shotIntervalSec,
-          swingCycleSec: CYCLE_MS / 1000,
-          rate,
-          /* 샷 모드에서도 카운트·진동 경로를 하나로 유지한다 (2026-08-06) */
-          onSwing: () => onSwingSignal(0),
-        });
-        setIsPlaying(true);
       } else {
-        // 연속(빈 스윙) — 기존처럼 네이티브 루프에 맡긴다
-        await m.play(rate);
+        // 모드 분기는 startPlayback 한 곳에 있다 (2026-08-07)
+        await startPlayback(m);
         setIsPlaying(true);
       }
     } catch (e) {
@@ -288,15 +344,18 @@ export default function PracticeScreen() {
   }
 
   /**
-   * 스윙 속도 변경 (2026-08-01)
+   * 스윙 속도 변경 (2026-08-01 · 2026-08-07 개편)
    *
-   * 재생 중에 눌러도 끊기지 않고 그 자리에서 빨라지거나 느려진다.
-   * 오디오를 새로 로드하지 않고 배속만 바꾸기 때문이다 — 비율은 파일 안에
-   * 이미 박혀 있어 배속을 곱해도 그대로 보존된다.
+   * 상태만 바꾸면 된다. 로드 effect가 `swingSpeed`를 의존성으로 두고 있어서
+   * **그 속도로 렌더링된 파일**을 다시 로드하고, 재생 중이었다면 이어서 튼다.
+   *
+   * ⚠️ 이전에는 `setRate()` 한 줄이었고 재생이 끊기지 않았다. 그 매끄러움의
+   * 대가가 위상 보코더였다 — 사용자가 듣는 모든 소리가 타임스트레치를 거쳤다.
+   * 여기서 짧은 공백을 감수하고 원본 음질을 얻는 쪽으로 바꿨다.
+   * (`swingSpeeds.ts` / [[사운드품질-진단과개선계획-2026-08-07]] 참고)
    */
-  async function changeSpeed(id: SwingSpeedId) {
+  function changeSpeed(id: SwingSpeedId) {
     setSwingSpeed(id);
-    await metronomeRef.current?.setRate(getSwingSpeed(id).rate);
   }
 
   /**
@@ -469,8 +528,8 @@ export default function PracticeScreen() {
             ratio={tempo.ratio}
             size={266}
             playing={isPlaying}
-            rate={rate}
-            cycleMs={CYCLE_MS}
+            /* 2026-08-07: 배속이 사라졌다. 링 주기는 속도별 루프 길이 그 자체다. */
+            cycleMs={cycleMs(swingSpeed)}
             colors={{ primary: c.primary, accent: c.accent, track: c.track, dot: c.ink }}
           >
             {/* 2026-08-01: 홈과 동일하게 색 출처를 팔레트로 통일 (링 안 숫자 실종 대응) */}

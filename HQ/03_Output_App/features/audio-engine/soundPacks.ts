@@ -30,28 +30,66 @@
  * 이제 전부 **E3(164.81Hz) 한 음** 위에 음색만 다르게 얹는다.
  * 자세한 근거와 생성 로직은 `scripts/generate-sound-packs.py` 주석 참고.
  */
+import {
+  BASE_SWING_SEC,
+  DEFAULT_SWING_SPEED,
+  getSwingSpeed,
+  type SwingSpeedId,
+} from '../tempo/swingSpeeds';
+
 export type SoundPackId = 'wood' | 'string' | 'drum' | 'rhythm';
 
 /* ───────────────────────── 루프 구조 (진실의 출처) ───────────────────────── */
 
 /**
- * 루프 한 바퀴 길이 (초) — `scripts/generate-sound-packs.py`의 `CYCLE`과 같은 값.
+ * ⚠️ 2026-08-07 — 상수에서 **함수로** 바뀌었다 (사운드 품질 Phase 1).
  *
- * ⚠️ 2026-08-06 신설. 이전엔 이 숫자가 파이썬 스크립트·`practice.tsx`의 `CYCLE_MS`·
- * `TempoRing`의 기본 prop 세 곳에 각각 박혀 있었고, 실제로 **어긋난 적이 있다**
- * (2026-08-01 오디오를 2.0초로 재생성하며 화면만 고치고 컴포넌트 기본값 2600을
- * 놓쳤다 — AOS 리뷰 V-4). 앱 쪽 진실의 출처를 여기 하나로 모은다.
+ * 이전에는 오디오가 파일 하나(스윙 1.1초 / 사이클 2.0초)뿐이었고, 속도는
+ * `player.setPlaybackRate()`로 늘려 썼다. 그래서 길이가 상수 하나로 족했다.
+ *
+ * 그 구조를 버렸다. 이유는 [[사운드품질-진단과개선계획-2026-08-07]]에 있는데
+ * 한 줄로 줄이면 이렇다 —
+ *
+ *   배속이 0.825 / 0.917 / 1.031 / 1.179 였다. **1.0이 하나도 없다.**
+ *   즉 사용자는 원본 파일을 한 번도 듣지 못했고, `shouldCorrectPitch`가
+ *   켜져 있어 항상 **위상 보코더**를 거쳤다. 위상 보코더가 가장 못 다루는
+ *   신호가 트랜지언트 뾰족한 타악기다 — 어택이 뭉개지고 프리에코가 낀다.
+ *   "저가형으로 들린다"의 가장 큰 단일 원인이었다.
+ *
+ * 이제 속도마다 오디오를 따로 렌더링한다. 따라서 **루프 길이가 속도에 따라
+ * 달라지고**, 링 애니메이션·샷 사이클·임팩트 진동이 전부 이 함수를 통해야 한다.
+ *
+ * ⚠️ `cycleSec`의 공식은 `scripts/generate-sound-packs.py`의 `cycle_for()`와
+ * **반드시 같아야 한다.** 어긋나면 진행 점이 소리와 다른 속도로 돈다
+ * (2026-08-01에 비슷한 사고가 있었다 — AOS 리뷰 V-4).
  */
-export const CYCLE_SEC = 2.0;
-
 /**
- * 백스윙 시작 → 임팩트까지의 길이 (초). 스크립트의 `SWING`과 같은 값.
- * 임팩트 진동을 소리에 맞춰 예약할 때 쓴다.
+ * 기준 사이클 길이 — `generate-sound-packs.py`의 `BASE_CYCLE`과 같아야 한다.
+ *
+ * ⚠️ 기준 스윙 길이(`BASE_SWING_SEC`)는 여기 다시 적지 않고 `swingSpeeds.ts`에서
+ * 가져온다. 같은 숫자를 두 곳에 두면 언젠가 어긋나고, 이 저장소는 실제로
+ * 그 사고를 한 번 겪었다(AOS 리뷰 V-4).
  */
-export const SWING_SEC = 1.1;
+export const BASE_CYCLE_SEC = 2.0;
 
-export const CYCLE_MS = CYCLE_SEC * 1000;
-export const IMPACT_AT_MS = SWING_SEC * 1000;
+/** 이 속도에서 백스윙 시작 → 임팩트까지 몇 초인가. */
+export function swingSec(speedId: SwingSpeedId): number {
+  return getSwingSpeed(speedId).swingSec;
+}
+
+/** 이 속도에서 루프 한 바퀴가 몇 초인가. 파이썬 `cycle_for()`와 같은 공식. */
+export function cycleSec(speedId: SwingSpeedId): number {
+  return (BASE_CYCLE_SEC * swingSec(speedId)) / BASE_SWING_SEC;
+}
+
+export function cycleMs(speedId: SwingSpeedId): number {
+  return cycleSec(speedId) * 1000;
+}
+
+/** 임팩트 진동을 소리에 맞춰 예약할 때 쓴다. */
+export function impactAtMs(speedId: SwingSpeedId): number {
+  return swingSec(speedId) * 1000;
+}
 
 export type SoundPack = {
   id: SoundPackId;
@@ -97,33 +135,111 @@ export function isPackFree(id: SoundPackId): boolean {
   return SOUND_PACKS.find((p) => p.id === id)?.free === true;
 }
 /**
- * 템포 × 사운드팩 조합 오디오.
- * require는 정적 경로만 받으므로 전부 나열한다(번들러 제약).
+ * 템포 × 사운드팩 × **스윙 속도** 조합 오디오.
+ *
+ * ⚠️ 2026-08-07: 속도 축이 새로 생겨 12개 → **48개**가 됐다.
+ * 배속 재생을 없앤 대가다(위 `cycleSec` 주석 참고). 번들이 1.4MB → 9.6MB
+ * 늘어나는데, 위상 보코더를 경로에서 빼는 값으로는 싸다고 판단했다.
+ *
+ * `require`는 정적 경로만 받으므로 전부 나열한다(번들러 제약).
+ * 이 표는 `scripts/generate-sound-packs.py`가 만드는 파일명과 1:1로 맞아야 한다:
+ *   `{비율}__{팩}__{속도}.wav`
  */
-const LOOPS: Record<string, Record<SoundPackId, unknown>> = {
+const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, unknown>>> = {
   'preset-3-1': {
-    wood: require('../../assets/audio/tempo_3_1__wood.wav'),
-    string: require('../../assets/audio/tempo_3_1__string.wav'),
-    drum: require('../../assets/audio/tempo_3_1__drum.wav'),
-    rhythm: require('../../assets/audio/tempo_3_1__rhythm.wav'),
+    wood: {
+      s133: require('../../assets/audio/tempo_3_1__wood__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_1__wood__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_1__wood__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_1__wood__s093.wav'),
+    },
+    string: {
+      s133: require('../../assets/audio/tempo_3_1__string__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_1__string__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_1__string__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_1__string__s093.wav'),
+    },
+    drum: {
+      s133: require('../../assets/audio/tempo_3_1__drum__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_1__drum__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_1__drum__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_1__drum__s093.wav'),
+    },
+    rhythm: {
+      s133: require('../../assets/audio/tempo_3_1__rhythm__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_1__rhythm__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_1__rhythm__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_1__rhythm__s093.wav'),
+    },
   },
   'preset-2-5-1': {
-    wood: require('../../assets/audio/tempo_2_5_1__wood.wav'),
-    string: require('../../assets/audio/tempo_2_5_1__string.wav'),
-    drum: require('../../assets/audio/tempo_2_5_1__drum.wav'),
-    rhythm: require('../../assets/audio/tempo_2_5_1__rhythm.wav'),
+    wood: {
+      s133: require('../../assets/audio/tempo_2_5_1__wood__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_5_1__wood__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_5_1__wood__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_5_1__wood__s093.wav'),
+    },
+    string: {
+      s133: require('../../assets/audio/tempo_2_5_1__string__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_5_1__string__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_5_1__string__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_5_1__string__s093.wav'),
+    },
+    drum: {
+      s133: require('../../assets/audio/tempo_2_5_1__drum__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_5_1__drum__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_5_1__drum__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_5_1__drum__s093.wav'),
+    },
+    rhythm: {
+      s133: require('../../assets/audio/tempo_2_5_1__rhythm__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_5_1__rhythm__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_5_1__rhythm__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_5_1__rhythm__s093.wav'),
+    },
   },
   'preset-3-5-1': {
-    wood: require('../../assets/audio/tempo_3_5_1__wood.wav'),
-    string: require('../../assets/audio/tempo_3_5_1__string.wav'),
-    drum: require('../../assets/audio/tempo_3_5_1__drum.wav'),
-    rhythm: require('../../assets/audio/tempo_3_5_1__rhythm.wav'),
+    wood: {
+      s133: require('../../assets/audio/tempo_3_5_1__wood__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_5_1__wood__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_5_1__wood__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_5_1__wood__s093.wav'),
+    },
+    string: {
+      s133: require('../../assets/audio/tempo_3_5_1__string__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_5_1__string__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_5_1__string__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_5_1__string__s093.wav'),
+    },
+    drum: {
+      s133: require('../../assets/audio/tempo_3_5_1__drum__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_5_1__drum__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_5_1__drum__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_5_1__drum__s093.wav'),
+    },
+    rhythm: {
+      s133: require('../../assets/audio/tempo_3_5_1__rhythm__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_5_1__rhythm__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_5_1__rhythm__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_5_1__rhythm__s093.wav'),
+    },
   },
 };
 
-/** 프리셋 id + 사운드팩 → 실제 오디오 파일 */
-export function loopAudio(presetId: string, pack: SoundPackId): unknown {
-  return LOOPS[presetId]?.[pack] ?? LOOPS['preset-3-1'][pack] ?? LOOPS['preset-3-1'].wood;
+/**
+ * 프리셋 id + 사운드팩 + 스윙 속도 → 실제 오디오 파일.
+ *
+ * 알 수 없는 값(구버전 저장값 등)은 조용히 기본으로 떨어진다 — 소리가 안 나는
+ * 것보다 다른 소리가 나는 편이 낫다.
+ */
+export function loopAudio(
+  presetId: string,
+  pack: SoundPackId,
+  speedId: SwingSpeedId
+): unknown {
+  const byPack = LOOPS[presetId] ?? LOOPS['preset-3-1'];
+  const bySpeed = byPack[pack] ?? byPack[FREE_SOUND_PACK];
+  return bySpeed[speedId] ?? bySpeed[DEFAULT_SWING_SPEED];
 }
 
 /**
