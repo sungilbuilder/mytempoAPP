@@ -147,7 +147,10 @@ export default function PracticeScreen() {
         await m.configureAudioMode();
         // 2026-08-01: 사운드 팩 / 2026-08-07: 스윙 속도까지 반영한 오디오를 쓴다.
         if (cancelled) return;
-        await m.load(tempo.audioFileFor(soundPack, swingSpeedRef.current), beepVolume);
+        // 볼륨은 ref로 읽는다. 상태를 그대로 쓰면 슬라이더를 만질 때마다 이
+        // effect가 다시 돌아 오디오가 통째로 재로드된다. 재생 중 볼륨 반영은
+        // 아래 전용 effect(setVolume)가 재로드 없이 처리한다.
+        await m.load(tempo.audioFileFor(soundPack, swingSpeedRef.current), volumeRef.current);
         if (cancelled) return;
         m.setOnCycle(onSwingSignalRef.current);
         /*
@@ -174,6 +177,12 @@ export default function PracticeScreen() {
       metronomeRef.current = null;
     };
     // 연습 대상·사운드 팩·**스윙 속도**가 바뀌면 다시 로드해야 한다.
+    //
+    // eslint 는 `tempo` 객체 전체를 의존성에 넣으라고 하지만 넣으면 안 된다.
+    // `useActiveTempo()`가 매 렌더 새 객체 리터럴을 돌려주므로, 의존성에 넣는
+    // 순간 **렌더마다 오디오가 언로드→재로드**된다. 실제로 오디오 재로드가
+    // 필요한 조건은 어느 파일을 읽느냐뿐이고, 그건 `presetIdForAudio`가 대표한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tempo.presetIdForAudio, soundPack, swingSpeed]);
 
   // 볼륨은 재로드 없이 반영
@@ -374,7 +383,8 @@ export default function PracticeScreen() {
       }
     });
     return () => sub.remove();
-  }, [isPlaying]);
+    // `setIsPlaying`은 zustand 액션이라 참조가 고정이다 — 넣어도 재등록되지 않는다.
+  }, [isPlaying, setIsPlaying]);
 
   /* ── 화면을 나갈 때 기록 저장 ───────────────────────── */
   /**

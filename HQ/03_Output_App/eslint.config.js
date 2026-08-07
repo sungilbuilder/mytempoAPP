@@ -59,6 +59,15 @@ module.exports = [
     },
   },
 
+  // 개발 전용 계측 도구 — console 출력이 이 파일들의 존재 이유다.
+  // 프로덕션 코드가 아니고 __DEV__ 가드 안에서만 돌기 때문에 규칙을 끈다.
+  {
+    files: ['features/debug/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
   // 테스트 파일 — jest 전역(describe/it/expect/jest)을 인식시킨다.
   {
     files: ['**/__tests__/**/*.{ts,tsx,js}', '**/*.test.{ts,tsx,js}', 'jest.setup.js'],
