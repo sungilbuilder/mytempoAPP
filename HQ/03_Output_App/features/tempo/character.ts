@@ -116,10 +116,6 @@ export function formatRatioWithPrecision(
   return { text: formatRatio(ratio), canImprove: false };
 }
 
-/** 슬로모 촬영 안내 문구 — 결과 화면에서만 노출한다(창업자 확정: 강요하지 않음) */
-export const SLOWMO_HINT =
-  '더 정확한 값을 보고 싶다면 슬로모로 촬영해보세요. 아이폰은 카메라 → 슬로모, 갤럭시는 카메라 → 더보기 → 슬로우 모션입니다.';
-
 /** 초 단위를 "0.56s" 형태로 */
 export function formatSeconds(sec: number): string {
   return `${sec.toFixed(2)}s`;

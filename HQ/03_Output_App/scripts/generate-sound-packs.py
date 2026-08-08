@@ -132,6 +132,115 @@ K-weighting(ITU-R BS.1770)을 쓰면 음색이 달라도 체감 음량이 맞는
 
 `scripts/audit.py`가 LUFS·트루피크·루프 이음매에 더해 **4kHz 이상 에너지 하한**과
 **타격 간 상관계수 상한**을 검사한다. 위 ①③이 조용히 되돌아가는 걸 막는다.
+
+═══════════════════════════════════════════════════════════════════════
+ 4. 2026-08-08 '현' 폐기 → 피아노로 전면 교체
+═══════════════════════════════════════════════════════════════════════
+
+같은 날 오전 실기기 검증(T-06)에서 "단조처럼 어둡다"는 피드백을 받고
+`string()`의 `brightness`를 0.5→0.60으로 올렸고, 그 직후 '현' 팩만 시그니처
+질감(wood+string 블렌드, `string_signature_voice`)으로 바꿨다.
+
+창업자가 그 결과물을 직접 오래 들어보고 다시 판단했다: **밝기를 조금 올리는
+정도로는 안 된다. 훈련 신호로서 이 물리모델 자체가 안 맞는다.** 투어템포와
+비교했을 때도 투어템포 쪽 피아노 톤이 더 듣기 좋다는 판단이었고, 이는 이미
+§3에서 실측한 "단조처럼 어둡다" 피드백과 같은 방향을 가리킨다 —
+Karplus-Strong 2탭 평균 필터는 태생적으로 고역이 죽은 "따뜻하지만 어두운"
+음색이라, 아무리 밝기를 조정해도 상한이 있다.
+
+→ **'현'·'리듬' 두 팩 모두 마커 음색을 `piano()`(신설, 배음 6개 비조화
+가산합성 + 해머 트랜지언트)로 교체한다.** `string()` 함수 자체는 지우지
+않는다 — 시그니처 사운드(`build_signature`)와 UI 확인음(`build_cues`)의
+"여운" 레이어로 여전히 쓰인다. 이 두 곳은 온보딩 1회·짧은 확인음이라
+20~40분 반복 노출로 인한 피로 문제의 대상이 아니다.
+
+E3 세 마커 동일 음정 원칙(§1)과 벨로시티가 음색을 바꾸는 원칙(§Phase 2-③)은
+그대로 유지한다 — 악기만 바뀌었지 훈련 신호 설계 원칙은 바뀌지 않는다.
+
+═══════════════════════════════════════════════════════════════════════
+ 5. 2026-08-08 오후 — 훈련 마커, 동일 음정 원칙 폐기 → 3음정 전환
+    [[사운드-아이덴티티]] §1 개정
+═══════════════════════════════════════════════════════════════════════
+
+§1의 "세 지점(시작·탑·임팩트)은 같은 음이다"는 2026-08-01 창업자 확정 원칙이었다.
+같은 날 창업자가 이 원칙을 **뒤집기로** 결정했다 — MYTEMPO만의 소리라는 인지를
+음정 자체로 만든다. 세 마커가 상승 3화음(START→TOP→IMPACT)을 이루게 한다.
+
+⚠️ 감수하는 리스크: 음정이 오르면 "더 빨리 스윙하라"는 오해를 줄 수 있다는
+기존 우려는 사라지지 않았다. 창업자가 그 리스크를 알고 감수하기로 한 결정이다.
+
+### 근음을 왜 4옥타브로 올렸나
+
+기존 E3(3옥타브, 164.81Hz)는 "연습장 웅성거림(200~800Hz) 아래로 피해 묻히지
+않는다"는 명확한 근거가 있었다(§1 원본). 4옥타브(261~494Hz)로 올리면 그 대역
+**안으로 들어간다** — 대가가 있는 선택이다.
+
+`scripts/signature_sound.py`로 25개 후보(음정 5×음색 5)를 만들어 실측한 결과,
+그 대가는 **음색으로 상쇄 가능**했다. 배음을 3~6차까지 넓게 펴고 트랜지언트
+대역을 2~9.5kHz로 잡은 음색("Crystal Piano")은 에너지 대부분이 웅성거림
+대역 위에 있어, 근음이 그 대역 안에 있어도 마스킹 위험도(그 대역 안 에너지
+비중)가 다른 음색 대비 20%p 이상 낮게 나왔다. 평가·근거 전문은 볼트
+[[사운드-아이덴티티]]와 `_sound_exploration/metrics.json` 참고.
+
+### 선정 — E4 → A4 → B4, Crystal Piano
+
+- **E 근음 유지** — 기존 시그니처 사운드·확인음이 전부 E(E3) 위에 있다.
+  브랜드가 이미 8일간 "E"로 알려져 왔으므로 새 체계도 E4에서 시작한다.
+- **B4로 해소** — 기존 시그니처의 해소음이 정확히 B4(E3×3=494.43Hz)다.
+  이 체계도 B4(493.88Hz, 평균율)로 끝나 두 사운드가 **같은 음으로 닫힌다.**
+- A4는 표준 3화음(장3도)이 아니라 완전4도 위 — "일반적인 3화음보다 독특함"
+  (평가 기준 §15 Brand Fit)을 노린 선택이다.
+
+### 이번에 바꾸지 않은 것
+
+- **시그니처 사운드(`build_signature`)·UI 확인음(`build_cues`)는 그대로 둔다.**
+  창업자 결정은 "훈련 마커"에 대한 것이었다. 온보딩 1회·짧은 확인음까지
+  범위를 넓히는 건 별도 판단이 필요해 이번 변경에 넣지 않았다.
+  ⚠️ 따라서 지금부터 앱에는 **두 개의 근음 체계**가 공존한다 — 훈련 마커는
+  E4/A4/B4, 시그니처·확인음은 E3/B4. 다음 판단이 필요한 지점.
+- `wood()`·`piano()`·`drum()` 함수 자체(가산합성·배음 구조)는 손대지 않는다.
+  바뀌는 건 **어떤 주파수로 부르느냐**뿐이다. 아래 `MARKER_FREQS` 참고.
+
+═══════════════════════════════════════════════════════════════════════
+ 6. 2026-08-08 저녁 — 새 팩 2종 추가: 마림바(mallet) · 플럭(pluck)
+═══════════════════════════════════════════════════════════════════════
+
+§5의 25후보 탐색에서 나온 Soft Mallet·Premium Pluck 음색을 선택지로 승격한다.
+`scripts/signature_sound.py`의 탐색용 SoundProfile 엔진을 그대로 옮기지 않고,
+이 파일의 다른 악기(`wood`·`piano`·`drum`)와 같은 스타일(`env`·`_transient`
+직접 호출)로 다시 짰다 — 파일 하나 안에서 함수들이 다른 패턴을 쓰면 다음에
+고칠 사람이 매번 두 스타일을 오가야 한다.
+
+  `mallet()` — `wood()`보다 배음이 적고 어택이 느리다(2ms→6ms). "또렷한 타격"
+              (나무) 대신 "부드러운 타격"을 노린다.
+  `pluck()`  — 이 파일에서 가장 짧은 어택(1.2ms), 배음이 차수가 오를수록
+              빠르게 준다. 트랜지언트는 광대역 타격음이 아니라 좁은 '클릭'
+              하나뿐 — 나무·피아노의 "때리는" 質感과 다른 "튕기는" 質感.
+
+`VOICES`·`MARKER_FREQS`에 `'mallet'`·`'pluck'`를 추가하면 끝이다 — `main()`의
+루프·미리듣기 생성 루프가 `VOICES`를 순회하는 구조라 자동으로 포함된다.
+파일 수는 팩 축이 4→6이 되며 48→72(루프) + 4→6(미리듣기)로 늘어난다.
+
+TS 쪽은 `features/audio-engine/soundPacks.ts`의 `SoundPackId`·`SOUND_PACKS`·
+`LOOPS`·`PREVIEWS`에 대응 항목을 손으로 추가해야 한다(번들러가 `require()`
+경로를 정적으로만 읽어 자동 생성이 안 된다). 둘 다 무료 팩이 아니다 —
+기존 프리미엄 게이팅 원칙(무료는 '나무' 하나) 그대로.
+
+═══════════════════════════════════════════════════════════════════════
+ 7. 2026-08-08 밤 — 팩 구성 정리: 나무·피아노·마림바·리듬 4종만 남긴다
+═══════════════════════════════════════════════════════════════════════
+
+창업자 결정: §6에서 늘린 6종 중 **'북'(drum)과 '플럭'(pluck)을 선택 가능한
+팩에서 뺀다.** 최종 라인업은 나무 → 피아노 → 마림바 → **리듬(맨 아래)**.
+
+- `pluck()` 함수는 다른 어디에서도 안 쓰여 완전히 삭제했다.
+- `drum()` 함수는 **지우지 않는다** — 카운트인(`build_countin`)·시그니처
+  (`build_signature`)·'리듬' 팩의 박자 층이 지금도 이 함수를 직접 부른다.
+  "선택 가능한 팩"에서 빠지는 것과 "함수가 안 쓰인다"는 다른 이야기다.
+- `MARKER_FREQS`의 저역 이조 상수(`MARKER_E2/A2/B2`)는 '북' 팩 전용이었어서
+  같이 지웠다. 남은 4팩은 전부 같은 E4→A4→B4를 쓴다.
+- TS 쪽 순서도 맞춰야 한다 — `soundPacks.ts`의 `SOUND_PACKS` 배열 순서가
+  설정 화면에 그대로 노출되는 목록 순서다(§16 "왜 파일 구조" 참고).
 """
 import os
 import wave
@@ -171,9 +280,27 @@ def cycle_for(swing: float) -> float:
     return BASE_CYCLE * swing / BASE_SWING
 
 
-E3 = 164.81     # 근음
-E1 = 41.20      # 북의 기음 (E3의 2옥타브 아래)
+E3 = 164.81     # 근음 — 시그니처 사운드·UI 확인음이 쓴다 (§5, 이번 변경 범위 밖)
+E1 = 41.20      # 북의 기음 (E3의 2옥타브 아래) — 리듬 팩의 박자 층이 쓴다
 B4 = E3 * 3     # 494.43 Hz — E3의 정확히 3배. 브랜드의 3:1을 주파수로 옮긴 값
+
+# ── 훈련 마커 3음정 (2026-08-08, §5) ───────────────────────────────────
+# START → TOP → IMPACT. E 근음 유지 + 기존 시그니처와 같은 B4로 해소.
+# 근거: `scripts/signature_sound.py`의 25후보 실측 평가 + [[사운드-아이덴티티]] §1.
+MARKER_E4 = 329.63
+MARKER_A4 = 440.00
+MARKER_B4 = 493.88   # 평균율. E3×3=494.43과 0.55Hz(≈2센트) 차이라 지각상 같은 음.
+
+# 팩별 (start, top, impact) 주파수 — 전부 동일(§6-2 갱신, '북' 팩 제거로 저역
+# 이조 필요 없어짐). '북'(drum())은 여전히 카운트인·시그니처·리듬 박자 층에서
+# 쓰이지만 그 호출들은 이 표를 보지 않고 자기 기본값(E1)을 그대로 쓴다.
+MARKER_FREQS = {
+    'wood':   (MARKER_E4, MARKER_A4, MARKER_B4),
+    'string': (MARKER_E4, MARKER_A4, MARKER_B4),   # 내부 id는 string, 실제는 피아노
+    'rhythm': (MARKER_E4, MARKER_A4, MARKER_B4),   # 박자 층(북)은 E1 그대로, 마커만 3음정
+    'mallet': (MARKER_E4, MARKER_A4, MARKER_B4),
+}
+
 PICKUP_BEATS = 2
 PREVIEW_SEC = 1.5
 COUNT_IN_SEC = 5   # 2026-08-01 창업자 요청으로 3초 → 5초
@@ -274,7 +401,7 @@ def wood(dur, f=E3, vel=1.0, rng=None):
     return sig
 
 
-def string(dur, f=E3, decay=0.9964, vel=1.0, rng=None):
+def string(dur, f=E3, decay=0.9968, vel=1.0, brightness=0.60, rng=None):
     """
     뜯는 현 — Karplus-Strong. 잡음을 링버퍼에 넣고 평균 필터를 돌린다.
 
@@ -284,6 +411,14 @@ def string(dur, f=E3, decay=0.9964, vel=1.0, rng=None):
     2026-08-07: 여기도 라운드로빈. 초기 잡음이 매번 달라지므로 원래 변주 여지가
     가장 큰 음색인데, 전역 시드 하나로 고정돼 그 이점을 통째로 버리고 있었다.
     피크(뜯는 순간)도 벨로시티에 연동한다.
+
+    ⚠️ 2026-08-07 실기기 검증(T-06): "단조처럼 어둡게 들린다, 더 밝게" 제보 반영.
+    고전 Karplus-Strong의 2탭 평균 필터(`0.5*cur + 0.5*nxt`)는 고역을 강하게
+    죽여 전형적으로 "따뜻하지만 어두운" 현 소리를 만든다(이게 표준 KS의 정체성이라
+    악기로서는 맞지만, 이 음이 20~40분 반복되는 훈련 신호로는 무겁게 들릴 수 있다).
+    `brightness`를 0.5보다 올리면(현재 0.60) 필터가 `cur` 쪽에 더 무게를 둬 고역
+    감쇠가 줄고 더 화사하게 들린다. 1.0에 가까울수록 감쇠가 거의 없는 필터가 되어
+    쇳소리에 가까워지므로 과하게 올리지 않는다(0.5~0.7 권장 범위).
     """
     rng = rng or np.random.default_rng(0)
     f = f * (1.0 + rng.uniform(-0.003, 0.003))
@@ -294,12 +429,13 @@ def string(dur, f=E3, decay=0.9964, vel=1.0, rng=None):
     # 된다. 스피커에서 툭 하는 잡음이 되고 헤드룸도 낭비한다.
     buf -= buf.mean()
     dec = decay * (1.0 + rng.uniform(-0.0008, 0.0008))
+    b = min(0.98, max(0.5, brightness))
     out = np.zeros(int(SR * dur))
     i = 0
     for k in range(len(out)):
         cur, nxt = buf[i], buf[(i+1) % n]
         out[k] = cur
-        buf[i] = dec * 0.5 * (cur + nxt)
+        buf[i] = dec * (b * cur + (1 - b) * nxt)
         i = (i+1) % n
 
     atk = min(len(out), int(SR * 0.002))
@@ -308,7 +444,8 @@ def string(dur, f=E3, decay=0.9964, vel=1.0, rng=None):
     out[-fade:] *= np.linspace(1, 0, fade)
 
     # 손톱이 현을 스치는 순간 — 세게 뜯을수록 밝아진다
-    out += _transient(len(out), rng, 2200, 8000, gain=0.24, decay=140,
+    # (2026-08-07: 게인 0.24→0.32 — 어택을 조금 더 또렷하게 해 첫인상을 밝게 한다)
+    out += _transient(len(out), rng, 2200, 8000, gain=0.32, decay=140,
                       mode_freqs=[3100, 5400], mode_decays=[0.007, 0.004],
                       mode_gains=[0.06, 0.04], vel=vel)
     return out
@@ -338,13 +475,111 @@ def drum(dur=0.18, f=E1, vel=1.0, rng=None):
     return sig
 
 
-# 팩 id → (마커 소리 만드는 함수, 박자 층이 있는가)
+def piano(dur, f=E3, vel=1.0, rng=None):
+    """
+    피아노 타격 — 해머가 현을 때리는 순간의 배음 구조.
+    (2026-08-08, '현' 폐기 대응)
+
+    같은 날 있었던 `string_signature_voice`(wood+string 블렌드) 시도를 대체한다.
+    브라이트니스를 올려도, 시그니처 톤과 블렌드해도 근본 문제는 그대로였다 —
+    Karplus-Strong 2탭 평균 필터 자체가 만드는 "어둡고 오래 우는" 캐릭터가
+    20~40분 반복되는 훈련 신호에는 안 맞았다(§4, T-06 실기기 피드백 참고).
+    투어템포가 톤으로 피아노를 쓰는 이유도 이것이라고 본다 — 배음이 넓게
+    퍼져 있고 어택이 짧고 뚜렷해서, 같은 음을 반복해도 무겁게 쌓이지 않는다.
+
+    현의 강성 때문에 부분음이 정수배에서 살짝 벌어지는 비조화성
+    (inharmonicity, f_n = f·n·√(1+B·n²))을 반영한다 — 이게 없으면 오르간처럼
+    밋밋하게 들린다. 세게 칠수록 고역 부분음 비중이 느는 것도 실제 피아노와
+    같다(기존 wood()의 벨로시티 처리와 같은 원리).
+    """
+    rng = rng or np.random.default_rng(0)
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    B = 0.0004   # 스타인웨이 중저음역 근사 비조화 계수
+
+    ak = 1.0 + rng.uniform(-0.12, 0.12)
+    dk = 1.0 + rng.uniform(-0.10, 0.10)
+    d = lambda: 1.0 + rng.uniform(-0.0025, 0.0025)   # 부분음 미세 디튠 (라운드로빈)
+    g = lambda: 1.0 + rng.uniform(-0.12, 0.12)       # 부분음 세기 흔들림
+
+    # (배수, 기본 세기, 감쇠(dur 대비), (벨로시티 무관분, 벨로시티 비례분))
+    partials = [
+        (1, 1.00, 0.42, (0.55, 0.45)),
+        (2, 0.58, 0.33, (0.35, 0.55)),
+        (3, 0.36, 0.26, (0.28, 0.62)),
+        (4, 0.22, 0.20, (0.20, 0.68)),
+        (5, 0.13, 0.15, (0.15, 0.72)),
+        (6, 0.08, 0.10, (0.10, 0.78)),
+    ]
+    sig = np.zeros(n)
+    for k, amp, dec_frac, (base, boost) in partials:
+        fk = f * k * np.sqrt(1 + B * k**2) * d()
+        atk = (0.0022 if k == 1 else 0.0010) * ak
+        env_k = env(n, atk, dur * dec_frac * dk)
+        gain = amp * (base + boost * vel) * g()
+        sig += gain * np.sin(2*np.pi*fk*t) * env_k
+        if k <= 2:
+            # 유니즌 현이 미세하게 어긋나며 만드는 자연스런 맥놀이(beating)
+            sign = 1.0 if rng.uniform(-1, 1) > 0 else -1.0
+            detune = 1.0 + sign * rng.uniform(0.0006, 0.0014)
+            sig += gain * 0.5 * np.sin(2*np.pi*fk*detune*t) * env_k
+
+    # 해머가 펠트를 통해 현을 때리는 순간의 어택 — 나무의 '노크'보다 둥글지만
+    # 대역은 더 넓게 잡는다. 부분음이 6배(~1kHz)에서 끝나 그 아래가 전부
+    # 어두웠는데, 실제 피아노의 "화사함"은 여기 트랜지언트 대역에 있다.
+    sig += _transient(n, rng, 1200, 8000, gain=1.55, decay=40,
+                      mode_freqs=[1900, 3600, 5600], mode_decays=[0.018, 0.012, 0.008],
+                      mode_gains=[0.36, 0.24, 0.14], vel=vel)
+    return sig
+
+
+def mallet(dur, f=E3, vel=1.0, rng=None):
+    """
+    소프트 말렛 — 새 팩 (2026-08-08, §6). `wood()`와 같은 마림바 계열이지만
+    더 적은 배음·더 느린 어택·더 좁고 낮은 트랜지언트 대역으로 **둔탁하지 않게
+    따뜻한** 쪽을 노린다. `wood()`가 "또렷한 타격"이라면 이쪽은 "부드러운 타격".
+
+    `scripts/signature_sound.py`의 탐색 후보 Soft Mallet을 프로덕션 톤으로
+    옮긴 것 — 트랜지언트·감쇠는 이 파일의 다른 악기와 같은 방식(`_transient`,
+    `env`)으로 다시 짰다(탐색용 엔진을 그대로 가져오지 않는다).
+    """
+    rng = rng or np.random.default_rng(0)
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    d = lambda: 1.0 + rng.uniform(-0.004, 0.004)
+    g = lambda: 1.0 + rng.uniform(-0.15, 0.15)
+    ak = 1.0 + rng.uniform(-0.15, 0.15)
+    dk = 1.0 + rng.uniform(-0.08, 0.08)
+
+    sig = (np.sin(2*np.pi*f*d()*t) * env(n, 0.006*ak, dur*0.46*dk)
+           + (0.22 + 0.10*vel) * g() * np.sin(2*np.pi*f*2.0*d()*t) * env(n, 0.004*ak, dur*0.30*dk)
+           + (0.08 + 0.08*vel) * g() * np.sin(2*np.pi*f*3.9*d()*t) * env(n, 0.003*ak, dur*0.18*dk))
+
+    sig += _transient(n, rng, 1400, 6500, gain=1.30, decay=44,
+                      mode_freqs=[1900, 3300, 5000], mode_decays=[0.022, 0.014, 0.009],
+                      mode_gains=[0.26, 0.17, 0.10], vel=vel)
+    return sig
+
+
+# 팩 id → (마커 소리 만드는 함수(d, f, vel, rng), 박자 층이 있는가)
+# ⚠️ 2026-08-08(§5) — 세 마커가 같은 음이 아니게 되면서 `f`(주파수) 인자가 추가됐다.
+# 호출부(`build`)가 `MARKER_FREQS`에서 위치별 주파수를 뽑아 넘긴다.
 VOICES = {
-    'wood':   (lambda d, vel, rng: wood(d, vel=vel, rng=rng), False),
-    'string': (lambda d, vel, rng: string(d, vel=vel, rng=rng), False),
-    'drum':   (lambda d, vel, rng: drum(min(d, 0.30), vel=vel, rng=rng), False),
-    'rhythm': (lambda d, vel, rng: string(d, vel=vel, rng=rng), True),
+    'wood':   (lambda d, f, vel, rng: wood(d, f=f, vel=vel, rng=rng), False),
+    'string': (lambda d, f, vel, rng: piano(d, f=f, vel=vel, rng=rng), False),
+    'mallet': (lambda d, f, vel, rng: mallet(d, f=f, vel=vel, rng=rng), False),
+    'rhythm': (lambda d, f, vel, rng: piano(d, f=f, vel=vel, rng=rng), True),
 }
+# ⚠️ id는 'string'·'rhythm' 그대로 둔다 — 파일명(tempo_*__string__*.wav)과
+# soundPacks.ts의 SoundPackId 타입까지 바꾸는 건 이번 변경 범위 밖이다.
+# 'mallet'은 2026-08-08(§6) 신설 — 25후보 탐색의 Soft Mallet을 프로덕션 팩으로
+# 승격한 것. `VOICES`에 넣는 것만으로 main()의 루프·미리듣기 생성이 자동으로
+# 새 팩을 포함한다(딕셔너리를 순회하는 구조라서).
+#
+# ⚠️ 2026-08-08 밤(§7) — '북'(drum)·'플럭'(pluck)을 선택 가능한 팩에서 뺐다.
+# `drum()` 함수 자체는 지우지 않는다 — 카운트인·시그니처·'리듬' 팩의 박자
+# 층이 여전히 쓴다. `pluck()` 함수는 다른 곳에서 안 써 완전히 삭제했다.
+# 사용자에게 보이는 이름(label)만 앱 쪽에서 '피아노'로 바뀐다.
 
 
 def place(buf, sig, at, gain=1.0):
@@ -375,6 +610,7 @@ def build(pack, ratio_name, ratio, speed_id, swing):
     두드리는 물리는 템포와 무관하다. 이전 배속 재생은 이 둘을 구분하지 못했다.
     """
     voice, pulse_layer = VOICES[pack]
+    f_start, f_top, f_impact = MARKER_FREQS[pack]
     total = cycle_for(swing)
     k = swing / BASE_SWING          # 감쇠 길이 스케일
     buf = np.zeros(int(total * SR))
@@ -383,11 +619,11 @@ def build(pack, ratio_name, ratio, speed_id, swing):
     def r(tag):
         return rng_for(pack, ratio_name, speed_id, tag)
 
-    # ── 마커 3음 — 같은 음정, 길이·세기·**음색**으로 구분 ──────────────
+    # ── 마커 3음 — 상승 3화음(§5), 길이·세기·음색으로도 구분 ──────────────
     #    벨로시티는 게인과 별개로 트랜지언트·고역 부분음 비중을 바꾼다.
-    place(buf, voice(0.50*k, 0.55, r('start')),  0.0,   0.70)   # 백스윙 시작 — 가볍게
-    place(buf, voice(0.42*k, 0.72, r('top')),    back,  0.80)   # 탑 — 짧게 끊어
-    place(buf, voice(0.72*k, 1.00, r('impact')), swing, 1.00)   # 임팩트 — 가장 길고 세게
+    place(buf, voice(0.50*k, f_start, 0.55, r('start')),  0.0,   0.70)   # 백스윙 시작 — 가볍게
+    place(buf, voice(0.42*k, f_top, 0.72, r('top')),      back,  0.80)   # 탑 — 짧게 끊어
+    place(buf, voice(0.72*k, f_impact, 1.00, r('impact')), swing, 1.00)  # 임팩트 — 가장 길고 세게
 
     if pulse_layer:
         # ── 박자 층 — 백스윙을 3등분 ─────────────────────────
@@ -527,19 +763,33 @@ def write(path, sig, target=LOOP_LUFS, seamless=False, extra=''):
 
 def clean_stale():
     """
-    배속 사전 렌더링 이전의 루프 파일을 지운다 (2026-08-07).
+    더 이상 어디서도 만들지 않는 오디오 파일을 지운다.
 
-    `tempo_3_1__wood.wav`처럼 속도 접미사가 없는 파일은 이제 어디서도
-    참조되지 않는다. 남겨두면 번들에 9MB가 아니라 10.4MB가 들어가고,
-    다음 사람이 "어느 쪽이 진짜인가"를 물어야 한다.
+    ① 배속 사전 렌더링 이전의 루프 파일(2026-08-07) — `tempo_3_1__wood.wav`처럼
+       속도 접미사가 없는 파일.
+    ② `VOICES`에서 빠진 팩의 잔재(2026-08-08 §7) — '북'·'플럭'을 선택 팩에서
+       뺐을 때 실제로 겪은 문제다. 코드에서 빼는 것과 파일이 사라지는 것은
+       별개라, 스크립트를 다시 돌려도 예전 파일이 그대로 남아 있었다.
+       남겨두면 번들 용량만 늘고, 다음 사람이 "이 파일이 왜 있지"를 묻는다.
     """
     removed = 0
     for f in os.listdir(OUT):
-        if f.startswith('tempo_') and f.endswith('.wav') and f.count('__') == 1:
-            os.remove(os.path.join(OUT, f))
-            removed += 1
+        if not f.endswith('.wav'):
+            continue
+        if f.startswith('tempo_') and f.count('__') == 1:
+            os.remove(os.path.join(OUT, f)); removed += 1
+            continue
+        if f.startswith('tempo_') and f.count('__') == 2:
+            _, pack, _ = f[:-4].split('__')
+            if pack not in VOICES:
+                os.remove(os.path.join(OUT, f)); removed += 1
+            continue
+        if f.startswith('preview_'):
+            pack = f[len('preview_'):-4]
+            if pack not in VOICES:
+                os.remove(os.path.join(OUT, f)); removed += 1
     if removed:
-        print(f'  구버전 루프 파일 {removed}개 삭제 (배속 재생 시절 잔재)')
+        print(f'  잔재 파일 {removed}개 삭제 (배속 재생 시절 · 빠진 팩)')
 
 
 def main():

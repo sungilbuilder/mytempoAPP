@@ -301,7 +301,7 @@ def check_audio():
     audio = os.path.join(APP, 'assets', 'audio')
     speeds = parse_swing_speeds()
     ratios = {'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
-    packs = ['wood', 'string', 'drum', 'rhythm']
+    packs = ['wood', 'string', 'mallet', 'rhythm']  # 2026-08-08 §7 — 북·플럭 제외
     base_swing, base_cycle = 1.1, 2.0
 
     # ── ① 48개 조합이 다 있는가 ────────────────────────────

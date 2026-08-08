@@ -12,22 +12,71 @@
  *   진행 점은 r=4.5 원이 링을 따라 돈다(회전은 SVG 내부가 아니라 래퍼 View를 돌린다 —
  *   reanimated x react-native-svg의 animatedProps 조합보다 이 쪽이 훨씬 덜 깨진다).
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   Easing,
   cancelAnimation,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
+  withDelay,
+  withSequence,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { DEFAULT_SWING_SPEED } from '../features/tempo/swingSpeeds';
-import { cycleMs as audioCycleMs } from '../features/audio-engine/soundPacks';
+import { impactAtMs } from '../features/audio-engine/soundPacks';
 
 const R = 42;
 const CIRCUMFERENCE = 2 * Math.PI * R; // ≈ 263.9
+
+/** 각도(0=정각 위, 시계방향 degree) → SVG 좌표(viewBox 0~100 기준) */
+function pointOnRing(angleDeg: number) {
+  const rad = (angleDeg * Math.PI) / 180;
+  return { cx: 50 + R * Math.sin(rad), cy: 50 - R * Math.cos(rad) };
+}
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/**
+ * 히트 이펙트 — 링을 도는 점이 시작/탑/임팩트 지점에 "도착하는 순간" 파형처럼
+ * 번지는 원 이펙트. (2026-08-08 신설, 사용자 요청 — 리듬 게임의 판정선 이펙트 참고)
+ *
+ * 위치는 고정(그 지점의 SVG 좌표)이고, `pulse`(0→1→0)만 애니메이션한다.
+ * 반지름·투명도 둘 다 pulse에서 파생시켜 "점이 지나가며 링이 그 자리에서
+ * 잠깐 크게 번쩍였다 사라지는" 느낌을 낸다.
+ */
+function HitRipple({
+  pulse,
+  cx,
+  cy,
+  color,
+}: {
+  pulse: SharedValue<number>;
+  cx: number;
+  cy: number;
+  color: string;
+}) {
+  const animatedProps = useAnimatedProps(() => ({
+    // 2026-08-08 (사용자 피드백 — "파장 효과 원이 너무 크다"): 최대 반지름을
+    // 14 → 8.5로 줄였다. 링 두께(strokeWidth 9)보다 커지면 링 자체를 가려
+    // 오히려 산만했다.
+    r: 2.5 + pulse.value * 6,
+    opacity: pulse.value,
+  }));
+  return (
+    <AnimatedCircle
+      cx={cx}
+      cy={cy}
+      fill="none"
+      stroke={color}
+      strokeWidth={2.5}
+      animatedProps={animatedProps}
+    />
+  );
+}
 
 export type TempoRingProps = {
   /** 백스윙:다운스윙 비율. 3:1이면 3 */
@@ -37,19 +86,23 @@ export type TempoRingProps = {
   /** 재생 중이면 진행 점이 링을 따라 돈다 */
   playing?: boolean;
   /**
-   * 한 사이클 시간(ms).
+   * 실제 스윙(백스윙 시작)이 시작될 때마다 바뀌는 값 — 보통 스윙 카운트를 그대로 넘긴다.
    *
-   * ⚠️ 기본값은 오디오 루프 길이를 그대로 쓴다 (2026-08-06, AOS 리뷰 V-4).
-   * 이전 기본값 2600은 2026-08-01에 오디오를 2.0초로 재생성하면서 놓친 값이었다.
-   * 당시엔 `practice.tsx`만 `playing`을 넘겨서 드러나지 않았지만, 홈 링에
-   * 애니메이션을 켜는 순간 **진행 점이 소리보다 30% 느리게 도는** 버그가 됐을 값이다.
-   * 숫자를 여기 다시 적지 말고 항상 오디오 쪽 함수를 가져다 쓸 것.
+   * 2026-08-08 신설(실기기 검증 — "2번째 스윙부터 원이 안 맞음"). 이전에는 링이
+   * `cycleMs` 간격으로 스스로 반복 재생하는 **자체 타이머**였다. 이게 맞으려면
+   * 실제 스윙 반복 주기가 항상 `cycleMs`(스윙 신호 자체의 루프 길이, ~2초)와
+   * 같아야 하는데, "샷 사이클" 모드(어드레스 대기 + 카운트인 뒤 스윙, 간격
+   * 15~40초)에서는 전혀 다르다. 그래서 첫 스윙 이후로는 링의 자체 루프가 실제
+   * 오디오보다 훨씬 빨리 돌아 어드레스·대기 구간에도 계속 회전하고, 스윙마다
+   * 어긋남이 누적됐다.
    *
-   * ⚠️ 2026-08-07: `rate` prop이 사라졌다. 배속 재생을 없애면서 루프 길이 자체가
-   * 속도별로 달라졌기 때문이다 — 호출부가 `cycleMs(속도)`를 그대로 넘긴다.
-   * 기본값도 상수가 아니라 기본 속도의 루프 길이다.
+   * 고친 방식은 자체 루프를 버리고, **실제 스윙 신호가 올 때만** 한 바퀴(길이는
+   * `swingMs`) 돌게 한다. 신호가 오기 전(대기·카운트인)에는 그냥 멈춰 있는다 —
+   * 별도 "정지" 계산이 필요 없다.
    */
-  cycleMs?: number;
+  swingTick?: number;
+  /** 스윙 자체(백스윙+다운스윙)의 시간(ms) — 이 시간에 걸쳐 링을 한 바퀴 돈다. */
+  swingMs?: number;
   /** 링 색 */
   colors: {
     /** 백스윙 구간 */
@@ -69,31 +122,87 @@ export function TempoRing({
   ratio,
   size = 220,
   playing = false,
-  cycleMs = audioCycleMs(DEFAULT_SWING_SPEED),
+  swingTick = 0,
+  swingMs = impactAtMs(DEFAULT_SWING_SPEED),
   colors,
   children,
 }: TempoRingProps) {
   const spin = useSharedValue(0);
+  /* 히트 이펙트 3종 — 시작(원점) · 탑(백스윙→다운스윙 경계) · 임팩트(원점으로 복귀) */
+  const startPulse = useSharedValue(0);
+  const topPulse = useSharedValue(0);
+  const impactPulse = useSharedValue(0);
+
+  // 백스윙이 차지하는 비중. ratio가 이상치여도 링이 깨지지 않게 클램프한다.
+  const safeRatio = Number.isFinite(ratio) && ratio > 0 ? Math.min(9, ratio) : 3;
+  const backswingFraction = safeRatio / (safeRatio + 1);
+  const backswingLen = CIRCUMFERENCE * backswingFraction;
+
+  // 정지 상태에서는 스윙 신호를 기다리지 않는다 — 항상 맨 위(0도)로 되돌린다.
+  useEffect(() => {
+    if (playing) return;
+    cancelAnimation(spin);
+    spin.value = withTiming(0, { duration: 220 });
+    cancelAnimation(startPulse);
+    cancelAnimation(topPulse);
+    cancelAnimation(impactPulse);
+    startPulse.value = 0;
+    topPulse.value = 0;
+    impactPulse.value = 0;
+  }, [playing, spin, startPulse, topPulse, impactPulse]);
+
+  /*
+    실제 스윙 신호(swingTick 변화)가 올 때만 한 바퀴 돈다. `playing`은 이 effect의
+    의존성에 넣지 않는다 — 재생 버튼을 누른 순간(아직 대기·카운트인 중) 이 값만
+    바뀌어도 링이 돌기 시작하면 첫 스윙 전부터 어긋나는 문제가 되살아난다.
+    대신 ref로 최신 playing만 읽어 "정지 중에 신호가 와도 무시" 정도만 가드한다.
+  */
+  const playingRef = useRef(playing);
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   useEffect(() => {
-    if (playing) {
-      const duration = Math.max(300, cycleMs);
-      spin.value = 0;
-      spin.value = withRepeat(withTiming(360, { duration, easing: Easing.linear }), -1, false);
-    } else {
+    if (!playingRef.current) return;
+    const duration = Math.max(100, swingMs);
+
+    spin.value = 0;
+    spin.value = withTiming(360, { duration, easing: Easing.linear });
+
+    /*
+      히트 이펙트 3종을 링 회전과 같은 시간축에 맞춘다 (2026-08-08 신설).
+      점이 그 지점을 "지나는" 시점에 파형이 번쩍이도록, 스핀 애니메이션과 동일한
+      duration·기준 시각(swingTick 변화 순간 = t0)에서 delay만 다르게 준다.
+        시작(0%)   → 즉시
+        탑(경계)   → duration * backswingFraction 뒤
+        임팩트(100%) → duration 뒤 (스핀이 한 바퀴 다 돈 시점과 정확히 겹친다)
+    */
+    const burst = () =>
+      withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 260 }));
+
+    startPulse.value = 0;
+    startPulse.value = burst();
+
+    topPulse.value = 0;
+    topPulse.value = withDelay(duration * backswingFraction, burst());
+
+    impactPulse.value = 0;
+    impactPulse.value = withDelay(duration, burst());
+
+    return () => {
       cancelAnimation(spin);
-      spin.value = withTiming(0, { duration: 220 });
-    }
-    return () => cancelAnimation(spin);
-  }, [playing, cycleMs, spin]);
+      cancelAnimation(startPulse);
+      cancelAnimation(topPulse);
+      cancelAnimation(impactPulse);
+    };
+  }, [swingTick, swingMs, backswingFraction, spin, startPulse, topPulse, impactPulse]);
 
   const dotStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${spin.value}deg` }],
   }));
 
-  // 백스윙이 차지하는 둘레 길이. ratio가 이상치여도 링이 깨지지 않게 클램프한다.
-  const safeRatio = Number.isFinite(ratio) && ratio > 0 ? Math.min(9, ratio) : 3;
-  const backswingLen = CIRCUMFERENCE * (safeRatio / (safeRatio + 1));
+  const originPoint = pointOnRing(0);
+  const topPoint = pointOnRing(backswingFraction * 360);
 
   return (
     <View style={{ width: size, height: size }}>
@@ -124,6 +233,24 @@ export function TempoRing({
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
           strokeDasharray={`${backswingLen} ${CIRCUMFERENCE - backswingLen}`}
+        />
+
+        {/*
+          히트 이펙트 — 시작/임팩트는 같은 자리(링 맨 위)에서 서로 다른 시점에
+          번쩍이고, 탑은 백스윙:다운스윙 경계 지점에서 번쩍인다.
+        */}
+        <HitRipple
+          pulse={startPulse}
+          cx={originPoint.cx}
+          cy={originPoint.cy}
+          color={colors.primary}
+        />
+        <HitRipple pulse={topPulse} cx={topPoint.cx} cy={topPoint.cy} color={colors.dot} />
+        <HitRipple
+          pulse={impactPulse}
+          cx={originPoint.cx}
+          cy={originPoint.cy}
+          color={colors.accent}
         />
       </Svg>
 

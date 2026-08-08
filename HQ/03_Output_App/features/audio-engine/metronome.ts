@@ -75,8 +75,27 @@ export class Metronome {
   private player: AudioPlayer | null = null;
   private loadedAudioFile: AudioSource = null;
   private removeStatusListener: (() => void) | null = null;
-  /** 매 샷 직전 카운트인 전용 플레이어 (2026-08-01) */
+  /**
+   * 매 샷 직전 카운트인 전용 플레이어.
+   *
+   * ⚠️ 2026-08-07 실기기 검증(T-06): 샷마다 `createAudioPlayer()`로 새로 만들어
+   * 곧장 재생하던 방식을 버렸다. 생성~로드 완료 사이의 레이턴시 때문에 ①카운트인이
+   * 늦게 들리기 시작하고 ②그 직후 정지를 누르면 아직 로드 중인 플레이어의 `remove()`가
+   * 뒤늦게 도착한 재생 요청을 못 막는 경합이 있었다(북이 계속 나오는 제보와 일치).
+   * 이제 `preloadCountIn()`으로 한 번만 만들고 `seekTo(0)+play()`만 반복한다.
+   */
   private countIn: AudioPlayer | null = null;
+  private countInFile: AudioSource | null = null;
+  private removeCountInListener: (() => void) | null = null;
+  /** 지금 진행 중인 샷 사이클의 설정 — 카운트인 완료 콜백이 참조한다 */
+  private shotOpts: {
+    intervalSec: number;
+    countInSec: number;
+    swingCycleSec: number;
+    onSwing?: () => void;
+  } | null = null;
+  /** 카운트인 완료 콜백이 지금 세대(shotGen)에 속하는지 확인하는 값 */
+  private countInGen = -1;
 
   /* ── 스윙 카운트를 오디오에서 뽑기 위한 상태 (2026-08-06, AOS 리뷰 P-3) ── */
   /** 루프 한 바퀴가 돌 때마다 호출된다. 인자는 "경계로부터 이미 지난 초". */
@@ -162,8 +181,16 @@ export class Metronome {
 
       if (!status.playing) return;
 
-      // 방어적 폴백 — 위 클래스 주석 참고. 네이티브 loop 큐잉이 매끄럽지 않은 기종 대비.
-      if (status.didJustFinish && player.loop) {
+      /*
+        방어적 폴백 — 위 클래스 주석 참고. 네이티브 loop 큐잉이 매끄럽지 않은 기종 대비.
+
+        2026-08-08 정지 후에도 재생이 멈추지 않는 버그 수정: `player.loop`(네이티브
+        플래그)만 보고 있었는데, `stop()`은 이 플래그를 건드리지 않는다. 정지 호출
+        직후 도착한 지연 이벤트가 하필 루프 경계와 겹치면 이 폴백이 `player.play()`를
+        다시 불러 재생을 되살렸다. `this.looping`(정지 시 즉시 false로 바뀌는 내부
+        상태)까지 함께 확인해야 정지 후 도착한 지연 이벤트를 걸러낼 수 있다.
+      */
+      if (status.didJustFinish && player.loop && this.looping) {
         player.seekTo(0);
         player.play();
         this.emitCycle(0);
@@ -208,24 +235,55 @@ export class Metronome {
   private shotGen = 0;
 
   /**
+   * 카운트인 플레이어를 미리 만들어 둔다 (2026-08-07 신설, T-06 실기기 검증).
+   *
+   * 카운트인 파일은 속도·팩과 무관하게 항상 같다(`countin_5s.wav` 하나). 매 샷마다
+   * 새로 만들 이유가 없고, 미리 만들어 두면 로드 레이턴시가 재생 시점이 아니라
+   * 화면 진입 시점으로 옮겨진다. `startShotCycle` 호출 전에(연습 화면 마운트
+   * 시점에) 반드시 불러야 한다 — 없으면 `runShotOnce`가 조용히 아무 것도 안 한다.
+   */
+  async preloadCountIn(file: AudioSource, volume = 1) {
+    const v = Math.min(1, Math.max(0, volume));
+    if (this.countIn && this.countInFile === file) {
+      this.countIn.volume = v;
+      return;
+    }
+    this.removeCountInListener?.();
+    try {
+      this.countIn?.remove();
+    } catch {
+      /* 이미 해제됨 */
+    }
+
+    const p = createAudioPlayer(file);
+    p.volume = v;
+    const subscription = p.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+      if (status.didJustFinish) this.onCountInFinished();
+    });
+    this.removeCountInListener = () => subscription.remove();
+    this.countIn = p;
+    this.countInFile = file;
+  }
+
+  /**
    * 공을 치는 상황을 위한 재생 모드.
    *
-   *   [조용한 대기] → [카운트인 3초] → [스윙 신호] → 반복
+   *   [조용한 대기] → [카운트인 5초] → [스윙 신호] → 반복
    *
    * 기존 `play()`는 네이티브 loop에 2초 사이클을 통째로 맡기는 방식이라
    * 스윙과 스윙 사이에 15~40초를 넣을 수가 없었다(루프 파일 길이를 그만큼
    * 늘려야 하는데, 간격 × 비율 × 사운드팩 조합만큼 파일이 필요해진다).
    *
-   * ⚠️ 여기서만 JS 타이머를 쓰는 이유 — PLANNING.md는 JS 타이머 스케줄링을
-   * 금지했지만, 그건 **스윙 안쪽(1.1초)** 이야기다. 시작·탑·임팩트의 상대 타이밍은
-   * 지금도 사전 렌더링된 오디오 파일이 담당하므로 정밀도가 그대로다.
-   * 샷과 샷 사이 20초에서 ±50ms는 아무 의미가 없다. 정밀도가 필요한 곳과
-   * 필요 없는 곳을 구분해서 쓴다.
+   * ⚠️ 2026-08-07: 스윙 신호로 넘어가는 시점을 **고정 타이머가 아니라 카운트인의
+   * 실제 재생완료 이벤트**(`didJustFinish`, `onCountInFinished`)로 바꿨다. 카운트인
+   * 재생 시작 자체에 약간의 지연이 있어도(레이턴시), 다음 소리는 "5초 뒤"가 아니라
+   * "카운트인이 실제로 끝난 뒤"에 나오므로 드럼과 스윙 신호가 겹치지 않는다.
+   * 샷과 샷 사이의 **대기 시간**(±50ms가 의미 없는 곳)만 JS 타이머로 잰다 —
+   * 정밀도가 필요한 곳과 필요 없는 곳을 구분해서 쓴다는 원칙은 그대로다.
    */
   startShotCycle(opts: {
-    countInFile: AudioSource;
-    countInSec: number;
     intervalSec: number;
+    countInSec: number;
     /** 지금 로드된 루프 파일 한 바퀴 길이 — `soundPacks.cycleSec(속도)` */
     swingCycleSec: number;
     onSwing?: () => void;
@@ -235,64 +293,70 @@ export class Metronome {
     this.player.loop = false;
     /*
       샷 모드는 루프가 아니라 "한 번 재생"의 반복이다. 경계 검출을 끄고,
-      스윙 카운트는 아래 onSwing이 담당한다 — 세는 곳이 둘이면 이중 계수가 난다.
+      스윙 카운트는 onSwing이 담당한다 — 세는 곳이 둘이면 이중 계수가 난다.
     */
     this.looping = false;
+    this.shotOpts = opts;
 
     const gen = ++this.shotGen;
-    const alive = () => gen === this.shotGen;
+    this.runShotOnce(gen);
+  }
 
-    const runOnce = () => {
-      if (!alive() || !this.player) return;
+  private runShotOnce(gen: number) {
+    if (gen !== this.shotGen || !this.player || !this.countIn) return;
+    this.countInGen = gen;
+    this.countIn.seekTo(0);
+    this.countIn.play();
+  }
 
-      // ① 카운트인 — "지금 어드레스" 신호
-      try {
-        this.countIn?.remove();
-        const p = createAudioPlayer(opts.countInFile);
-        p.volume = this.player.volume;
-        this.countIn = p;
-        p.play();
-      } catch {
-        // 카운트인 재생 실패는 무시한다 — 스윙 신호가 더 중요하다
-      }
+  /** 카운트인의 실제 재생이 끝났을 때 호출된다 — 스윙 신호로 넘어가는 유일한 경로. */
+  private onCountInFinished() {
+    const gen = this.countInGen;
+    if (gen !== this.shotGen || !this.player || !this.shotOpts) return;
+    const opts = this.shotOpts;
 
-      // ② 카운트인이 끝나면 스윙 신호
-      this.shotTimer = setTimeout(() => {
-        if (!alive() || !this.player) return;
-        try {
-          this.countIn?.remove();
-          this.countIn = null;
-        } catch {
-          /* 이미 해제됨 */
-        }
-        this.player.seekTo(0);
-        this.player.play();
-        opts.onSwing?.();
+    this.player.seekTo(0);
+    this.player.play();
+    opts.onSwing?.();
 
-        // ③ 다음 샷까지 대기. 전체 간격에서 이미 흘려보낸 시간을 뺀다.
-        const restMs = Math.max(
-          500,
-          (opts.intervalSec - opts.countInSec - opts.swingCycleSec) * 1000,
-        );
-        this.shotTimer = setTimeout(runOnce, restMs);
-      }, opts.countInSec * 1000);
-    };
+    /*
+      다음 샷까지 대기.
 
-    runOnce();
+      ⚠️ 2026-08-08 샷 간격-재생 시간 불일치 버그 수정: 이 타이머는 스윙 사운드가
+      **끝나기를 기다렸다가** 시작되는 게 아니라, 스윙 사운드가 재생을 시작하는
+      바로 이 순간(`player.play()` 직후)부터 카운트를 시작한다 — 스윙 사운드는
+      백그라운드에서 알아서 끝까지 흘러간다. 그런데 예산 계산에서는
+      `opts.swingCycleSec`(스윙 재생 시간)까지 함께 빼고 있었다. 실제로 그 시간을
+      기다리는 코드가 없는데 예산에서만 이중으로 빠지는 셈이라, 실제 샷 간격
+      (스윙→스윙, 카운트인 시작→카운트인 시작 모두 동일)이 설정값보다 항상
+      `swingCycleSec`만큼(약 1.7~2.4초) 짧게 나왔다 — 15초를 골라도 실제로는
+      13초 안팎으로 반복되는 식이다.
+      `swingCycleSec`는 이제 "스윙 사운드가 다음 카운트인 전에 확실히 끝나게"
+      하는 최소 대기 하한(안전망)으로만 쓴다. 기본 간격(15~40초)이 스윙 재생
+      시간(2초 안팎)보다 훨씬 길어 평소엔 이 하한이 걸릴 일이 없다.
+    */
+    const restMs = Math.max(
+      500,
+      opts.swingCycleSec * 1000,
+      (opts.intervalSec - opts.countInSec) * 1000,
+    );
+    this.shotTimer = setTimeout(() => this.runShotOnce(gen), restMs);
   }
 
   stopShotCycle() {
     this.shotGen++;
+    this.shotOpts = null;
     if (this.shotTimer) {
       clearTimeout(this.shotTimer);
       this.shotTimer = null;
     }
-    try {
-      this.countIn?.remove();
-    } catch {
-      /* 이미 해제됨 */
-    }
-    this.countIn = null;
+    /*
+      remove()가 아니라 pause() (2026-08-07, T-06 실기기 검증 — "정지해도 북이
+      계속 나옴"). 방금 재생을 건 카운트인이 아직 로드 중일 때 remove()하면
+      늦게 도착한 재생 요청을 못 막는 경합이 있었다. 플레이어는 살려 두고
+      다음 샷에서 재사용한다(preloadCountIn 참고).
+    */
+    this.countIn?.pause();
   }
 
   /*
@@ -301,14 +365,17 @@ export class Metronome {
   */
 
   async setVolume(volume: number) {
-    if (!this.player) return;
-    this.player.volume = Math.min(1, Math.max(0, volume));
+    const v = Math.min(1, Math.max(0, volume));
+    if (this.player) this.player.volume = v;
+    if (this.countIn) this.countIn.volume = v;
   }
 
   async stop() {
     this.stopShotCycle();
     this.looping = false;
     if (!this.player) return;
+    // 네이티브 루프 큐잉이 정지 이후 스스로 다음 바퀴를 이어가지 않도록 플래그도 끈다.
+    this.player.loop = false;
     this.player.pause();
   }
 
@@ -332,8 +399,32 @@ export class Metronome {
     this.stopShotCycle();
     this.looping = false;
     this.onCycle = null;
+
+    this.removeCountInListener?.();
+    this.removeCountInListener = null;
+    try {
+      this.countIn?.pause();
+      this.countIn?.remove();
+    } catch {
+      /* 이미 해제됨 */
+    }
+    this.countIn = null;
+    this.countInFile = null;
+
     if (!this.player) return;
     try {
+      /*
+        2026-08-08 스윙 속도 전환 시 소리 겹침 수정: `stop()`은 remove 전에
+        `loop = false` + `pause()`를 거치는데 여기는 곧장 `remove()`만 했다.
+        스윙 속도를 바꾸면(연습 중 오디오 재로드 effect) 이 함수가 "재생 중인"
+        플레이어에 대고 곧장 remove()를 부르게 되는데, expo-audio의 iOS 큐잉
+        루프(클래스 상단 주석 참고)는 remove() 시점에 이미 큐잉된 다음 바퀴를
+        곧바로 취소한다는 보장이 없다 — 그 결과로 새로 로드한 플레이어 소리와
+        겹쳐 들리거나, 옛 플레이어 소리가 끊기지 않고 남아 있는 것처럼 들렸다.
+        stop()과 동일하게 먼저 멈춘 뒤 remove()해야 안전하다.
+      */
+      this.player.loop = false;
+      this.player.pause();
       this.removeStatusListener?.();
       this.player.remove(); // release()가 아니라 remove() — 호출하지 않으면 메모리 누수(expo-audio 공식 경고)
     } catch {

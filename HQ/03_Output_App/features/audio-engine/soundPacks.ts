@@ -38,7 +38,7 @@ import {
   type SwingSpeedId,
 } from '../tempo/swingSpeeds';
 
-export type SoundPackId = 'wood' | 'string' | 'drum' | 'rhythm';
+export type SoundPackId = 'wood' | 'string' | 'mallet' | 'rhythm';
 
 /* ───────────────────────── 루프 구조 (진실의 출처) ───────────────────────── */
 
@@ -119,15 +119,25 @@ export const SOUND_PACKS: SoundPack[] = [
     description: '나무를 두드리는 소리 — 가장 자연스러워요',
     free: true,
   },
-  { id: 'string', label: '현', description: '뜯는 현 — 여운이 남아 리듬이 이어져요' },
-  { id: 'drum', label: '북', description: '낮은 타격 — 시끄러운 실내에서도 잘 들려요' },
+  {
+    id: 'string',
+    label: '피아노',
+    description: '해머로 때리는 피아노 — 화사해서 오래 들어도 편안해요',
+  },
+  {
+    id: 'mallet',
+    label: '마림바',
+    description: '나무보다 부드러운 말렛 타격 — 따뜻하고 둥글어요',
+  },
   {
     id: 'rhythm',
     label: '리듬',
-    description: '현이 세 지점을, 북이 그 사이 박자를 잡아줍니다',
+    description: '피아노가 세 지점을, 북이 그 사이 박자를 잡아줍니다',
     hasPulse: true,
   },
 ];
+// ⚠️ 2026-08-08 §7 — '북'(drum)·'플럭'(pluck)을 선택 팩에서 뺐다(창업자 결정).
+// 이 배열 순서가 설정 화면 목록 순서 그대로다 — '리듬'을 맨 아래에 둔다.
 
 /** 무료 티어의 기본 사운드팩 — 체험이 끝나면 여기로 되돌린다 */
 export const FREE_SOUND_PACK: SoundPackId = 'wood';
@@ -141,6 +151,9 @@ export function isPackFree(id: SoundPackId): boolean {
  * ⚠️ 2026-08-07: 속도 축이 새로 생겨 12개 → **48개**가 됐다.
  * 배속 재생을 없앤 대가다(위 `cycleSec` 주석 참고). 번들이 1.4MB → 9.6MB
  * 늘어나는데, 위상 보코더를 경로에서 빼는 값으로는 싸다고 판단했다.
+ * 2026-08-08(§6): 팩이 4→6종(마림바·플럭 추가)이 되며 48 → 72개.
+ * 2026-08-08 밤(§7): '북'·'플럭' 제외, 4종(나무/피아노/마림바/리듬)으로 정리
+ * 되며 다시 **48개**.
  *
  * `require`는 정적 경로만 받으므로 전부 나열한다(번들러 제약).
  * 이 표는 `scripts/generate-sound-packs.py`가 만드는 파일명과 1:1로 맞아야 한다:
@@ -160,11 +173,11 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, AudioSource
       s107: require('../../assets/audio/tempo_3_1__string__s107.wav'),
       s093: require('../../assets/audio/tempo_3_1__string__s093.wav'),
     },
-    drum: {
-      s133: require('../../assets/audio/tempo_3_1__drum__s133.wav'),
-      s120: require('../../assets/audio/tempo_3_1__drum__s120.wav'),
-      s107: require('../../assets/audio/tempo_3_1__drum__s107.wav'),
-      s093: require('../../assets/audio/tempo_3_1__drum__s093.wav'),
+    mallet: {
+      s133: require('../../assets/audio/tempo_3_1__mallet__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_1__mallet__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_1__mallet__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_1__mallet__s093.wav'),
     },
     rhythm: {
       s133: require('../../assets/audio/tempo_3_1__rhythm__s133.wav'),
@@ -186,11 +199,11 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, AudioSource
       s107: require('../../assets/audio/tempo_2_5_1__string__s107.wav'),
       s093: require('../../assets/audio/tempo_2_5_1__string__s093.wav'),
     },
-    drum: {
-      s133: require('../../assets/audio/tempo_2_5_1__drum__s133.wav'),
-      s120: require('../../assets/audio/tempo_2_5_1__drum__s120.wav'),
-      s107: require('../../assets/audio/tempo_2_5_1__drum__s107.wav'),
-      s093: require('../../assets/audio/tempo_2_5_1__drum__s093.wav'),
+    mallet: {
+      s133: require('../../assets/audio/tempo_2_5_1__mallet__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_5_1__mallet__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_5_1__mallet__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_5_1__mallet__s093.wav'),
     },
     rhythm: {
       s133: require('../../assets/audio/tempo_2_5_1__rhythm__s133.wav'),
@@ -212,11 +225,11 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, AudioSource
       s107: require('../../assets/audio/tempo_3_5_1__string__s107.wav'),
       s093: require('../../assets/audio/tempo_3_5_1__string__s093.wav'),
     },
-    drum: {
-      s133: require('../../assets/audio/tempo_3_5_1__drum__s133.wav'),
-      s120: require('../../assets/audio/tempo_3_5_1__drum__s120.wav'),
-      s107: require('../../assets/audio/tempo_3_5_1__drum__s107.wav'),
-      s093: require('../../assets/audio/tempo_3_5_1__drum__s093.wav'),
+    mallet: {
+      s133: require('../../assets/audio/tempo_3_5_1__mallet__s133.wav'),
+      s120: require('../../assets/audio/tempo_3_5_1__mallet__s120.wav'),
+      s107: require('../../assets/audio/tempo_3_5_1__mallet__s107.wav'),
+      s093: require('../../assets/audio/tempo_3_5_1__mallet__s093.wav'),
     },
     rhythm: {
       s133: require('../../assets/audio/tempo_3_5_1__rhythm__s133.wav'),
@@ -249,7 +262,7 @@ export function loopAudio(presetId: string, pack: SoundPackId, speedId: SwingSpe
 const PREVIEWS: Record<SoundPackId, AudioSource> = {
   wood: require('../../assets/audio/preview_wood.wav'),
   string: require('../../assets/audio/preview_string.wav'),
-  drum: require('../../assets/audio/preview_drum.wav'),
+  mallet: require('../../assets/audio/preview_mallet.wav'),
   rhythm: require('../../assets/audio/preview_rhythm.wav'),
 };
 

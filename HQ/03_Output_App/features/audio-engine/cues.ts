@@ -22,9 +22,12 @@
  *
  * ## 구현 메모
  *
- * - 재생할 때마다 플레이어를 만들고 끝나면 해제한다. 확인음은 짧고 드물어
- *   상주시킬 이유가 없고, `createAudioPlayer`로 만든 플레이어는 직접 `remove()`
- *   하지 않으면 누수가 난다(expo-audio 공식 경고).
+ * - ⚠️ 2026-08-07 실기기 검증(T-06): 예전엔 재생할 때마다 플레이어를 새로 만들고
+ *   끝나면 해제했다. "확인음 켜고 끌 때 소리가 바로 안 들린다"는 제보의 원인이
+ *   이거였다 — `createAudioPlayer()`로 만든 플레이어는 로드가 끝나야 들리는데,
+ *   그 로드 자체를 재생을 요청한 시점에야 시작했다. 이제 앱에서 이 모듈을 처음
+ *   불러올 때(모듈 로드 시점) 4개를 한 번에 만들어 두고 계속 재사용한다 —
+ *   실제 탭 시점에는 `seekTo(0)+play()`만 남는다.
  * - **실패해도 조용히 넘어간다.** 확인음이 안 나는 것보다 확인음 때문에 저장이
  *   막히는 게 훨씬 나쁘다. 여기서 예외를 던지지 않는다.
  * - 메트로놈과 별개의 플레이어라 연습 중에 겹쳐 울려도 서로를 끊지 않는다.
@@ -40,14 +43,6 @@ const FILES: Record<CueId, unknown> = {
   signature: require('../../assets/audio/signature.wav'),
 };
 
-/** 파일 길이보다 넉넉히 잡은 해제 시각 (ms) */
-const RELEASE_MS: Record<CueId, number> = {
-  mark: 500,
-  saved: 1100,
-  complete: 1300,
-  signature: 2400,
-};
-
 /**
  * 확인음은 **메트로놈보다 조용해야 한다.**
  *
@@ -57,35 +52,33 @@ const RELEASE_MS: Record<CueId, number> = {
  */
 const CUE_GAIN = 0.7;
 
-const pending = new Set<AudioPlayer>();
+const players: Partial<Record<CueId, AudioPlayer>> = {};
+
+function getPlayer(id: CueId): AudioPlayer {
+  let p = players[id];
+  if (!p) {
+    p = createAudioPlayer(FILES[id] as never);
+    players[id] = p;
+  }
+  return p;
+}
+
+// 모듈이 처음 임포트될 때(앱 시작 시점) 미리 만들어 둔다 — 실패해도 무시.
+(Object.keys(FILES) as CueId[]).forEach((id) => {
+  try {
+    getPlayer(id);
+  } catch {
+    /* 다음 playCue 호출에서 다시 시도된다 */
+  }
+});
 
 export function playCue(id: CueId, volume = 1) {
   try {
-    const p = createAudioPlayer(FILES[id] as never);
+    const p = getPlayer(id);
     p.volume = Math.min(1, Math.max(0, volume * CUE_GAIN));
-    pending.add(p);
+    p.seekTo(0);
     p.play();
-    setTimeout(() => {
-      try {
-        p.remove();
-      } catch {
-        /* 이미 해제됨 */
-      }
-      pending.delete(p);
-    }, RELEASE_MS[id]);
   } catch {
     // 확인음 재생 실패는 무시한다 — 이 소리 때문에 본 동작이 막히면 안 된다.
   }
-}
-
-/** 화면을 통째로 벗어날 때 남은 플레이어를 정리한다 */
-export function releaseCues() {
-  pending.forEach((p) => {
-    try {
-      p.remove();
-    } catch {
-      /* 이미 해제됨 */
-    }
-  });
-  pending.clear();
 }
