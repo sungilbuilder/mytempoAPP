@@ -487,16 +487,20 @@ export function IconTrend({ color, size = 24 }: IconProps) {
   );
 }
 
+/*
+  2026-08-08: 톱니바퀴 → 슬라이더 3줄로 교체 (사용자 테스트 피드백).
+  "조절/설정"을 직관적으로 표현하면서, 앱의 "템포 조절" 컨셉과도 톤이 맞는다.
+  컴포넌트명·props는 그대로라 호출부(홈 등)는 수정할 필요가 없다.
+*/
 export function IconSettings({ color, size = 22 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={1.75} />
-      <Path
-        d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"
-        stroke={color}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-      />
+      <Path d="M3 7h10M17 7h4" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+      <Circle cx="14" cy="7" r="2.5" stroke={color} strokeWidth={1.75} fill="none" />
+      <Path d="M3 12h4M11 12h10" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+      <Circle cx="8" cy="12" r="2.5" stroke={color} strokeWidth={1.75} fill="none" />
+      <Path d="M3 17h9M17 17h4" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+      <Circle cx="13" cy="17" r="2.5" stroke={color} strokeWidth={1.75} fill="none" />
     </Svg>
   );
 }
@@ -557,6 +561,26 @@ export function IconCheck({ color, size = 18 }: IconProps) {
         stroke={color}
         strokeWidth={2.25}
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * 즐겨찾기 별 (2026-08-07, T-06 피드백 — 내 스윙 관리).
+ * `filled`이 아니면 윤곽선만 그려 "즐겨찾기 아님"을 표시한다.
+ */
+export function IconStar({ color, size = 20, filled = false }: IconProps & { filled?: boolean }) {
+  const d =
+    'M12 3.5l2.47 5.18 5.53.63-4.12 3.88 1.1 5.6L12 15.9l-4.98 2.89 1.1-5.6-4.12-3.88 5.53-.63z';
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d={d}
+        fill={filled ? color : 'none'}
+        stroke={color}
+        strokeWidth={1.75}
         strokeLinejoin="round"
       />
     </Svg>

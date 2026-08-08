@@ -8,12 +8,21 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { setAudioModeAsync } from 'expo-audio';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { palette } from '../constants/theme';
 import {
   Button,
@@ -26,7 +35,7 @@ import {
   textScaling,
 } from '../components/ui';
 import { playCue } from '../features/audio-engine/cues';
-import { type SwingMarks } from '../store/useSwingStore';
+import type { SwingMarks } from '../store/useSwingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 /** 재생 배속 프리셋 — 임팩트 구간이 워낙 짧아 0.25배속이 기본 작업 속도가 된다. */
@@ -77,6 +86,110 @@ const STEP_META: { key: keyof SwingMarks; title: string; hint: string }[] = [
   { key: 'impact', title: '공에 맞는 순간', hint: '클럽 헤드가 공에 닿는 곳이에요' },
 ];
 
+/** 각 단계가 등장하는 간격(ms) — 1 → 2 → 3이 또렷이 순서대로 읽히도록 넉넉하게 둔다. */
+const STEP_STAGGER_MS = 650;
+
+/**
+ * 첫 등록자용 1·2·3 안내 카드 — 하나씩 순서대로 등장 (2026-08-08 네 번째 재작업)
+ *
+ * ## 지금까지의 시도와 왜 또 바꿨는가
+ *
+ * 1차: 350ms 간격 페이드인 — 너무 빨라 "사라졌다"는 피드백.
+ * 2차: 간격을 늘리고 라벨을 `Animated.Text`의 fontSize로 애니메이션 — 배지
+ *     숫자는 보이는데 라벨만 계속 안 보인다는 피드백.
+ * 3차: `Animated.Text`를 걷어내고 라벨을 평범한 `Text`(애니메이션 없음)로
+ *     바꿨다. 그런데도 **여전히 숫자만 보이고 라벨은 안 보인다** — 즉
+ *     `Animated.Text`가 원인이 아니었다. 두 시도에서 유일하게 계속 같았던
+ *     조건은 "라벨 Text에 `flex-1`을 주고, 그 부모가 `Animated.View`"였다.
+ *
+ *     RN 플렉스박스에서 `flex: 1` 자식은 부모가 **확정된 너비**를 가져야
+ *     "남는 공간"을 계산해 채울 수 있다. 원래(애니메이션 붙이기 전) 코드는
+ *     이 줄이 평범한 `View className="flex-row items-center gap-[12px]"`
+ *     였고 정상 동작했다 — 그 `View`는 부모(`View className="gap-[10px]"`)의
+ *     기본 stretch로 화면 너비를 그대로 물려받았다. 그런데 이 줄을
+ *     `Animated.View`로 바꾸면서 너비를 명시하지 않았고, 애니메이션
+ *     style(opacity/transform)만 준 상태에서 `flex-1` 자식이 너비 0으로
+ *     찌부러졌을 가능성이 크다 — 배지(고정 32px)는 이 계산에 안 걸리니
+ *     항상 보이고, 라벨만 항상 안 보인 것과 정확히 들어맞는다.
+ *
+ * 4차(지금): 애니메이션 담당과 레이아웃 담당을 분리했다. 바깥
+ * `Animated.View`는 `width: '100%'`만 갖고 opacity·scale만 맡는다(레이아웃에
+ * 관여하지 않는 순수 래퍼). 안쪽은 원래 정상 동작했던 구조 그대로
+ * `View className="flex-row items-center gap-[12px]"` — flex-1 라벨을
+ * 포함해 전부 원본과 동일하다.
+ */
+function StepItem({
+  index,
+  n,
+  label,
+  surfaceColor,
+  textColor,
+}: {
+  index: number;
+  n: string;
+  label: string;
+  surfaceColor: string;
+  textColor: string;
+}) {
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.82);
+
+  useEffect(() => {
+    const delay = index * STEP_STAGGER_MS;
+    opacity.value = withDelay(
+      delay,
+      withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) }),
+    );
+    // "큰 글씨로 보여달라"는 요청 — 카드 전체가 크게 나타났다가 정착한다.
+    scale.value = withDelay(
+      delay,
+      withSequence(
+        withTiming(1.25, { duration: 260, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }),
+      ),
+    );
+  }, [index, opacity, scale]);
+
+  const wrapperStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  /*
+    ⚠️ className은 Animated.View에 직접 걸지 않는다 — nativewind-setup.ts가
+    등록한 cssInterop과 reanimated 애니메이션 style을 같은 컴포넌트에 함께
+    쓰면 애니메이션이 화면에 반영되지 않는 사례가 있었다. 바깥 래퍼는 순수
+    style 객체로만 구성하고, className이 필요한 레이아웃/텍스트는 전부
+    안쪽의 평범한 View/Text에 맡긴다.
+  */
+  return (
+    <Animated.View style={[{ width: '100%' }, wrapperStyle]}>
+      <View className="flex-row items-center gap-[12px]">
+        <View
+          className="w-[32px] h-[32px] rounded-pill items-center justify-center"
+          style={{ backgroundColor: surfaceColor }}
+        >
+          <Text
+            {...numeralScaling}
+            className="font-display-bold text-body"
+            style={{ color: textColor }}
+          >
+            {n}
+          </Text>
+        </View>
+        <Text
+          {...koreanWrap}
+          {...textScaling}
+          className="font-kr-bold text-body flex-1"
+          style={{ color: textColor }}
+        >
+          {label}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 /**
  * 내 스윙 — 영상 마킹 (PLANNING.md Feature B, WBS 2.2~2.5)
  *
@@ -102,6 +215,32 @@ export default function MarkingScreen() {
   const c = palette(colorScheme);
   const uiSounds = useSettingsStore((s) => s.uiSounds);
   const beepVolume = useSettingsStore((s) => s.beepVolume);
+
+  /**
+   * 오디오 세션 설정 (2026-08-08 신설).
+   *
+   * ⚠️ 이 화면은 지금까지 오디오 세션을 한 번도 설정한 적이 없었다 —
+   * `setAudioModeAsync`를 부르는 곳은 `Metronome.configureAudioMode()`
+   * (연습 화면)뿐이었다. 그래서 연습 화면을 한 번도 거치지 않고 곧장 이
+   * 화면으로 들어오는 경로(온보딩 → 첫 스윙 등록)에서는, 마킹 확인음
+   * (`playCue('mark', …)`)이 **아직 설정되지 않은 기본 오디오 세션** 위에서
+   * 재생된다. 이 상태에서 무음 스위치가 켜져 있으면 소리가 안 나거나,
+   * 영상을 처음 재생하는 순간에야 세션이 우연히 갱신돼 그 뒤로만 소리가
+   * 들리는 식의 비일관적인 동작이 생길 수 있다 — "시작 마킹은 소리가
+   * 안 나는데 탑·임팩트는 난다"는 제보와 맞아떨어진다(시작은 슬로모
+   * 재생 없이 스크럽만으로 찍는 경우가 많아, 영상 재생으로 세션이 갱신되기
+   * 전에 첫 마킹음이 나가 버린다).
+   *
+   * 화면 진입 즉시(사용자가 첫 지점을 찍기 훨씬 전에) `playsInSilentMode: true`로
+   * 세션을 명시적으로 잡아둬서, 어떤 순서로 조작하든 확인음이 항상 들리게 한다.
+   */
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: false,
+      interruptionMode: 'duckOthers',
+    }).catch(() => {});
+  }, []);
 
   /**
    * 재마킹 진입 (2026-08-06 신설, AOS 리뷰 P-5)
@@ -133,10 +272,17 @@ export default function MarkingScreen() {
   const [marks, setMarks] = useState<Partial<SwingMarks>>({});
   const trackWidth = useRef(1);
 
+  /*
+    2026-08-08 (사용자 테스트): 갤러리 영상 소리를 켠다.
+    임팩트 순간의 "딱" 소리가 정확한 프레임을 찾는 실질적인 단서가 된다 —
+    영상만 보고 판단하는 것보다 소리까지 들으면 훨씬 정확하다.
+    마킹 확인음(playCue('mark', ...), 아래 markHere 참고)과 겹칠 가능성은 낮다 —
+    마킹은 보통 영상을 일시정지한 상태에서 누르기 때문이다.
+  */
   const player = useVideoPlayer(videoUri ?? null, (p) => {
     if (!p) return;
     p.loop = false;
-    p.muted = true;
+    p.muted = false;
   });
 
   /**
@@ -270,16 +416,20 @@ export default function MarkingScreen() {
     [player, durationSec],
   );
 
-  /** 프레임 단위 이동. 드래그로는 도달할 수 없는 정밀도를 여기서 확보한다. */
+  /**
+   * 프레임 단위 이동. 드래그로는 도달할 수 없는 정밀도를 여기서 확보한다.
+   * `frames`(2026-08-08 추가) — 1프레임 버튼 옆에 5프레임 버튼을 더해 큰 폭 이동도
+   * 지원한다. 가드·탐색 로직은 그대로 재사용한다.
+   */
   const stepFrame = useCallback(
-    (dir: -1 | 1) => {
+    (dir: -1 | 1, frames: number = 1) => {
       if (isPlaying) {
         player?.pause();
         setIsPlaying(false);
       }
       Haptics.selectionAsync().catch(() => {});
       // 순서 가드 — 이전 마크보다 앞으로는 못 가게 한다 (드래그 쪽 minSec 클램프와 동일 규칙).
-      seekTo(Math.max(minSec, currentSec + dir * frameSec));
+      seekTo(Math.max(minSec, currentSec + dir * frameSec * frames));
     },
     [currentSec, frameSec, isPlaying, minSec, player, seekTo],
   );
@@ -467,7 +617,6 @@ export default function MarkingScreen() {
       확인음 (2026-08-06, T-24)
       마킹은 화면을 뚫어져라 보는 작업이라 "찍혔다"는 확인이 시각으로만 오면
       눈이 한 번 더 일해야 한다. 짧은 나무 소리 한 번이 그 부담을 덜어준다.
-      영상 소리는 음소거돼 있어(player.muted) 겹칠 걱정이 없다.
     */
     if (uiSounds) playCue('mark', beepVolume);
 
@@ -511,13 +660,24 @@ export default function MarkingScreen() {
     ]);
   }, [marks, router]);
 
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      confirmLeave();
-      return true;
-    });
-    return () => sub.remove();
-  }, [confirmLeave]);
+  /*
+    포커스 기반 구독 (2026-08-08 버그 수정).
+    이전에는 mount/unmount에만 걸려 있어, 마킹 화면을 나가고도 스택에
+    남아 있으면(예: 다른 화면을 push로 그 위에 띄운 경우) 리스너가 계속
+    살아 있었다. hardwareBackPress는 화면 포커스를 모르는 전역 스택이라,
+    포커스가 없는 마킹 화면의 리스너가 지금 보고 있는 다른 화면(예: 온보딩)의
+    뒤로가기까지 가로채 "마킹을 그만둘까요?"가 엉뚱하게 떴다.
+    useFocusEffect로 감싸 포커스를 잃으면 즉시 해제되게 한다.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        confirmLeave();
+        return true;
+      });
+      return () => sub.remove();
+    }, [confirmLeave]),
+  );
 
   function undo() {
     if (step === 0) {
@@ -552,14 +712,35 @@ export default function MarkingScreen() {
             {...koreanWrap}
             {...textScaling}
             accessibilityRole="header"
-            className="font-kr-black text-h1 text-ink dark:text-inkDark leading-[32px]"
+            className="font-kr-black text-h1 text-ink dark:text-inkDark leading-[40px]"
           >
             스윙 영상을 골라주세요
           </Text>
-          <Caption>
-            아무 영상이나 괜찮아요. 앱에서 느리게 돌려보며 시작·탑·임팩트 세 지점만 찍으면 템포가
-            계산됩니다.
-          </Caption>
+
+          {/*
+            2026-08-08 (사용자 요청): 원래는 처음 등록하는 사람에게만 이 3단계
+            카드를 보여주고, 한 번 등록해본 사람에게는 한 줄 캡션만 보여줬다.
+            그런데 갤러리에서 영상을 고르기 전에 항상 3단계를 알려주고 싶다는
+            요청에 따라 `hasSwings` 조건을 없애고 누구에게나 항상 보여준다.
+            2026-08-08 추가: 세 항목이 한 번에 나타나면 온보딩이 한 페이지로
+            다 보인다는 피드백에 따라 1→2→3 순차 등장으로 바꿨다(StepItem 참고).
+          */}
+          <View className="gap-[10px]">
+            {[
+              { n: '1', label: '영상 고르기' },
+              { n: '2', label: '세 지점 찍기 — 시작·탑·임팩트' },
+              { n: '3', label: '완성!' },
+            ].map((s, i) => (
+              <StepItem
+                key={s.n}
+                index={i}
+                n={s.n}
+                label={s.label}
+                surfaceColor={c.surface2}
+                textColor={c.ink}
+              />
+            ))}
+          </View>
 
           <View className="pt-s2">
             {loading ? (
@@ -607,6 +788,43 @@ export default function MarkingScreen() {
             되돌리기
           </Text>
         </Pressable>
+      </View>
+
+      {/*
+        단계 스테퍼 (2026-08-08, 사용자 테스트 피드백).
+        "지금 뭘 찍고 있는지 모르겠다"는 피드백에 따라 영상 아래에 있던 요약 행을
+        영상 위, 제목 바로 위로 옮기고 현재 단계를 색으로 강조한다.
+        완료: primary, 현재: accent(강조), 남은 단계: muted.
+      */}
+      <View className="flex-row px-s3 pb-s2">
+        {STEP_META.map((m, i) => {
+          const value = marks[m.key];
+          const isCurrent = i === step;
+          const isDone = value !== undefined;
+          const stepColor = isCurrent ? c.accent : isDone ? c.primary : c.muted;
+          return (
+            <View key={m.key} className="items-center flex-1">
+              <Text
+                {...textScaling}
+                className={isCurrent ? 'font-kr-black text-body' : 'font-kr-bold text-caption'}
+                style={{ color: stepColor }}
+              >
+                {['시작', '탑', '임팩트'][i]}
+              </Text>
+              <Text
+                {...numeralScaling}
+                className={
+                  isCurrent
+                    ? 'font-display-bold text-body pt-[2px]'
+                    : 'font-display text-caption pt-[2px]'
+                }
+                style={{ color: stepColor }}
+              >
+                {value !== undefined ? '완료' : isCurrent ? '지금' : '—'}
+              </Text>
+            </View>
+          );
+        })}
       </View>
 
       <View className="px-s3">
@@ -672,26 +890,16 @@ export default function MarkingScreen() {
         />
       </View>
 
-      {/* 현재 위치 / 배속 */}
-      <View className="px-s3 flex-row items-center justify-between pb-s1">
-        <View>
-          <Text className="font-display-bold text-h2 text-ink dark:text-inkDark">
-            {currentSec.toFixed(3)}초
-          </Text>
-          {/*
-            2026-07-31 리뷰 반영: "프레임 428 · 240fps"에서 fps 표기를 뺐다.
-            앱 전체가 일상어(리듬·템포·스윙)를 쓰는데 여기만 약어가 튀었고,
-            fps는 일반 골퍼에게 의미가 없다. 정밀도는 결과 화면에서 간접 전달된다.
-          */}
-          <Caption>{frameNo}번째 프레임</Caption>
-        </View>
+      {/*
+        확대 배율 표시 (2026-08-08: 초·프레임 숫자를 뺐다 — 사용자 테스트에서
+        "굳이 필요 없는 정밀 수치"로 지적됨. 확대 컨트롤만 남긴다.)
 
-        {/*
-          2026-08-01 UI 정리 — 확대 컨트롤을 영상 밖으로 뺐다.
-          영상 위에 배율 표시와 안내 배너를 얹었더니 **정작 봐야 할 스윙을 가렸다**(창업자 지적).
-          골퍼는 보통 화면 중앙~하단에 잡히는데 거기가 딱 가려졌다.
-          영상 영역은 완전히 비우고, 배율은 확대 중일 때만 이 줄에 작게 표시한다.
-        */}
+        2026-08-01 UI 정리 — 확대 컨트롤을 영상 밖으로 뺐다.
+        영상 위에 배율 표시와 안내 배너를 얹었더니 **정작 봐야 할 스윙을 가렸다**(창업자 지적).
+        골퍼는 보통 화면 중앙~하단에 잡히는데 거기가 딱 가려졌다.
+        영상 영역은 완전히 비우고, 배율은 확대 중일 때만 이 줄에 작게 표시한다.
+      */}
+      <View className="px-s3 flex-row items-center justify-end pb-s1">
         {zoom > 1.02 && (
           <Pressable
             onPress={() => setZoom(1)}
@@ -809,11 +1017,27 @@ export default function MarkingScreen() {
         {/*
           프레임 이동 + 재생 — 드래그로 도달할 수 없는 정밀도를 여기서 확보한다.
 
-          2026-08-06 접근성 (AOS 리뷰 A-1): "◀ 1프레임"은 TalkBack이 기호를
-          이상하게 읽는다("검은 왼쪽 삼각형 1프레임"). 화면 글자는 그대로 두고
-          읽히는 이름만 따로 준다.
+          2026-08-06 접근성 (AOS 리뷰 A-1): 화면 글자는 삼각형만 두고, 읽히는
+          이름은 accessibilityLabel로 따로 준다 (TalkBack이 기호를 이상하게 읽어서).
+          2026-08-08: "1프레임" 단어는 지우고 삼각형만 남겼다(사용자 테스트 —
+          글자를 잘 안 읽는다는 피드백). 큰 폭 이동용 5프레임 버튼을 양 옆에 추가.
         */}
-        <View className="flex-row items-center justify-center gap-s2 py-s1">
+        <View className="flex-row items-center justify-center gap-[6px] py-s1">
+          <Pressable
+            onPress={() => stepFrame(-1, 5)}
+            accessibilityRole="button"
+            accessibilityLabel="다섯 프레임 뒤로"
+            style={{ minHeight: MIN_TOUCH }}
+            className="px-s1 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
+          >
+            <Text
+              {...numeralScaling}
+              className="font-display-bold text-body text-ink dark:text-inkDark"
+            >
+              ◀◀
+            </Text>
+          </Pressable>
+
           <Pressable
             onPress={() => stepFrame(-1)}
             accessibilityRole="button"
@@ -825,7 +1049,7 @@ export default function MarkingScreen() {
               {...numeralScaling}
               className="font-display-bold text-body text-ink dark:text-inkDark"
             >
-              ◀ 1프레임
+              ◀
             </Text>
           </Pressable>
 
@@ -852,35 +1076,38 @@ export default function MarkingScreen() {
               {...numeralScaling}
               className="font-display-bold text-body text-ink dark:text-inkDark"
             >
-              1프레임 ▶
+              ▶
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => stepFrame(1, 5)}
+            accessibilityRole="button"
+            accessibilityLabel="다섯 프레임 앞으로"
+            style={{ minHeight: MIN_TOUCH }}
+            className="px-s1 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
+          >
+            <Text
+              {...numeralScaling}
+              className="font-display-bold text-body text-ink dark:text-inkDark"
+            >
+              ▶▶
             </Text>
           </Pressable>
         </View>
 
         {/*
           조작 안내를 상시 노출로 분리 (2026-07-31 리뷰 반영).
-          단계별 힌트에 섞여 있으면 단계가 바뀔 때마다 문구가 달라져 오히려 안 읽힌다.
+          2026-08-08: 문구를 한 줄로 축약 — 실질적인 해결은 버튼 자체를 키우고
+          단계 스테퍼를 강조하는 쪽(위 STEP_META 스테퍼, 아래 프레임 버튼)이 맡는다.
         */}
         <Text
           {...koreanWrap}
           {...textScaling}
-          className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pb-[2px]"
+          className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pb-[6px]"
         >
-          막대를 밀어 대략 맞춘 뒤, 버튼으로 한 프레임씩 조정하세요{'\n'}
-          영상은 두 손가락으로 확대할 수 있어요
+          밀어서 맞추고, 버튼으로 미세 조정하세요
         </Text>
-
-        {/* 구간 요약 */}
-        <View className="flex-row justify-between pb-s1">
-          {STEP_META.map((m, i) => (
-            <View key={m.key} className="items-center">
-              <Caption>{['시작', '탑', '임팩트'][i]}</Caption>
-              <Text className="font-display text-caption text-ink dark:text-inkDark pt-[2px]">
-                {marks[m.key] !== undefined ? `${marks[m.key]!.toFixed(3)}s` : '— —'}
-              </Text>
-            </View>
-          ))}
-        </View>
 
         <Button
           label={

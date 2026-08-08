@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,7 +7,6 @@ import { palette } from '../constants/theme';
 import { TempoRing } from '../components/TempoRing';
 import { Caption, MIN_TOUCH, koreanWrap, numeralScaling, textScaling } from '../components/ui';
 import {
-  SLOWMO_HINT,
   characterForRatio,
   formatRatioWithPrecision,
   formatSeconds,
@@ -15,7 +14,7 @@ import {
 } from '../features/tempo/character';
 import { recommendSwingSpeed } from '../features/tempo/swingSpeeds';
 import { playCue } from '../features/audio-engine/cues';
-import { computeTempo, useSwingStore } from '../store/useSwingStore';
+import { SWING_CLUBS, computeTempo, useSwingStore, type SwingClub } from '../store/useSwingStore';
 import { usePracticeStore } from '../store/usePracticeStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -85,6 +84,42 @@ export default function ResultScreen() {
   const videoUri = params.videoUri || undefined;
 
   const [name, setName] = useState(defaultName());
+  /**
+   * 클럽 종류 (2026-08-07, T-06 피드백 — "내 스윙 관리" 방안).
+   * 등록 시점에 알면 바로 붙이지만, 강제하지 않는다 — 안 고르면 미지정으로 저장되고
+   * my-swings 목록에서 나중에 붙여도 된다.
+   */
+  const [club, setClub] = useState<SwingClub | null>(null);
+  /**
+   * 템포 선택 (2026-08-08, 실기기 검증 — "등록하기 버튼이 없어서 헷갈림").
+   *
+   * 이전엔 "내 스윙 그대로"/"3:1 리듬으로"가 각각 누르는 즉시 등록+이동하는
+   * 버튼이었다. 그 결과 "등록"이라는 말이 붙은 유일한 버튼이 맨 아래 텍스트인
+   * [등록만 하기]뿐이라, 사용자가 그걸 눌러야 등록되는 줄 알고 거기로 몰렸다.
+   * 이제 둘은 클럽 종류처럼 **고르기만 하는 선택지**이고, 실제 등록은 아래
+   * 단 하나의 [등록하기] 버튼이 담당한다.
+   */
+  const [tempoMode, setTempoMode] = useState<'mine' | 'reference'>('mine');
+
+  /**
+   * 스크롤 완료 후 등록 가능 (2026-08-08, 사용자 테스트 피드백).
+   *
+   * "등록하기" 버튼이 위 스크롤 영역 밖의 고정 푸터라, 이름 붙이기·클럽 선택을
+   * 보지 않고도 바로 누를 수 있었다 — 실제로 그렇게 눌러버리는 사용자가 많았다.
+   * 버튼을 완전히 숨기면 2026-08-08 이전 버전에서 겪었던 "등록하기 버튼이 안
+   * 보여서 헷갈림" 문제가 재발하므로, 숨기지 않고 **스크롤을 끝까지 내리기
+   * 전엔 비활성 상태로 보여준다.** 화면이 이미 다 보이는 큰 기기에서는
+   * 스크롤할 게 없으므로 처음부터 활성 상태다.
+   */
+  const [scrollLayoutHeight, setScrollLayoutHeight] = useState(0);
+  const [scrollContentHeight, setScrollContentHeight] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const SCROLL_END_THRESHOLD = 24;
+  const canRegister =
+    scrollContentHeight <= scrollLayoutHeight + SCROLL_END_THRESHOLD ||
+    scrollY + scrollLayoutHeight >= scrollContentHeight - SCROLL_END_THRESHOLD;
+
   const uiSounds = useSettingsStore((s) => s.uiSounds);
   const beepVolume = useSettingsStore((s) => s.beepVolume);
   const addSwing = useSwingStore((s) => s.addSwing);
@@ -139,6 +174,7 @@ export default function ResultScreen() {
       videoUri,
       sourceFps,
       createdAt: new Date().toISOString(),
+      club: club ?? undefined,
     });
 
     if (mode === 'reference') selectPreset(REFERENCE_PRESET_ID);
@@ -158,29 +194,46 @@ export default function ResultScreen() {
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
       {/*
-        2026-08-01: View → ScrollView.
-        추천 카드와 버튼이 늘면서 내용이 화면을 넘쳐 하단 버튼과 겹쳤다
-        (창업자 스크린샷에서 '저장만 하기'와 '이름 붙이기'가 겹쳐 보인 문제).
-        작은 화면·큰 글씨 설정에서도 안전하도록 스크롤을 연다.
+        2026-08-01: View → ScrollView (작은 화면·큰 글씨 설정에서도 안전하도록).
+        2026-08-08: 실기기 검증 — "스크롤 없이 한눈에 보고 싶다"는 피드백으로
+        내용 자체를 줄였다(추천 카드 문구 축약, 템포 버튼 2장 → 선택지+버튼 1개).
+        showsVerticalScrollIndicator도 꺼서, 그래도 넘치는 아주 작은 화면·확대
+        글꼴 설정에서 스크롤이 필요하더라도 막대가 시선을 끌지 않게 한다.
       */}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        onLayout={(e) => setScrollLayoutHeight(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_, h) => setScrollContentHeight(h)}
+        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        /*
+          2026-08-08: 등록하기 버튼이 끝까지 스크롤해도 안 켜진다는 제보 수정.
+          `onScroll`은 32ms 쓰로틀이 걸려 있어, `scrollToEnd()`(아래 스크롤 힌트
+          버튼)로 끝까지 이동해도 딱 맞아떨어지는 마지막 위치 이벤트가 누락될 수
+          있었다 — 그 뒤로는 스크롤이 이미 끝이라 추가 onScroll이 안 와서 `scrollY`가
+          영영 갱신되지 않았다. 드래그·모멘텀 스크롤이 실제로 멈추는 시점에도
+          최종 위치를 한 번 더 반영한다.
+        */
+        onScrollEndDrag={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        onMomentumScrollEnd={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={32}
       >
         <Caption>내 스윙 템포</Caption>
 
-        <View className="items-center pt-s3">
+        <View className="items-center pt-s2">
           <TempoRing
             ratio={ratio}
-            size={220}
+            size={200}
             colors={{ primary: c.primary, accent: c.accent, track: c.track, dot: c.ink }}
           >
             <Text
               {...numeralScaling}
               accessibilityLabel={`측정 결과 ${display.text}`}
               className="font-display-bold text-ink dark:text-inkDark"
-              style={{ fontSize: precision === 'coarse' ? 42 : 52 }}
+              style={{ fontSize: precision === 'coarse' ? 40 : 48 }}
             >
               {display.text}
             </Text>
@@ -198,14 +251,14 @@ export default function ResultScreen() {
           <Text
             {...numeralScaling}
             accessibilityLabel={`백스윙 ${backswingSec.toFixed(2)}초, 다운스윙 ${downswingSec.toFixed(2)}초`}
-            className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s2"
+            className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s1"
           >
             {formatSeconds(backswingSec)} : {formatSeconds(downswingSec)}
           </Text>
         </View>
 
         {/* 성향 한 줄 */}
-        <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s2 mt-s4">
+        <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s2 mt-s3">
           <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
             {character.headline}
           </Text>
@@ -220,10 +273,10 @@ export default function ResultScreen() {
 
         {/*
           내 템포 추천 (2026-08-01, WBS 2.12)
-
-          실측값을 **감추지 않고 그대로 보여준 다음** 가장 가까운 단계를 말한다.
-          "당신에게는 이게 맞아요"라고만 하면 근거 없는 단정이 되기 때문이다.
-          범위 밖이면 그 사실도 숨기지 않는다 — 억지로 맞다고 하는 것보다 낫다.
+          실측값을 감추지 않고 그대로 보여준 다음 가장 가까운 단계를 말한다.
+          2026-08-08: 화면 길이를 줄이려고 별도 캡션 한 줄(속도 우열 안내)을
+          접었다 — 핵심 메시지("빠를수록 좋은 게 아니다")는 온보딩에서 이미
+          전달되므로, 여기서는 매 등록마다 반복하지 않아도 된다.
         */}
         {pick && (
           <View className="bg-surface2 dark:bg-surface2Dark rounded-card p-s2 mt-s2">
@@ -235,26 +288,11 @@ export default function ResultScreen() {
                 ? `스윙 전체가 ${pick.measuredSec.toFixed(2)}초예요. 준비된 단계 중에서는 ${pick.speed.label}가 가장 가깝지만 차이가 있는 편이에요.`
                 : `스윙 전체가 ${pick.measuredSec.toFixed(2)}초예요. ${pick.speed.label} 단계로 연습하면 지금 리듬 그대로 익힐 수 있어요.`}
             </Text>
-            <Caption className="pt-[6px]">
-              빠른 속도가 더 좋은 속도는 아니에요. 사람마다 맞는 속도가 다릅니다.
-            </Caption>
-          </View>
-        )}
-
-        {/*
-          슬로모 촬영 안내 (2026-07-31 신설)
-          창업자 확정: 온보딩이나 마킹 진입이 아니라 **결과 화면에서만** 노출한다.
-          촬영 fps가 낮아 정밀도가 떨어질 때만 맥락적으로 뜨므로, 필요 없는 사용자를
-          방해하지 않고 강요처럼 읽히지도 않는다. "원하면 더 정확해진다"는 안내다.
-        */}
-        {display.canImprove && (
-          <View className="bg-surface2 dark:bg-surface2Dark rounded-card p-s2 mt-s2">
-            <Caption>{SLOWMO_HINT}</Caption>
           </View>
         )}
 
         {/* 이름 붙이기 */}
-        <View className="pt-s3">
+        <View className="pt-s2">
           <Caption className="pb-[6px]">이름 붙이기</Caption>
           <TextInput
             value={name}
@@ -273,80 +311,160 @@ export default function ResultScreen() {
             이름이 길 때 카드 레이아웃(숫자·성향 라벨과 한 줄에 배치)이 깨질 수 있었다.
           */}
         </View>
+
+        {/*
+          클럽 종류 (2026-08-07, T-06 피드백)
+          강제하지 않는다 — 안 골라도 등록은 그대로 된다. 같은 걸 다시 탭하면 해제.
+        */}
+        <View className="pt-s2">
+          <Caption className="pb-[6px]">클럽 종류 (선택)</Caption>
+          <View className="flex-row gap-[6px]">
+            {SWING_CLUBS.map((c2) => {
+              const active = club === c2.id;
+              return (
+                <Pressable
+                  key={c2.id}
+                  onPress={() => setClub(active ? null : c2.id)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={c2.label}
+                  accessibilityState={{ checked: active, selected: active }}
+                  style={{ minHeight: MIN_TOUCH }}
+                  className={`flex-1 items-center justify-center rounded-card px-s2 ${
+                    active ? 'bg-primary dark:bg-primary-neon' : 'bg-surface2 dark:bg-surface2Dark'
+                  } active:opacity-80`}
+                >
+                  <Text
+                    {...textScaling}
+                    className="font-kr-medium text-body"
+                    style={{ color: active ? c.onPrimary : c.ink }}
+                  >
+                    {c2.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/*
+          템포 선택 — 2026-08-08 신설. 예전엔 이 자리의 두 버튼을 누르는 즉시
+          등록+이동했다. 이제 클럽 종류와 같은 성격의 "선택"으로 바꾸고, 실제
+          등록은 하단의 [등록하기] 버튼 하나로 모은다(아래 액션 영역 참고).
+        */}
+        <View className="pt-s2">
+          <Caption className="pb-[6px]">템포</Caption>
+          <View className="flex-row gap-[6px]">
+            <Pressable
+              onPress={() => setTempoMode('mine')}
+              accessibilityRole="radio"
+              accessibilityLabel="내 스윙 그대로"
+              accessibilityState={{ checked: tempoMode === 'mine', selected: tempoMode === 'mine' }}
+              style={{ minHeight: MIN_TOUCH }}
+              className={`flex-1 items-center justify-center rounded-card px-s2 ${
+                tempoMode === 'mine'
+                  ? 'bg-primary dark:bg-primary-neon'
+                  : 'bg-surface2 dark:bg-surface2Dark'
+              } active:opacity-80`}
+            >
+              <Text
+                {...textScaling}
+                className="font-kr-medium text-body"
+                style={{ color: tempoMode === 'mine' ? c.onPrimary : c.ink }}
+              >
+                내 스윙 그대로
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setTempoMode('reference')}
+              accessibilityRole="radio"
+              accessibilityLabel="3대 1 기준 리듬"
+              accessibilityState={{
+                checked: tempoMode === 'reference',
+                selected: tempoMode === 'reference',
+              }}
+              style={{ minHeight: MIN_TOUCH }}
+              className={`flex-1 items-center justify-center rounded-card px-s2 ${
+                tempoMode === 'reference'
+                  ? 'bg-primary dark:bg-primary-neon'
+                  : 'bg-surface2 dark:bg-surface2Dark'
+              } active:opacity-80`}
+            >
+              <Text
+                {...textScaling}
+                className="font-kr-medium text-body"
+                style={{ color: tempoMode === 'reference' ? c.onPrimary : c.ink }}
+              >
+                3:1 리듬으로
+              </Text>
+            </Pressable>
+          </View>
+          <Caption className="pt-[6px]">
+            {tempoMode === 'mine'
+              ? `${display.text} · ${pick ? pick.speed.label : '기본'}`
+              : pick
+                ? `속도 ${pick.speed.label} 유지`
+                : '비율만 기준으로'}
+          </Caption>
+        </View>
       </ScrollView>
 
       {/*
-        하단 액션 (2026-08-01 — 버튼 1개에서 2개로 분리)
+        하단 액션 (2026-08-08 재설계 — "등록하기 버튼이 없어서 헷갈림")
 
-        무엇이 적용되는지 버튼 안에 그대로 적는다. 이전엔 "이 템포로 바로 연습"
-        한 줄이라 비율이 바뀌는지 속도가 바뀌는지 알 수 없었다.
-        내 리듬 그대로 하는 쪽을 위에 둔다 — 기준을 강요하지 않는다.
+        예전엔 여기 두 버튼("내 스윙 그대로"/"3:1 리듬으로")이 각각 누르는 즉시
+        등록+이동을 겸했다. "등록"이란 말이 붙은 버튼이 맨 아래 텍스트뿐이라
+        사용자가 등록하려면 그쪽을 눌러야 하는 줄 알고 몰렸다(실기기 피드백).
+        이제 템포 선택(위 스크롤 영역의 라디오)과 등록 행위를 분리해서, 여기는
+        **등록하기 버튼 하나**만 둔다 — 누르면 위에서 고른 템포로 저장하고
+        연습으로 넘어간다.
       */}
       <View className="px-s3 pb-s2 gap-[8px]">
-        {/*
-          2026-08-01: 상하 → 좌우 배치 (창업자 요청 "지금은 상하라서 더 보기 어려워").
-          두 선택지가 **대등한 갈래**라 위아래로 쌓으면 위가 정답처럼 읽힌다.
-          나란히 두면 비교해서 고르는 화면이 된다.
-        */}
-        <View className="flex-row gap-[8px]">
+        {!canRegister && (
           <Pressable
-            onPress={() => save('mine')}
+            onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
             accessibilityRole="button"
-            accessibilityLabel={`내 스윙 그대로 등록하고 연습하기. 비율 ${display.text}, 속도 ${pick ? pick.speed.label : '기본'}`}
-            style={{ minHeight: MIN_TOUCH }}
-            className="flex-1 rounded-card items-center justify-center py-s2 px-[6px] bg-primary dark:bg-primary-neon active:opacity-80"
+            accessibilityLabel="아래로 스크롤해 이름과 클럽을 확인하세요"
+            className="items-center pb-[2px]"
           >
-            <Text
-              {...koreanWrap}
-              {...textScaling}
-              className="font-kr-bold text-body text-onPrimary dark:text-onPrimaryDark text-center"
-            >
-              내 스윙 그대로
-            </Text>
-            <Text
-              {...textScaling}
-              className="font-kr-medium text-caption text-onPrimary dark:text-onPrimaryDark opacity-80 pt-[3px] text-center"
-            >
-              {`${display.text} · ${pick ? pick.speed.label : '기본'}`}
-            </Text>
+            <Caption>↓ 아래로 스크롤해 완료하세요</Caption>
           </Pressable>
-
-          <Pressable
-            onPress={() => save('reference')}
-            accessibilityRole="button"
-            accessibilityLabel="3대 1 기준 리듬으로 연습하기. 속도는 내 스윙에 맞춘 값을 유지합니다"
-            style={{ minHeight: MIN_TOUCH }}
-            className="flex-1 rounded-card items-center justify-center py-s2 px-[6px] bg-surface2 dark:bg-surface2Dark border border-line dark:border-lineDark active:opacity-80"
-          >
-            <Text
-              {...koreanWrap}
-              {...textScaling}
-              className="font-kr-bold text-body text-ink dark:text-inkDark text-center"
-            >
-              3:1 리듬으로
-            </Text>
-            <Text
-              {...textScaling}
-              className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-[3px] text-center"
-            >
-              {pick ? `속도 ${pick.speed.label} 유지` : '비율만 기준으로'}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */}
+        )}
         <Pressable
-          onPress={() => save('saveOnly')}
+          onPress={() => canRegister && save(tempoMode)}
           accessibilityRole="button"
-          accessibilityLabel="등록만 하고 연습은 나중에"
-          style={{ minHeight: MIN_TOUCH }}
-          className="items-center justify-center py-s2 active:opacity-70"
+          accessibilityState={{ disabled: !canRegister }}
+          accessibilityLabel={
+            !canRegister
+              ? '등록하기. 아래로 스크롤해 이름과 클럽을 먼저 확인하세요'
+              : tempoMode === 'mine'
+                ? `등록하기. 내 스윙 그대로, 비율 ${display.text}, 속도 ${pick ? pick.speed.label : '기본'}로 연습을 시작합니다`
+                : '등록하기. 3대 1 기준 리듬으로 연습을 시작합니다. 속도는 내 스윙에 맞춘 값을 유지합니다'
+          }
+          style={{ minHeight: MIN_TOUCH, opacity: canRegister ? 1 : 0.4 }}
+          className="rounded-card items-center justify-center py-s2 bg-primary dark:bg-primary-neon active:opacity-80"
         >
           <Text
             {...textScaling}
-            className="font-kr-medium text-body text-muted dark:text-mutedDark"
+            className="font-kr-bold text-body text-onPrimary dark:text-onPrimaryDark"
           >
-            등록만 하기
+            등록하기
+          </Text>
+        </Pressable>
+
+        {/* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */}
+        <Pressable
+          onPress={() => canRegister && save('saveOnly')}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canRegister }}
+          accessibilityLabel="등록만 하고 연습은 나중에"
+          style={{ minHeight: MIN_TOUCH, opacity: canRegister ? 1 : 0.4 }}
+          className="items-center justify-center py-s1 active:opacity-70"
+        >
+          <Text
+            {...textScaling}
+            className="font-kr-medium text-caption text-muted dark:text-mutedDark"
+          >
+            등록만 하고 나중에 연습하기
           </Text>
         </Pressable>
       </View>

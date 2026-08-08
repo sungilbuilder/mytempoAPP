@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,15 +10,25 @@ import {
   IconButton,
   IconCheck,
   IconClose,
+  IconStar,
   IconTarget,
   koreanWrap,
   numeralScaling,
   textScaling,
 } from '../../components/ui';
-import { useSwingStore } from '../../store/useSwingStore';
+import { SWING_CLUBS, useSwingStore, type SwingClub } from '../../store/useSwingStore';
 import { usePracticeStore } from '../../store/usePracticeStore';
-import { characterForRatio, formatRatio, formatSeconds } from '../../features/tempo/character';
+import { characterForRatio, formatRatio } from '../../features/tempo/character';
 import { humanDate } from '../../store/useHistoryStore';
+
+/** 목록 필터 (2026-08-07, T-06 피드백 — "내 스윙 관리" 방안) */
+type SwingFilter = 'all' | 'favorite' | SwingClub;
+
+const FILTERS: { id: SwingFilter; label: string }[] = [
+  { id: 'all', label: '전체' },
+  { id: 'favorite', label: '즐겨찾기' },
+  ...SWING_CLUBS.map((c) => ({ id: c.id as SwingFilter, label: c.label })),
+];
 
 /**
  * 내 스윙 — 저장해둔 내 템포 목록. (PLANNING.md Feature B)
@@ -31,6 +42,19 @@ export default function MySwingsScreen() {
   const source = usePracticeStore((s) => s.source);
   const selectSwing = usePracticeStore((s) => s.selectSwing);
   const removeSwing = useSwingStore((s) => s.removeSwing);
+  const toggleFavorite = useSwingStore((s) => s.toggleFavorite);
+  const setSwingClub = useSwingStore((s) => s.setSwingClub);
+
+  const [filter, setFilter] = useState<SwingFilter>('all');
+  /*
+    필터는 **보기 방식**일 뿐 데이터를 지우지 않는다. 즐겨찾기/클럽 카테고리가
+    "다변화"라는 요청 취지에 맞게, 저장된 스윙이 늘어도 원하는 것만 골라 보게 한다.
+  */
+  const visibleSwings = useMemo(() => {
+    if (filter === 'all') return swings;
+    if (filter === 'favorite') return swings.filter((w) => w.favorite);
+    return swings.filter((w) => w.club === filter);
+  }, [swings, filter]);
 
   /**
    * 스윙 삭제 (2026-08-01 창업자 요청)
@@ -51,7 +75,10 @@ export default function MySwingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text
           {...textScaling}
           accessibilityRole="header"
@@ -59,10 +86,11 @@ export default function MySwingsScreen() {
         >
           내 스윙
         </Text>
-        {/* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */}
-        <Caption className="pt-[6px]">
-          가장 잘 맞은 스윙 하나를 등록해두면, 그 리듬으로 반복 연습할 수 있어요
-        </Caption>
+        {/*
+          2026-08-08 (사용자 테스트): 이 안내문은 상시 노출인데도 잘 안 읽혔고,
+          이미 스윙을 등록한 사람에게는 의미도 없었다. 첫 등록 안내는 빈 상태
+          블록(아래) 한 곳으로 모으고, 여기서는 뺀다.
+        */}
 
         {swings.length === 0 ? (
           /* 빈 상태 — 실패가 아니라 다음 할 일을 보여준다 */
@@ -86,8 +114,53 @@ export default function MySwingsScreen() {
           </View>
         ) : (
           <>
+            {/*
+              필터 (2026-08-07, T-06 피드백) — 스윙이 몇 개 안 될 땐 없어도 그만이지만,
+              늘어날수록 "즐겨찾기만" "아이언만" 보고 싶어진다. 가로 스크롤 칩이라
+              목록이 길어져도 화면 폭을 넘지 않는다.
+            */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="pt-s3"
+              contentContainerStyle={{ gap: 6 }}
+            >
+              {FILTERS.map((f) => {
+                const active = filter === f.id;
+                return (
+                  <Pressable
+                    key={f.id}
+                    onPress={() => setFilter(f.id)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={f.label}
+                    accessibilityState={{ checked: active, selected: active }}
+                    style={{ minHeight: 36 }}
+                    className={`items-center justify-center px-s2 rounded-pill ${
+                      active
+                        ? 'bg-primary dark:bg-primary-neon'
+                        : 'bg-surface2 dark:bg-surface2Dark'
+                    } active:opacity-80`}
+                  >
+                    <Text
+                      {...textScaling}
+                      className="font-kr-medium text-caption"
+                      style={{ color: active ? c.onPrimary : c.muted }}
+                    >
+                      {f.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {visibleSwings.length === 0 && (
+              <View className="items-center py-s5">
+                <Caption>이 조건에 맞는 스윙이 없어요</Caption>
+              </View>
+            )}
+
             <View className="gap-[12px] pt-s3">
-              {swings.map((swing) => {
+              {visibleSwings.map((swing) => {
                 const active = swing.id === activeId;
                 const char = characterForRatio(swing.ratio);
                 return (
@@ -124,15 +197,68 @@ export default function MySwingsScreen() {
                               <IconCheck color={c.onPrimary} size={13} />
                             </View>
                           )}
+                          {/*
+                            즐겨찾기 (2026-08-07, T-06 피드백). 카드 탭(연습 시작)과
+                            겹치지 않게 hitSlop을 둔 별도 Pressable — 삭제 버튼과 같은 패턴.
+                          */}
+                          <Pressable
+                            onPress={() => toggleFavorite(swing.id)}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                              swing.favorite
+                                ? `${swing.name} 즐겨찾기 해제`
+                                : `${swing.name} 즐겨찾기 추가`
+                            }
+                            accessibilityState={{ selected: !!swing.favorite }}
+                          >
+                            <IconStar
+                              color={swing.favorite ? c.accent : c.muted}
+                              size={18}
+                              filled={!!swing.favorite}
+                            />
+                          </Pressable>
                         </View>
-                        <Caption className="pt-[4px]">
-                          {char.label} · {formatSeconds(swing.backswingSec)} :{' '}
-                          {formatSeconds(swing.downswingSec)}
-                        </Caption>
+                        {/* 2026-08-08: "0.70s : 0.27s" 같은 초 단위 라벨 제거 — 오른쪽 큰 비율 숫자와 중복 */}
+                        <Caption className="pt-[4px]">{char.label}</Caption>
                         {/* 2026-08-06 용어 통일: 저장 → 등록 (AOS 리뷰 B-2) */}
                         <Caption className="pt-[2px]">
                           {humanDate(swing.createdAt.slice(0, 10))} 등록
                         </Caption>
+
+                        {/*
+                          클럽 종류 (2026-08-07, T-06 피드백). 등록 때 안 골랐어도
+                          여기서 붙이거나 바꿀 수 있다 — 같은 걸 다시 탭하면 해제.
+                        */}
+                        <View className="flex-row gap-[6px] pt-[6px]">
+                          {SWING_CLUBS.map((cl) => {
+                            const clubActive = swing.club === cl.id;
+                            return (
+                              <Pressable
+                                key={cl.id}
+                                onPress={() => setSwingClub(swing.id, clubActive ? null : cl.id)}
+                                hitSlop={4}
+                                accessibilityRole="radio"
+                                accessibilityLabel={`${swing.name}을(를) ${cl.label}로 표시`}
+                                accessibilityState={{ checked: clubActive, selected: clubActive }}
+                                style={{ minHeight: 28 }}
+                                className={`px-[8px] justify-center rounded-sm ${
+                                  clubActive
+                                    ? 'bg-primary dark:bg-primary-neon'
+                                    : 'bg-surface2 dark:bg-surface2Dark'
+                                } active:opacity-80`}
+                              >
+                                <Text
+                                  {...textScaling}
+                                  className="font-kr-medium text-[11px]"
+                                  style={{ color: clubActive ? c.onPrimary : c.muted }}
+                                >
+                                  {cl.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
                       </View>
                       <View className="items-end">
                         <Text

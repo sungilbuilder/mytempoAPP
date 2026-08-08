@@ -1,9 +1,40 @@
 import { useMemo } from 'react';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../../constants/theme';
 import { IconHome, IconTarget, IconTrend } from '../../components/ui';
 import { useRenderTrace } from '../../features/debug/useRenderTrace';
+
+/*
+  2026-08-08 (사용자 테스트): 활성/비활성 탭이 색상만으로 구분되는데, 둘 다
+  초록 계열이라 라이트 모드에서 "바뀐 게 잘 안 보인다"는 피드백을 받았다.
+  색만이 아니라 형태(배경 필)로도 활성 상태를 표시한다.
+*/
+function TabIcon({
+  focused,
+  pillColor,
+  children,
+}: {
+  focused: boolean;
+  pillColor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View
+      style={{
+        width: 40,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? pillColor : 'transparent',
+      }}
+    >
+      {children}
+    </View>
+  );
+}
 
 /**
  * 탭 구조 (2026-07-31 시안 반영): 홈 · 내 스윙 · 기록
@@ -63,21 +94,33 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: '홈',
-          tabBarIcon: ({ color }) => <IconHome color={color} size={22} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused} pillColor={c.surface2}>
+              <IconHome color={color} size={22} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="my-swings"
         options={{
           title: '내 스윙',
-          tabBarIcon: ({ color }) => <IconTarget color={color} size={22} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused} pillColor={c.surface2}>
+              <IconTarget color={color} size={22} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: '기록',
-          tabBarIcon: ({ color }) => <IconTrend color={color} size={22} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused} pillColor={c.surface2}>
+              <IconTrend color={color} size={22} />
+            </TabIcon>
+          ),
         }}
       />
       {/* 구 연습 라우트 — 리다이렉트 스텁이라 탭바에는 숨긴다 */}

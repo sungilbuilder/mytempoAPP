@@ -18,6 +18,21 @@ export type SwingMarks = {
   impact: number;
 };
 
+/**
+ * 클럽 종류 (2026-08-07, T-06 피드백 — "내 스윙 관리" 방안).
+ *
+ * 드라이버/아이언 2종만 둔다. 실기기 테스트 피드백에서 나온 "favorite/driver/iron
+ * 등 다변화 카테고리"를 그대로 반영하면 두 축(즐겨찾기·클럽)이 섞여 나중에 꼬인다
+ * — "favorite"은 단일 플래그(아래 `favorite`), 클럽 종류는 이 타입으로 분리했다.
+ * 목록을 늘릴 땐 여기 하나만 고치면 된다(선택 UI는 이 타입을 그대로 순회한다).
+ */
+export type SwingClub = 'driver' | 'iron';
+
+export const SWING_CLUBS: { id: SwingClub; label: string }[] = [
+  { id: 'driver', label: '드라이버' },
+  { id: 'iron', label: '아이언' },
+];
+
 export type SavedSwing = {
   id: string;
   name: string;
@@ -36,6 +51,10 @@ export type SavedSwing = {
    */
   sourceFps?: number;
   createdAt: string;
+  /** 즐겨찾기 표시 (2026-08-07). 없으면(undefined) 즐겨찾기 아님과 같다. */
+  favorite?: boolean;
+  /** 클럽 종류 (2026-08-07). 없으면 미지정 — 강제하지 않는다. */
+  club?: SwingClub;
 };
 
 type SwingState = {
@@ -45,6 +64,9 @@ type SwingState = {
   renameSwing: (id: string, name: string) => void;
   removeSwing: (id: string) => void;
   setActiveSwing: (id: string | null) => void;
+  toggleFavorite: (id: string) => void;
+  /** club을 null로 주면 미지정으로 되돌린다(같은 값을 다시 탭해 해제하는 UI용) */
+  setSwingClub: (id: string, club: SwingClub | null) => void;
 };
 
 export const useSwingStore = create<SwingState>()(
@@ -64,6 +86,14 @@ export const useSwingStore = create<SwingState>()(
           activeSwingId: s.activeSwingId === id ? null : s.activeSwingId,
         })),
       setActiveSwing: (activeSwingId) => set({ activeSwingId }),
+      toggleFavorite: (id) =>
+        set((s) => ({
+          swings: s.swings.map((w) => (w.id === id ? { ...w, favorite: !w.favorite } : w)),
+        })),
+      setSwingClub: (id, club) =>
+        set((s) => ({
+          swings: s.swings.map((w) => (w.id === id ? { ...w, club: club ?? undefined } : w)),
+        })),
     }),
     { partialize: (s) => ({ swings: s.swings, activeSwingId: s.activeSwingId }) },
   ),

@@ -57,14 +57,17 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/*
           헤더
           2026-07-31 브랜드 리뉴얼: "오늘"이라는 무의미한 캡션 자리에 워드마크를 넣었다.
           창업자 전략 — 앱 아이콘은 심볼만 쓰는 대신, 앱 안에서는 워드마크를 적극 노출해
           브랜드를 각인시킨다. 홈은 재방문 시 가장 먼저 보는 화면이라 노출 가치가 가장 크다.
         */}
-        <View className="flex-row items-start justify-between pb-s4">
+        <View className="flex-row items-center justify-between pb-s3">
           <View className="gap-[6px]">
             <Logo size={18} color={c.primary} accentColor={c.accent} />
             <Text
@@ -75,9 +78,11 @@ export default function HomeScreen() {
               연습할까요
             </Text>
           </View>
-          <IconButton label="설정" onPress={() => router.push('/settings')}>
-            <IconSettings color={c.muted} />
-          </IconButton>
+          <View className="flex-row items-center gap-[4px]">
+            <IconButton label="설정" onPress={() => router.push('/settings')}>
+              <IconSettings color={c.muted} />
+            </IconButton>
+          </View>
         </View>
 
         {/*
@@ -88,7 +93,7 @@ export default function HomeScreen() {
           돌려주기 때문이다. 이어갈 게 없는데 이어서 하라고 하면 홈의 첫인상이
           어긋난다. 이제 고른 적이 있을 때만 "이어서"라고 말한다.
         */}
-        <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s3 items-center">
+        <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s2 items-center">
           <Text
             {...textScaling}
             className="font-kr-medium text-caption text-muted dark:text-mutedDark self-start"
@@ -103,10 +108,10 @@ export default function HomeScreen() {
             {tempo.hasHistory ? tempo.sublabel : '내 스윙을 등록하면 내 리듬으로 바뀌어요'}
           </Text>
 
-          <View className="py-s3">
+          <View className="py-s2">
             <TempoRing
               ratio={tempo.ratio}
-              size={188}
+              size={168}
               colors={{
                 primary: c.primary,
                 accent: c.accent,
@@ -124,7 +129,7 @@ export default function HomeScreen() {
               <Text
                 {...numeralScaling}
                 accessibilityLabel={`템포 비율 ${formatRatio(tempo.ratio)}, ${tempo.label}`}
-                className="font-display-bold text-[44px]"
+                className="font-display-bold text-[38px]"
                 style={{ color: c.ink }}
               >
                 {formatRatio(tempo.ratio)}
@@ -167,9 +172,9 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="내 스윙 등록"
             accessibilityHint="영상에서 백스윙 시작, 탑, 임팩트 세 지점을 표시합니다"
-            className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card p-s2 gap-[6px] active:opacity-80"
+            className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-[10px] gap-[4px] active:opacity-80"
           >
-            <IconTarget color={c.primary} size={22} />
+            <IconTarget color={c.primary} size={20} />
             <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
               내 스윙 등록
             </Text>
@@ -183,9 +188,9 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="템포 바꾸기"
             accessibilityHint="기준 리듬 3종 중에서 고릅니다"
-            className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card p-s2 gap-[6px] active:opacity-80"
+            className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-[10px] gap-[4px] active:opacity-80"
           >
-            <IconBars color={c.primary} size={22} />
+            <IconBars color={c.primary} size={20} />
             <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
               템포 바꾸기
             </Text>
@@ -205,7 +210,7 @@ export default function HomeScreen() {
           accessibilityRole="button"
           accessibilityLabel={`이번 주 ${summary.weekDays}일 연습, ${summary.weekSwings}스윙. 기록 보기`}
           style={{ minHeight: MIN_TOUCH }}
-          className="flex-row items-center justify-between bg-surface2 dark:bg-surface2Dark rounded-card px-s2 py-s2 mt-s2 active:opacity-80"
+          className="flex-row items-center justify-between bg-surface2 dark:bg-surface2Dark rounded-card px-s2 py-[10px] mt-s2 active:opacity-80"
         >
           <Caption>이번 주</Caption>
           <View className="flex-row items-baseline gap-[6px]">

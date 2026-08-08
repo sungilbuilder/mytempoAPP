@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
@@ -19,11 +19,10 @@ import {
 } from '../components/ui';
 import { Toast, useToast } from '../components/Toast';
 import { Metronome } from '../features/audio-engine/metronome';
-import { playCue, releaseCues } from '../features/audio-engine/cues';
+import { playCue } from '../features/audio-engine/cues';
 import {
   COUNT_IN_SEC,
   countInAudio,
-  cycleMs,
   cycleSec,
   impactAtMs,
 } from '../features/audio-engine/soundPacks';
@@ -59,6 +58,7 @@ import {
  */
 export default function PracticeScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
 
@@ -151,6 +151,10 @@ export default function PracticeScreen() {
         // effect가 다시 돌아 오디오가 통째로 재로드된다. 재생 중 볼륨 반영은
         // 아래 전용 effect(setVolume)가 재로드 없이 처리한다.
         await m.load(tempo.audioFileFor(soundPack, swingSpeedRef.current), volumeRef.current);
+        if (cancelled) return;
+        // 2026-08-07 (T-06 실기기 검증): 카운트인도 여기서 미리 로드해 둔다 —
+        // 샷마다 새로 만들면 레이턴시·정지 경합이 생긴다(metronome.ts 주석 참고).
+        await m.preloadCountIn(countInAudio(), volumeRef.current);
         if (cancelled) return;
         m.setOnCycle(onSwingSignalRef.current);
         /*
@@ -293,7 +297,6 @@ export default function PracticeScreen() {
        * 2초마다 울려서는 쓸 수가 없다. 자세한 근거는 soundPacks.ts 주석 참고.
        */
       m.startShotCycle({
-        countInFile: countInAudio(),
         countInSec: COUNT_IN_SEC,
         intervalSec: shotIntervalRef.current,
         // 2026-08-07: 루프 길이가 속도마다 다르므로 상수가 아니라 함수로 구한다
@@ -316,44 +319,64 @@ export default function PracticeScreen() {
   useEffect(
     () => () => {
       if (impactTimer.current) clearTimeout(impactTimer.current);
-      // 확인음 플레이어가 남아 있으면 해제한다 (expo-audio는 자동 해제되지 않는다)
-      releaseCues();
     },
     [],
   );
 
   /**
    * ── 재생/정지 ──────────────────────────────────────
-   * 연타 가드 (2026-07-31 추가): toggle()이 매번 await를 거치는데, 그 사이에
-   * 다시 탭하면 오디오 엔진의 실제 재생 상태와 화면의 isPlaying이 어긋날 수 있었다.
-   * 처리 중에는 추가 탭을 무시한다(버튼을 비활성화하지 않고 조용히 무시하는 이유:
-   * 버튼이 깜빡이며 비활성화되는 것보다 그냥 무시하는 쪽이 손맛이 자연스럽다).
+   * 연타 가드 (2026-07-31 추가, 2026-08-08 개선)
+   *
+   * toggle()이 매번 await를 거치는데, 예전에는 그 사이 도착한 탭을 조용히
+   * "버렸다". 문제는 재생을 누른 직후(await startPlayback 처리 중) 바로
+   * 정지를 누르면, 그 정지 탭이 버려지고 아무도 다시 정지를 걸지 않아 소리가
+   * 끝까지 난 것처럼 보였다 — "빠르게 재생·정지를 누르면 안 멈춘다" 제보의 원인.
+   *
+   * 이제 처리 중 도착한 탭은 버리지 않고 "대기"만 표시해 두고, 지금 처리가
+   * 끝나자마자 그 탭을 한 번 더 처리한다 — 마지막 탭의 의도(정지)가 항상
+   * 반영된다. 판단 기준도 렌더 시점에 캡처되는 `isPlaying` 상태값이 아니라
+   * `isPlayingRef`(항상 최신값)로 바꿔, 재렌더 타이밍에 따라 오래된 상태를
+   * 보고 판단하는 경우를 없앴다.
    */
   const togglingRef = useRef(false);
-  async function toggle() {
-    if (togglingRef.current) return;
+  const pendingToggleRef = useRef(false);
+
+  async function runToggle() {
+    if (togglingRef.current) {
+      pendingToggleRef.current = true;
+      return;
+    }
     const m = metronomeRef.current;
+    const wantsToPlay = !isPlayingRef.current;
     // 로드 effect가 아직 안 끝났으면 조용히 무시한다 — 오디오 없이 재생 중으로
     // 보이는 상태(링 스핀·타이머만 돌고 소리·스윙 카운트는 없음)를 막는다.
     // 로드가 끝나면 사용자가 다시 탭하면 된다(수백 ms 내 완료가 보통이라 재탭
     // 부담이 크지 않다).
-    if (!m || (!isPlaying && !m.isReady())) return;
+    if (!m || (wantsToPlay && !m.isReady())) return;
     togglingRef.current = true;
     try {
-      if (isPlaying) {
-        await m.stop();
-        if (impactTimer.current) clearTimeout(impactTimer.current);
-        setIsPlaying(false);
-      } else {
+      if (wantsToPlay) {
         // 모드 분기는 startPlayback 한 곳에 있다 (2026-08-07)
         await startPlayback(m);
-        setIsPlaying(true);
+      } else {
+        await m.stop();
+        if (impactTimer.current) clearTimeout(impactTimer.current);
       }
+      isPlayingRef.current = wantsToPlay;
+      setIsPlaying(wantsToPlay);
     } catch (e) {
       console.warn('[마이템포] 재생 토글 실패', e);
     } finally {
       togglingRef.current = false;
+      if (pendingToggleRef.current) {
+        pendingToggleRef.current = false;
+        runToggle();
+      }
     }
+  }
+
+  function toggle() {
+    runToggle();
   }
 
   /**
@@ -383,6 +406,7 @@ export default function PracticeScreen() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active' && isPlaying) {
         metronomeRef.current?.stop();
+        isPlayingRef.current = false;
         setIsPlaying(false);
       }
     });
@@ -481,6 +505,26 @@ export default function PracticeScreen() {
     return () => sub.remove();
   }, [close]);
 
+  /**
+   * 안전망 — 예측형 뒤로가기 제스처 대응 (2026-08-07, T-06 🔴 최우선 항목).
+   *
+   * `app.json`의 `predictiveBackGestureEnabled: true`(Android 13+) 아래에서는
+   * 안드로이드가 `OnBackInvokedCallback` 경로를 쓰는데, 이 경로에서 `BackHandler`가
+   * 실제로 이벤트를 가로채는지는 기기에서만 확인된다(T-31 ⑥). 가로채지 못하면
+   * 위 리스너가 조용히 무시되고 `close()`가 아예 안 불려 정지·저장이 안 될 수 있다.
+   *
+   * `beforeRemove`는 화면이 스택에서 빠질 때(하드웨어 뒤로가기·제스처·프로그램상
+   * 이동 모두 포함) React Navigation이 직접 쏘는 이벤트라 제스처 종류와 무관하게
+   * 걸린다. `close()`는 `closingRef`로 중복 호출을 막으므로 두 리스너가 겹쳐
+   * 불려도 안전하다.
+   */
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      close();
+    });
+    return unsubscribe;
+  }, [navigation, close]);
+
   const mm = String(Math.floor(elapsedSec / 60)).padStart(1, '0');
   const ss = String(elapsedSec % 60).padStart(2, '0');
   /**
@@ -535,22 +579,34 @@ export default function PracticeScreen() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* 링 — 화면의 주인공 */}
-        <View className="items-center justify-center py-s2" style={{ minHeight: 380 }}>
-          <Caption className="pb-s2">BACKSWING : DOWNSWING</Caption>
+        {/*
+          링 — 화면의 주인공.
+          2026-08-08 (실기기 검증 — "스크롤 없이 한 화면에 보고 싶다"): 크기·여백을
+          줄여 아래 컨트롤까지 화면 안에 들어오게 했다. minHeight도 실제 내용 높이에
+          맞춰 낮췄다 — 너무 크면 오히려 아래 컨트롤을 화면 밖으로 미는 원인이었다.
+        */}
+        <View className="items-center justify-center py-s1" style={{ minHeight: 300 }}>
+          <Caption className="pb-s1">BACKSWING : DOWNSWING</Caption>
           <TempoRing
             ratio={tempo.ratio}
-            size={266}
+            size={220}
             playing={isPlaying}
-            /* 2026-08-07: 배속이 사라졌다. 링 주기는 속도별 루프 길이 그 자체다. */
-            cycleMs={cycleMs(swingSpeed)}
+            /*
+              2026-08-08 (실기기 검증 — "2번째 스윙부터 원이 안 맞음"): 링을 자체
+              타이머로 반복시키는 대신, 실제 스윙 신호가 올 때(swingCount 변화)만
+              한 바퀴 돌린다. `onSwingSignal`이 오디오 이벤트(연속 모드) 또는
+              카운트인 종료 이벤트(샷 사이클 모드) 양쪽 모두에서 정확히 스윙 시작
+              시점에 불리므로, 어드레스·대기 구간에는 링이 그대로 멈춰 있는다.
+            */
+            swingTick={swingCount}
+            swingMs={impactAtMs(swingSpeed)}
             colors={{ primary: c.primary, accent: c.accent, track: c.track, dot: c.ink }}
           >
             {/* 2026-08-01: 홈과 동일하게 색 출처를 팔레트로 통일 (링 안 숫자 실종 대응) */}
             <Text
               {...numeralScaling}
               accessibilityLabel={`템포 비율 ${formatRatio(tempo.ratio)}`}
-              className="font-display-bold text-[60px]"
+              className="font-display-bold text-[50px]"
               style={{ color: c.ink }}
             >
               {formatRatio(tempo.ratio)}
@@ -558,7 +614,7 @@ export default function PracticeScreen() {
           </TempoRing>
 
           {/* 구간 라벨 */}
-          <View className="flex-row gap-s3 pt-s3">
+          <View className="flex-row gap-s3 pt-s2">
             <View className="flex-row items-center gap-[6px]">
               <View
                 className="w-[8px] h-[8px] rounded-pill"
@@ -585,7 +641,7 @@ export default function PracticeScreen() {
             {...koreanWrap}
             {...textScaling}
             accessibilityLiveRegion="polite"
-            className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s3"
+            className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s2"
           >
             {elapsedSec > 0 ? `${mm}분 ${ss}초 · ${swingCount}스윙` : '아직 시작 전이에요'}
           </Text>
@@ -601,9 +657,9 @@ export default function PracticeScreen() {
               isPlaying ? '메트로놈 소리를 멈춥니다' : '선택한 템포로 소리가 반복 재생됩니다'
             }
             accessibilityState={{ busy: isPlaying }}
-            className="flex-row items-center justify-center gap-[8px] bg-accent dark:bg-accent-neon rounded-lg py-s3 active:opacity-85"
+            className="flex-row items-center justify-center gap-[8px] bg-accent dark:bg-accent-neon rounded-lg py-s2 active:opacity-85"
             style={{
-              minHeight: 56,
+              minHeight: 52,
               shadowColor: c.accent,
               shadowOpacity: 0.45,
               shadowRadius: 18,
@@ -644,8 +700,8 @@ export default function PracticeScreen() {
           하나가 몇 초에 끝나는가**를 그대로 보여준다. 비율(3:1)은 그대로 두고
           절대 속도만 바뀐다는 점이 화면에서 바로 읽혀야 한다. (features/tempo/swingSpeeds.ts)
         */}
-          <View className="pt-s3">
-            <Caption className="text-center pb-[8px]">
+          <View className="pt-s2">
+            <Caption className="text-center pb-[6px]">
               스윙 속도 — 빠른 게 더 좋은 건 아니에요
             </Caption>
             <View className="flex-row gap-[6px]">
@@ -659,13 +715,13 @@ export default function PracticeScreen() {
                     accessibilityRole="radio"
                     accessibilityLabel={`스윙 속도 ${s.label}${isPick ? ', 내 템포 추천' : ''}`}
                     accessibilityState={{ checked: active, selected: active }}
-                    className={`flex-1 items-center justify-center py-[10px] rounded-card ${
+                    className={`flex-1 items-center justify-center py-[8px] rounded-card ${
                       active
                         ? 'bg-primary dark:bg-primary-neon'
                         : 'bg-surface2 dark:bg-surface2Dark'
                     } active:opacity-80`}
                     style={[
-                      { minHeight: 56 },
+                      { minHeight: 48 },
                       /* 추천 단계는 선택돼 있지 않아도 테두리로 표시해 눈에 띄게 한다 */
                       !active && isPick ? { borderWidth: 1, borderColor: c.accent } : null,
                     ]}
@@ -697,7 +753,7 @@ export default function PracticeScreen() {
             <Text
               {...koreanWrap}
               {...textScaling}
-              className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s2"
+              className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
             >
               {`백스윙 ${breakdown.backswingSec.toFixed(2)}초 · 다운스윙 ${breakdown.downswingSec.toFixed(2)}초`}
             </Text>
@@ -714,8 +770,8 @@ export default function PracticeScreen() {
                 onPress={() => changeSpeed(recommendation.speed.id)}
                 accessibilityRole="button"
                 accessibilityLabel={`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초입니다. 추천 속도 ${recommendation.speed.label}로 맞추기`}
-                style={{ minHeight: 48 }}
-                className="mt-s2 rounded-card border border-line dark:border-lineDark px-s2 py-[10px] justify-center active:opacity-70"
+                style={{ minHeight: 44 }}
+                className="mt-s1 rounded-card border border-line dark:border-lineDark px-s2 py-[8px] justify-center active:opacity-70"
               >
                 <Text
                   {...koreanWrap}
