@@ -42,7 +42,10 @@ export default function PresetsScreen() {
         </IconButton>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text
           {...textScaling}
           accessibilityRole="header"

@@ -45,7 +45,10 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text
           {...textScaling}
           accessibilityRole="header"

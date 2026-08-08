@@ -115,7 +115,10 @@ export default function SettingsScreen() {
         </IconButton>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text
           {...textScaling}
           accessibilityRole="header"
