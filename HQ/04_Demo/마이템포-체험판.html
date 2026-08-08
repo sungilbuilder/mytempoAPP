@@ -223,8 +223,7 @@ button{font-family:inherit;border:none;background:none;cursor:pointer;color:inhe
             <span class="chk"></span><span class="bd" style="font-weight:500">폰 설정을 따를게요</span>
           </button>
         </div>
-        <button class="btn pri" onclick="finishOb()">무료로 시작하기</button>
-        <div class="cp" style="max-width:260px">템포 여러 개 저장과 연습 히스토리는 추후 프리미엄 기능으로 제공될 예정이에요</div>
+        <button class="btn pri" onclick="finishOb()">시작하기</button>
       </div>
     </div>
     <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
@@ -285,7 +284,7 @@ button{font-family:inherit;border:none;background:none;cursor:pointer;color:inhe
   <div class="scr" id="s-practice" style="padding:22px 20px">
     <div class="row">
       <button onclick="stopPlay();go('home')" style="font-size:19px;color:var(--subtle)">✕</button>
-      <span class="mu" id="pracName">프리셋 · 안정형</span><span style="width:14px"></span>
+      <span class="mu" id="pracName">프리셋 · 여유롭게</span><span style="width:14px"></span>
     </div>
     <div class="grow" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0">
       <div class="cp" style="letter-spacing:.16em;padding-bottom:14px">BACKSWING : DOWNSWING</div>
@@ -338,7 +337,7 @@ button{font-family:inherit;border:none;background:none;cursor:pointer;color:inhe
     <div style="padding-top:18px" id="resRing"></div>
     <div class="mu ctr" style="padding-top:12px" id="resSec">0.56s : 0.18s</div>
     <div class="card lg" style="margin-top:24px">
-      <div class="h2" style="font-size:14.5px" id="resHead">'안정형'에 가까운 리듬이에요</div>
+      <div class="h2" style="font-size:14.5px" id="resHead">'여유롭게'에 가까운 리듬이에요</div>
       <div class="cp" style="padding-top:5px" id="resDetail">천천히 올렸다가 정확하게 내려놓는 편입니다.</div>
     </div>
     <div style="padding-top:18px">
@@ -421,9 +420,9 @@ button{font-family:inherit;border:none;background:none;cursor:pointer;color:inhe
 <script>
 /* ═══════════ 상태 ═══════════ */
 const PRESETS=[
-  {id:'p3',alias:'안정형',label:'3:1',desc:'천천히 올리고 정확하게 내리는 리듬',r:3},
-  {id:'p25',alias:'균형형',label:'2.5:1',desc:'가장 무난한 기본 리듬',r:2.5},
-  {id:'p35',alias:'파워형',label:'3.5:1',desc:'길게 끌고 강하게 때리는 리듬',r:3.5},
+  {id:'p3',alias:'여유롭게',label:'3:1',desc:'천천히 올리고 정확하게 내리는 리듬',r:3},
+  {id:'p25',alias:'고르게',label:'2.5:1',desc:'가장 무난한 기본 리듬',r:2.5},
+  {id:'p35',alias:'길게',label:'3.5:1',desc:'길게 끌고 강하게 때리는 리듬',r:3.5},
 ];
 let S={screen:'home',preset:'p3',swing:null,swings:[],sessions:[],
        rate:1,vol:.8,playing:false,elapsed:0,swingCount:0};
@@ -439,9 +438,9 @@ function activeTempo(){
 }
 const fmtRatio=r=>(Math.round(r*10)/10)+':1';
 function character(r){
-  if(r<2.75)return["'균형형'에 가까운 리듬이에요",'올리고 내리는 속도가 고르게 이어지는 편입니다.'];
-  if(r<=3.25)return["'안정형'에 가까운 리듬이에요",'천천히 올렸다가 정확하게 내려놓는 편입니다.'];
-  return["'파워형'에 가까운 리듬이에요",'길게 끌어 올렸다가 빠르게 내려치는 편입니다.'];
+  if(r<2.75)return["'고르게'에 가까운 리듬이에요",'올리고 내리는 속도가 고르게 이어지는 편입니다.'];
+  if(r<=3.25)return["'여유롭게'에 가까운 리듬이에요",'천천히 올렸다가 정확하게 내려놓는 편입니다.'];
+  return["'길게'에 가까운 리듬이에요",'길게 끌어 올렸다가 빠르게 내려치는 편입니다.'];
 }
 
 /* ═══════════ 템포 링 ═══════════ */

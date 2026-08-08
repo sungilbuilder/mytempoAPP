@@ -404,9 +404,9 @@ function showResult(){
   document.getElementById('rTol').textContent=prec==='approximate'?'±0.1':'';
   document.getElementById('rSecs').textContent=`${bs.toFixed(2)}s : ${ds.toFixed(2)}s`;
 
-  const ch = ratio<2.75?['\'균형형\'에 가까운 리듬이에요','올리고 내리는 속도가 고르게 이어지는 편입니다.']
-           : ratio<=3.25?['\'안정형\'에 가까운 리듬이에요','천천히 올렸다가 정확하게 내려놓는 편입니다.']
-           : ['\'파워형\'에 가까운 리듬이에요','길게 끌어 올렸다가 빠르게 내려치는 편입니다.'];
+  const ch = ratio<2.75?['\'고르게\'에 가까운 리듬이에요','올리고 내리는 속도가 고르게 이어지는 편입니다.']
+           : ratio<=3.25?['\'여유롭게\'에 가까운 리듬이에요','천천히 올렸다가 정확하게 내려놓는 편입니다.']
+           : ['\'길게\'에 가까운 리듬이에요','길게 끌어 올렸다가 빠르게 내려치는 편입니다.'];
   document.getElementById('rHead').textContent=ch[0];
   document.getElementById('rDetail').textContent=ch[1];
 

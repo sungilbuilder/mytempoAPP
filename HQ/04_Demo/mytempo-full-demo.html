@@ -177,8 +177,7 @@
             <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
             <div class="ring-center"></div>
           </div>
-          <button class="cta" onclick="finishOnboarding()">무료로 시작하기</button>
-          <p class="cta-note">템포 여러 개 저장과 연습 히스토리는 추후 프리미엄 기능으로 제공될 예정이에요</p>
+          <button class="cta" onclick="finishOnboarding()">시작하기</button>
         </div>
       </div>
       <div class="dots" id="dots"></div>
@@ -196,7 +195,7 @@
       <div class="tabpanel" id="tab-practice">
         <div class="practice-body">
           <div class="glass-card">
-            <div class="practice-name" id="practiceName">3:1 템포 · 안정형</div>
+            <div class="practice-name" id="practiceName">3:1 템포 · 여유롭게</div>
             <div class="practice-ratio" id="practiceRatio">3:1</div>
             <div class="bar-track" style="width:100%;">
               <div class="bar-fill-bs" id="practiceBarBs" style="flex-basis:75%;"></div>
@@ -273,9 +272,9 @@ function finishOnboarding(){
 
 /* ---------- 메인 앱 ---------- */
 const PRESETS = [
-  { id:'p1', name:'2.5:1 템포 · 균형형', bs:2.5, ds:1 },
-  { id:'p2', name:'3:1 템포 · 안정형', bs:3, ds:1 },
-  { id:'p3', name:'3.5:1 템포 · 파워형', bs:3.5, ds:1 },
+  { id:'p1', name:'2.5:1 템포 · 고르게', bs:2.5, ds:1 },
+  { id:'p2', name:'3:1 템포 · 여유롭게', bs:3, ds:1 },
+  { id:'p3', name:'3.5:1 템포 · 길게', bs:3.5, ds:1 },
 ];
 let currentPresetId = 'p2';
 let isPlaying = false;
