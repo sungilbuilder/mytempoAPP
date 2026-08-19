@@ -21,7 +21,14 @@ android/
 
 # 사운드 탐색 산출물 — `scripts/signature_sound.py`가 만드는 후보 wav·오디션 파일.
 # 재생성 가능하므로 커밋 대상이 아니다(스크립트 자체만 저장소에 남는다).
-scripts/_sound_exploration/
+# 주의(2026-08-20 수정): 원래 패턴 "scripts/_sound_exploration/"은 중간에 슬래시가 있어
+# 레포 루트에만 앵커링돼, 실제 위치인 HQ/03_Output_App/scripts/_sound_exploration/를
+# 못 잡고 있었다(12번 줄의 같은 원리 설명 참고). 슬래시 없는 패턴으로 교체.
+_sound_exploration/
+
+# Strix 보안 스캔 실행 산출물 — 실행할 때마다 새로 생기는 로그·SARIF·에이전트 상태.
+# 코드가 아니라 도구 실행 캐시라 커밋 대상이 아니다.
+strix_runs/
 
 # 로그
 npm-debug.*
@@ -67,3 +74,9 @@ HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/*.html
 HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/support.js
 HQ/📑_02_Workspace/product_design/mytempo-implemented-preview.html
 HQ/📑_02_Workspace/product_design/mytempo-ui-wireframes.html
+
+# 중간 작업본 데모 스냅샷 — 그날그날 작업 중 저장된 날짜 찍힌 사본으로,
+# 이후 정식본(HQ/04_Demo/마이템포-체험판.html·마이템포-체험판-공유용.html)으로
+# 대체됐다(diff로 확인: 임시 문구 "오늘(8/8) 추가된 기능이에요" 포함, 정식본엔 없음).
+# 정식본만 배포물로 추적한다 (2026-08-20)
+HQ/04_Demo/마이템포-체험판-2026-08-08.html
