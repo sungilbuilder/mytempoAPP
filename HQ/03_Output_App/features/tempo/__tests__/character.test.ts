@@ -8,21 +8,21 @@ import {
 
 describe('characterForRatio — 비율 → 성향', () => {
   it('2.75 미만은 "고르게"', () => {
-    expect(characterForRatio(2.0).id).toBe('balanced');
-    expect(characterForRatio(2.5).label).toBe('고르게');
-    expect(characterForRatio(2.749).id).toBe('balanced');
+    expect(characterForRatio(2.0)).toBe('balanced');
+    expect(characterForRatio(2.5)).toBe('balanced');
+    expect(characterForRatio(2.749)).toBe('balanced');
   });
 
   it('2.75~3.25 는 "여유롭게"', () => {
-    expect(characterForRatio(2.75).id).toBe('stable');
-    expect(characterForRatio(3.0).label).toBe('여유롭게');
-    expect(characterForRatio(3.25).id).toBe('stable');
+    expect(characterForRatio(2.75)).toBe('stable');
+    expect(characterForRatio(3.0)).toBe('stable');
+    expect(characterForRatio(3.25)).toBe('stable');
   });
 
   it('3.25 초과는 "길게"', () => {
-    expect(characterForRatio(3.26).id).toBe('power');
-    expect(characterForRatio(3.5).label).toBe('길게');
-    expect(characterForRatio(10).id).toBe('power');
+    expect(characterForRatio(3.26)).toBe('power');
+    expect(characterForRatio(3.5)).toBe('power');
+    expect(characterForRatio(10)).toBe('power');
   });
 
   /**
@@ -30,8 +30,8 @@ describe('characterForRatio — 비율 → 성향', () => {
    * 정해졌으므로, 프리셋이 바뀌지 않는 한 이 경계도 움직이면 안 된다.
    */
   it('경계는 [<2.75) / [2.75, 3.25] / (3.25>] 로 닫힌다', () => {
-    expect(characterForRatio(2.75).id).not.toBe(characterForRatio(2.749).id);
-    expect(characterForRatio(3.25).id).not.toBe(characterForRatio(3.251).id);
+    expect(characterForRatio(2.75)).not.toBe(characterForRatio(2.749));
+    expect(characterForRatio(3.25)).not.toBe(characterForRatio(3.251));
   });
 });
 

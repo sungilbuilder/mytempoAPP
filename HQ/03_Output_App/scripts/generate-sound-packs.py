@@ -321,7 +321,11 @@ REVERB_WET = 0.12
 # 실기 청취에서 "소리 사이가 너무 비었다"는 반응이 나오면 그때 올릴 것.
 ROOM_TONE_DB = -80.0
 
-RATIOS = {'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
+RATIOS = {'tempo_2_1': 2.0, 'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
+# ⚠️ 2026-08-19 (T-39) — tempo_2_1 추가. 어프로치·퍼팅 프리미엄 프리셋용.
+# 근거: [[T-39-어프로치퍼팅-프리미엄-프리셋]] — PGA투어 실측(2007)·Blast Motion
+# 센서 데이터·Tour Tempo 방법론 세 출처가 전부 2:1로 수렴(창업자 확인 2026-08-19).
+# 풀스윙(driver_iron) 3종과 물리적으로 같은 파이프라인을 타므로 팩·속도 축은 그대로 재사용한다.
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'assets', 'audio')
 

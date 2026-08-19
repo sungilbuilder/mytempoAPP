@@ -26,41 +26,33 @@
  *
  * ⚠️ 임계값은 프리셋 3종(2.5 / 3.0 / 3.5)의 중간지점이고, 골프 스윙 생체역학
  * 연구에 근거한 값이 아니다. 그래서 화면 문구도 "~에 가까운"으로만 말한다.
+ *
+ * 2026-08-08 i18n: label/headline/detail 문자열은 여기 두지 않고
+ * `i18n/locales/{ko,en}/domain.json`의 `character.<id>`에 둔다. 화면은
+ * `t(\`domain:character.${id}.label\`)` 형태로 읽는다. 프리셋 별칭(`presets.ts`의
+ * `characterId`)도 같은 id를 참조하므로, 프리셋 화면과 결과 화면의 표현이
+ * **구조적으로** 항상 같다 — 문자열을 두 곳에 따로 두지 않는다.
+ *
+ * ⚠️ 2026-08-19 (T-39) — `approach`·`putting` 추가.
+ *
+ * 이 둘은 `characterForRatio()`가 **계산해서 내놓는 값이 아니다.** 이 함수의
+ * 임계값(2.75/3.25)은 드라이버·아이언 풀스윙 프리셋 3종의 중간지점이라는
+ * 의미만 가지고, 어프로치·퍼팅(2:1)은 애초에 그 철학("빠른 게 더 좋은 건
+ * 아니에요")이 다루는 대상이 아니다. 그래서 `presets.ts`에서 두 프리셋에
+ * `characterId: 'approach'`/`'putting'`을 **직접 지정**하고, 이 함수는 절대
+ * 이 두 값을 리턴하지 않는다 — 계산 경로와 직접 지정 경로가 섞이지 않게
+ * 의도적으로 분리했다. `result.tsx`/`my-swings.tsx`가 임의의 측정 비율에
+ * `characterForRatio()`를 계속 쓰는 한(드라이버·아이언 세션 전제), 어프로치·
+ * 퍼팅 세션 결과 화면에 이 라벨이 그대로 맞는지는 별도 검토가 필요하다
+ * (T-39 실행 메모, golf-ux-designer 몫으로 남겨둠).
  */
-export type TempoCharacter = {
-  /** id는 저장·분석용이라 바꾸지 않는다 — 라벨만 바뀌었다 */
-  id: 'balanced' | 'stable' | 'power';
-  label: string;
-  headline: string;
-  detail: string;
-};
+export type TempoCharacterId = 'balanced' | 'stable' | 'power' | 'approach' | 'putting';
 
-const BALANCED: TempoCharacter = {
-  id: 'balanced',
-  label: '고르게',
-  headline: '올리고 내리는 시간이 고른 편이에요',
-  detail: '백스윙과 다운스윙의 차이가 크지 않습니다.',
-};
-
-const STABLE: TempoCharacter = {
-  id: 'stable',
-  label: '여유롭게',
-  headline: '올릴 때 여유를 두는 편이에요',
-  detail: '천천히 올렸다가 정확하게 내려놓습니다.',
-};
-
-const POWER: TempoCharacter = {
-  id: 'power',
-  label: '길게',
-  headline: '백스윙을 길게 가져가는 편이에요',
-  detail: '길게 끌어 올렸다가 짧게 내려옵니다.',
-};
-
-/** 백스윙:다운스윙 비율(예: 3.2)을 성향으로 변환 */
-export function characterForRatio(ratio: number): TempoCharacter {
-  if (ratio < 2.75) return BALANCED;
-  if (ratio <= 3.25) return STABLE;
-  return POWER;
+/** 백스윙:다운스윙 비율(예: 3.2)을 성향 id로 변환 */
+export function characterForRatio(ratio: number): TempoCharacterId {
+  if (ratio < 2.75) return 'balanced';
+  if (ratio <= 3.25) return 'stable';
+  return 'power';
 }
 
 /** 3.15 → "3.2:1" (소수 첫째자리 반올림) */

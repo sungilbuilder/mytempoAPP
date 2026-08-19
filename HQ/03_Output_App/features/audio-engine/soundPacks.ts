@@ -94,8 +94,10 @@ export function impactAtMs(speedId: SwingSpeedId): number {
 
 export type SoundPack = {
   id: SoundPackId;
-  label: string;
-  description: string;
+  /**
+   * label/description은 `i18n/locales/{ko,en}/domain.json`의
+   * `soundPacks.<id>`에 있다 (2026-08-08 i18n 리팩터).
+   */
   /**
    * 박자를 깔아주는 층이 있는가 (2026-08-01 신설).
    * true인 팩은 마커음 3개 외에 일정한 펄스가 더 들린다.
@@ -115,24 +117,16 @@ export type SoundPack = {
 export const SOUND_PACKS: SoundPack[] = [
   {
     id: 'wood',
-    label: '나무',
-    description: '나무를 두드리는 소리 — 가장 자연스러워요',
     free: true,
   },
   {
     id: 'string',
-    label: '피아노',
-    description: '해머로 때리는 피아노 — 화사해서 오래 들어도 편안해요',
   },
   {
     id: 'mallet',
-    label: '마림바',
-    description: '나무보다 부드러운 말렛 타격 — 따뜻하고 둥글어요',
   },
   {
     id: 'rhythm',
-    label: '리듬',
-    description: '피아노가 세 지점을, 북이 그 사이 박자를 잡아줍니다',
     hasPulse: true,
   },
 ];
@@ -238,6 +232,63 @@ const LOOPS: Record<string, Record<SoundPackId, Record<SwingSpeedId, AudioSource
       s093: require('../../assets/audio/tempo_3_5_1__rhythm__s093.wav'),
     },
   },
+  /**
+   * 2026-08-19 (T-39) 신설 — 어프로치·퍼팅, 둘 다 2:1이라 같은 오디오
+   * (`tempo_2_1__*`)를 가리킨다. 비율이 같으므로 파일을 두 벌 만들지 않는다 —
+   * `generate-sound-packs.py`의 `RATIOS['tempo_2_1']` 참고.
+   */
+  'preset-approach-2-1': {
+    wood: {
+      s133: require('../../assets/audio/tempo_2_1__wood__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__wood__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__wood__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__wood__s093.wav'),
+    },
+    string: {
+      s133: require('../../assets/audio/tempo_2_1__string__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__string__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__string__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__string__s093.wav'),
+    },
+    mallet: {
+      s133: require('../../assets/audio/tempo_2_1__mallet__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__mallet__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__mallet__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__mallet__s093.wav'),
+    },
+    rhythm: {
+      s133: require('../../assets/audio/tempo_2_1__rhythm__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__rhythm__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__rhythm__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__rhythm__s093.wav'),
+    },
+  },
+  'preset-putting-2-1': {
+    wood: {
+      s133: require('../../assets/audio/tempo_2_1__wood__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__wood__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__wood__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__wood__s093.wav'),
+    },
+    string: {
+      s133: require('../../assets/audio/tempo_2_1__string__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__string__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__string__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__string__s093.wav'),
+    },
+    mallet: {
+      s133: require('../../assets/audio/tempo_2_1__mallet__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__mallet__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__mallet__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__mallet__s093.wav'),
+    },
+    rhythm: {
+      s133: require('../../assets/audio/tempo_2_1__rhythm__s133.wav'),
+      s120: require('../../assets/audio/tempo_2_1__rhythm__s120.wav'),
+      s107: require('../../assets/audio/tempo_2_1__rhythm__s107.wav'),
+      s093: require('../../assets/audio/tempo_2_1__rhythm__s093.wav'),
+    },
+  },
 };
 
 /**
@@ -312,13 +363,26 @@ export function previewAudio(pack: SoundPackId): AudioSource {
  * 신호가 되므로, 간격 자체가 루틴을 훈련시킨다.
  */
 
-/** 0 = 연속(빈 스윙). 그 외는 한 샷에서 다음 샷까지의 전체 시간(초). */
-export type ShotIntervalSec = 0 | 15 | 25 | 40;
+/**
+ * 0 = 연속(빈 스윙). 그 외는 한 샷에서 다음 샷까지의 전체 시간(초).
+ *
+ * 프리셋 4종(0·15·25·40) 외에 [[샷간격-전면재설계]] §"간격 사용자 지정"이 열어둔
+ * 직접 입력값도 여기 담긴다 — 리터럴 유니온이 아니라 `number`인 이유다.
+ * `startShotCycle`의 대기 시간 계산(`metronome.ts`)이 이미 임의의 초 값을
+ * 안전하게 처리하므로(하한 500ms) 프리셋 여부와 무관하게 그대로 넘겨도 된다.
+ */
+export type ShotIntervalSec = number;
 
+/** 직접 입력 가능한 샷 간격 범위(초) — v1.0-출시사양 Premium §2 "커스텀" */
+export const CUSTOM_SHOT_INTERVAL_MIN = 5;
+export const CUSTOM_SHOT_INTERVAL_MAX = 90;
+
+/**
+ * label/hint 문자열은 `domain.json`의 `shotIntervals.<value>`에 있다
+ * (2026-08-08 i18n 리팩터).
+ */
 export const SHOT_INTERVALS: {
   value: ShotIntervalSec;
-  label: string;
-  hint: string;
   /**
    * 무료 티어에서 쓸 수 있는가 (2026-08-06, Premium 게이팅).
    *
@@ -328,12 +392,7 @@ export const SHOT_INTERVALS: {
    * "내 타석 사이클에 맞게 조절하는" 부분이다.
    */
   free?: boolean;
-}[] = [
-  { value: 0, label: '연속', hint: '공 없이 빈 스윙을 반복할 때', free: true },
-  { value: 15, label: '15초', hint: '공이 빨리 올라오는 타석' },
-  { value: 25, label: '25초', hint: '기본 — 결과를 확인하고 다시 준비할 여유', free: true },
-  { value: 40, label: '40초', hint: '프리샷 루틴을 온전히 지킬 때' },
-];
+}[] = [{ value: 0, free: true }, { value: 15 }, { value: 25, free: true }, { value: 40 }];
 
 /** 무료 티어의 기본 샷 간격 — 체험이 끝나면 여기로 되돌린다 */
 export const FREE_SHOT_INTERVAL: ShotIntervalSec = 25;

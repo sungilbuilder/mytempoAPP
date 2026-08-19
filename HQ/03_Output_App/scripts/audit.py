@@ -300,7 +300,9 @@ def check_audio():
 
     audio = os.path.join(APP, 'assets', 'audio')
     speeds = parse_swing_speeds()
-    ratios = {'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
+    # ⚠️ generate-sound-packs.py의 RATIOS와 반드시 같아야 한다(2026-08-19, T-39로 tempo_2_1 추가) —
+    # 이 딕셔너리가 별도로 중복돼 있어 한쪽만 고치면 어긋난다(이 파일이 실제로 그 사고를 겪었다).
+    ratios = {'tempo_2_1': 2.0, 'tempo_2_5_1': 2.5, 'tempo_3_1': 3.0, 'tempo_3_5_1': 3.5}
     packs = ['wood', 'string', 'mallet', 'rhythm']  # 2026-08-08 §7 — 북·플럭 제외
     base_swing, base_cycle = 1.1, 2.0
 

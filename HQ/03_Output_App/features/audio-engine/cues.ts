@@ -52,6 +52,17 @@ const FILES: Record<CueId, unknown> = {
  */
 const CUE_GAIN = 0.7;
 
+/**
+ * `complete`(20스윙 NSM 완료) 추가 감쇠 (2026-08-09).
+ *
+ * 연습 도중 루프 소리 위에 겹쳐 울리는 유일한 큐라 나머지 셋보다 훨씬 더
+ * 조용해야 한다 — 사용자가 또렷이 듣고 스윙을 거기 맞추게 만들 필요가 없다.
+ * "완료됐다"는 표식만 은은하게 남기면 된다.
+ */
+const CUE_EXTRA_GAIN: Partial<Record<CueId, number>> = {
+  complete: 0.25,
+};
+
 const players: Partial<Record<CueId, AudioPlayer>> = {};
 
 function getPlayer(id: CueId): AudioPlayer {
@@ -75,7 +86,8 @@ function getPlayer(id: CueId): AudioPlayer {
 export function playCue(id: CueId, volume = 1) {
   try {
     const p = getPlayer(id);
-    p.volume = Math.min(1, Math.max(0, volume * CUE_GAIN));
+    const extraGain = CUE_EXTRA_GAIN[id] ?? 1;
+    p.volume = Math.min(1, Math.max(0, volume * CUE_GAIN * extraGain));
     p.seekTo(0);
     p.play();
   } catch {

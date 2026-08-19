@@ -34,10 +34,16 @@ echo "  │       npm run go:tunnel                │"
 echo "  └────────────────────────────────────────┘"
 echo ""
 
+# expo-dev-client가 설치돼 있으면 expo CLI가 기본 타깃을 "개발 빌드"로 자동
+# 전환한다 (아직 만든 적 없음, T-12 진행 중). 폰에는 여전히 일반 Expo Go 앱을
+# 쓰므로 --go로 명시해서 강제로 Expo Go 타깃을 유지한다.
+# (실제 개발 빌드를 만들고 나면 이 플래그를 빼고 --dev-client로 바꿀 것.)
+GO_FLAG="--go"
+
 if [ "$MODE" = "--tunnel" ]; then
   echo "  터널 모드로 시작합니다 (Wi-Fi가 달라도 됩니다. 조금 느립니다)"
   echo ""
-  exec npx expo start --tunnel $CLEAR_FLAG
+  exec npx expo start --tunnel $CLEAR_FLAG $GO_FLAG
 else
   # 맥과 폰이 같은 Wi-Fi에 있는지 힌트를 준다
   IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "")
@@ -45,5 +51,5 @@ else
     echo "  이 맥의 주소: $IP  — 폰이 같은 Wi-Fi에 있어야 합니다"
     echo ""
   fi
-  exec npx expo start $CLEAR_FLAG
+  exec npx expo start $CLEAR_FLAG $GO_FLAG
 fi
