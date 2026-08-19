@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../constants/theme';
@@ -12,7 +14,7 @@ import {
   formatSeconds,
   precisionForFps,
 } from '../features/tempo/character';
-import { recommendSwingSpeed } from '../features/tempo/swingSpeeds';
+import { recommendSwingSpeed, swingSecLabel } from '../features/tempo/swingSpeeds';
 import { playCue } from '../features/audio-engine/cues';
 import { SWING_CLUBS, computeTempo, useSwingStore, type SwingClub } from '../store/useSwingStore';
 import { usePracticeStore } from '../store/usePracticeStore';
@@ -31,13 +33,14 @@ const REFERENCE_PRESET_ID = 'preset-3-1';
  *   숫자 하나로 보상감을 주는 화면. 비율을 크게 보여주고,
  *   그 아래 성향 한 줄로 "내 리듬이 어떤 편인지"를 말로 바꿔준다.
  */
-function defaultName(): string {
+function defaultName(t: TFunction): string {
   const d = new Date();
-  return `${d.getMonth() + 1}월 스윙`;
+  return t('result:nameSection.defaultName', { month: d.getMonth() + 1 });
 }
 
 export default function ResultScreen() {
   const router = useRouter();
+  const { t } = useTranslation(['result', 'common', 'domain']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
 
@@ -83,7 +86,7 @@ export default function ResultScreen() {
   const display = formatRatioWithPrecision(ratio, precision);
   const videoUri = params.videoUri || undefined;
 
-  const [name, setName] = useState(defaultName());
+  const [name, setName] = useState(defaultName(t));
   /**
    * 클럽 종류 (2026-08-07, T-06 피드백 — "내 스윙 관리" 방안).
    * 등록 시점에 알면 바로 붙이지만, 강제하지 않는다 — 안 고르면 미지정으로 저장되고
@@ -166,7 +169,7 @@ export default function ResultScreen() {
     if (uiSounds) playCue('saved', beepVolume);
     addSwing({
       id,
-      name: name.trim() || defaultName(),
+      name: name.trim() || defaultName(t),
       marks,
       backswingSec,
       downswingSec,
@@ -221,7 +224,7 @@ export default function ResultScreen() {
         onMomentumScrollEnd={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={32}
       >
-        <Caption>내 스윙 템포</Caption>
+        <Caption>{t('result:title')}</Caption>
 
         <View className="items-center pt-s2">
           <TempoRing
@@ -231,7 +234,7 @@ export default function ResultScreen() {
           >
             <Text
               {...numeralScaling}
-              accessibilityLabel={`측정 결과 ${display.text}`}
+              accessibilityLabel={t('result:measuredA11y', { value: display.text })}
               className="font-display-bold text-ink dark:text-inkDark"
               style={{ fontSize: precision === 'coarse' ? 40 : 48 }}
             >
@@ -240,7 +243,7 @@ export default function ResultScreen() {
             {display.tolerance && (
               <Text
                 {...numeralScaling}
-                accessibilityLabel={`오차 범위 ${display.tolerance}`}
+                accessibilityLabel={t('result:toleranceA11y', { value: display.tolerance })}
                 className="font-display text-caption text-muted dark:text-mutedDark pt-[2px]"
               >
                 {display.tolerance}
@@ -250,7 +253,10 @@ export default function ResultScreen() {
 
           <Text
             {...numeralScaling}
-            accessibilityLabel={`백스윙 ${backswingSec.toFixed(2)}초, 다운스윙 ${downswingSec.toFixed(2)}초`}
+            accessibilityLabel={t('result:breakdownA11y', {
+              backswing: backswingSec.toFixed(2),
+              downswing: downswingSec.toFixed(2),
+            })}
             className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s1"
           >
             {formatSeconds(backswingSec)} : {formatSeconds(downswingSec)}
@@ -260,16 +266,12 @@ export default function ResultScreen() {
         {/* 성향 한 줄 */}
         <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s2 mt-s3">
           <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
-            {character.headline}
+            {t(`domain:character.${character}.headline`)}
           </Text>
-          <Caption className="pt-[4px]">{character.detail}</Caption>
+          <Caption className="pt-[4px]">{t(`domain:character.${character}.detail`)}</Caption>
         </View>
 
-        {suspicious && (
-          <Caption className="pt-s2">
-            구간이 매우 짧게 찍혔어요. 마킹을 다시 확인해보는 걸 권합니다.
-          </Caption>
-        )}
+        {suspicious && <Caption className="pt-s2">{t('result:suspiciousWarning')}</Caption>}
 
         {/*
           내 템포 추천 (2026-08-01, WBS 2.12)
@@ -284,25 +286,31 @@ export default function ResultScreen() {
               {...koreanWrap}
               className="font-kr-medium text-caption text-ink dark:text-inkDark"
             >
-              {pick.outOfRange
-                ? `스윙 전체가 ${pick.measuredSec.toFixed(2)}초예요. 준비된 단계 중에서는 ${pick.speed.label}가 가장 가깝지만 차이가 있는 편이에요.`
-                : `스윙 전체가 ${pick.measuredSec.toFixed(2)}초예요. ${pick.speed.label} 단계로 연습하면 지금 리듬 그대로 익힐 수 있어요.`}
+              {t(
+                pick.outOfRange
+                  ? 'result:recommendation.outOfRange'
+                  : 'result:recommendation.inRange',
+                {
+                  measured: pick.measuredSec.toFixed(2),
+                  speed: t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) }),
+                },
+              )}
             </Text>
           </View>
         )}
 
         {/* 이름 붙이기 */}
         <View className="pt-s2">
-          <Caption className="pb-[6px]">이름 붙이기</Caption>
+          <Caption className="pb-[6px]">{t('result:nameSection.label')}</Caption>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="7월 드라이버"
+            placeholder={t('result:nameSection.placeholder')}
             /* 2026-08-06: placeholder도 읽어야 하는 글자다 — subtle(3.19:1) → muted(5.55:1) */
             placeholderTextColor={c.muted}
             maxLength={20}
             returnKeyType="done"
-            accessibilityLabel="스윙 이름"
+            accessibilityLabel={t('result:nameSection.a11yLabel')}
             {...textScaling}
             className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-s2 font-kr-medium text-body text-ink dark:text-inkDark"
           />
@@ -317,16 +325,17 @@ export default function ResultScreen() {
           강제하지 않는다 — 안 골라도 등록은 그대로 된다. 같은 걸 다시 탭하면 해제.
         */}
         <View className="pt-s2">
-          <Caption className="pb-[6px]">클럽 종류 (선택)</Caption>
+          <Caption className="pb-[6px]">{t('result:clubSection.label')}</Caption>
           <View className="flex-row gap-[6px]">
             {SWING_CLUBS.map((c2) => {
               const active = club === c2.id;
+              const label = t(`domain:clubs.${c2.id}`);
               return (
                 <Pressable
                   key={c2.id}
                   onPress={() => setClub(active ? null : c2.id)}
                   accessibilityRole="radio"
-                  accessibilityLabel={c2.label}
+                  accessibilityLabel={label}
                   accessibilityState={{ checked: active, selected: active }}
                   style={{ minHeight: MIN_TOUCH }}
                   className={`flex-1 items-center justify-center rounded-card px-s2 ${
@@ -338,7 +347,7 @@ export default function ResultScreen() {
                     className="font-kr-medium text-body"
                     style={{ color: active ? c.onPrimary : c.ink }}
                   >
-                    {c2.label}
+                    {label}
                   </Text>
                 </Pressable>
               );
@@ -352,12 +361,12 @@ export default function ResultScreen() {
           등록은 하단의 [등록하기] 버튼 하나로 모은다(아래 액션 영역 참고).
         */}
         <View className="pt-s2">
-          <Caption className="pb-[6px]">템포</Caption>
+          <Caption className="pb-[6px]">{t('result:tempoSection.label')}</Caption>
           <View className="flex-row gap-[6px]">
             <Pressable
               onPress={() => setTempoMode('mine')}
               accessibilityRole="radio"
-              accessibilityLabel="내 스윙 그대로"
+              accessibilityLabel={t('result:tempoSection.mine')}
               accessibilityState={{ checked: tempoMode === 'mine', selected: tempoMode === 'mine' }}
               style={{ minHeight: MIN_TOUCH }}
               className={`flex-1 items-center justify-center rounded-card px-s2 ${
@@ -371,13 +380,13 @@ export default function ResultScreen() {
                 className="font-kr-medium text-body"
                 style={{ color: tempoMode === 'mine' ? c.onPrimary : c.ink }}
               >
-                내 스윙 그대로
+                {t('result:tempoSection.mine')}
               </Text>
             </Pressable>
             <Pressable
               onPress={() => setTempoMode('reference')}
               accessibilityRole="radio"
-              accessibilityLabel="3대 1 기준 리듬"
+              accessibilityLabel={t('result:tempoSection.referenceA11y')}
               accessibilityState={{
                 checked: tempoMode === 'reference',
                 selected: tempoMode === 'reference',
@@ -394,16 +403,23 @@ export default function ResultScreen() {
                 className="font-kr-medium text-body"
                 style={{ color: tempoMode === 'reference' ? c.onPrimary : c.ink }}
               >
-                3:1 리듬으로
+                {t('result:tempoSection.referenceLabel')}
               </Text>
             </Pressable>
           </View>
           <Caption className="pt-[6px]">
             {tempoMode === 'mine'
-              ? `${display.text} · ${pick ? pick.speed.label : '기본'}`
+              ? t('result:tempoSection.mineSummary', {
+                  ratio: display.text,
+                  speed: pick
+                    ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
+                    : t('result:tempoSection.defaultWord'),
+                })
               : pick
-                ? `속도 ${pick.speed.label} 유지`
-                : '비율만 기준으로'}
+                ? t('result:tempoSection.referenceSummaryWithSpeed', {
+                    speed: t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) }),
+                  })
+                : t('result:tempoSection.referenceSummaryNoSpeed')}
           </Caption>
         </View>
       </ScrollView>
@@ -423,10 +439,10 @@ export default function ResultScreen() {
           <Pressable
             onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
             accessibilityRole="button"
-            accessibilityLabel="아래로 스크롤해 이름과 클럽을 확인하세요"
+            accessibilityLabel={t('result:scrollHint.a11y')}
             className="items-center pb-[2px]"
           >
-            <Caption>↓ 아래로 스크롤해 완료하세요</Caption>
+            <Caption>{t('result:scrollHint.text')}</Caption>
           </Pressable>
         )}
         <Pressable
@@ -435,10 +451,15 @@ export default function ResultScreen() {
           accessibilityState={{ disabled: !canRegister }}
           accessibilityLabel={
             !canRegister
-              ? '등록하기. 아래로 스크롤해 이름과 클럽을 먼저 확인하세요'
+              ? t('result:registerButton.a11yDisabled')
               : tempoMode === 'mine'
-                ? `등록하기. 내 스윙 그대로, 비율 ${display.text}, 속도 ${pick ? pick.speed.label : '기본'}로 연습을 시작합니다`
-                : '등록하기. 3대 1 기준 리듬으로 연습을 시작합니다. 속도는 내 스윙에 맞춘 값을 유지합니다'
+                ? t('result:registerButton.a11yMine', {
+                    ratio: display.text,
+                    speed: pick
+                      ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
+                      : t('result:tempoSection.defaultWord'),
+                  })
+                : t('result:registerButton.a11yReference')
           }
           style={{ minHeight: MIN_TOUCH, opacity: canRegister ? 1 : 0.4 }}
           className="rounded-card items-center justify-center py-s2 bg-primary dark:bg-primary-neon active:opacity-80"
@@ -447,7 +468,7 @@ export default function ResultScreen() {
             {...textScaling}
             className="font-kr-bold text-body text-onPrimary dark:text-onPrimaryDark"
           >
-            등록하기
+            {t('result:registerButton.label')}
           </Text>
         </Pressable>
 
@@ -456,7 +477,7 @@ export default function ResultScreen() {
           onPress={() => canRegister && save('saveOnly')}
           accessibilityRole="button"
           accessibilityState={{ disabled: !canRegister }}
-          accessibilityLabel="등록만 하고 연습은 나중에"
+          accessibilityLabel={t('result:saveOnlyButton.a11yLabel')}
           style={{ minHeight: MIN_TOUCH, opacity: canRegister ? 1 : 0.4 }}
           className="items-center justify-center py-s1 active:opacity-70"
         >
@@ -464,7 +485,7 @@ export default function ResultScreen() {
             {...textScaling}
             className="font-kr-medium text-caption text-muted dark:text-mutedDark"
           >
-            등록만 하고 나중에 연습하기
+            {t('result:saveOnlyButton.label')}
           </Text>
         </Pressable>
       </View>

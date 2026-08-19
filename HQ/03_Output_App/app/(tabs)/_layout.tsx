@@ -1,10 +1,34 @@
 import { useMemo } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../../constants/theme';
-import { IconHome, IconTarget, IconTrend } from '../../components/ui';
+import { IconHome, IconTarget, IconTrend, MAX_NUMERAL_SCALE } from '../../components/ui';
 import { useRenderTrace } from '../../features/debug/useRenderTrace';
+
+/*
+  tabBarLabel을 직접 그리는 이유 (2026-08-19): 기본 라벨(tabBarLabelStyle만 지정)은
+  탭 폭이 고정(3분할)인데도 줄바꿈 방지 장치가 없어서, 영어 로케일의 "My swings" 같은
+  라벨이 62px 높이 탭바 안에서 잘렸다. numberOfLines + adjustsFontSizeToFit로 한 줄을
+  지키고, 자리가 정해진 라벨이라 MAX_NUMERAL_SCALE(1.25배) 캡을 쓴다.
+  ⚠️ tabBarLabel을 함수로 주면 tabBarLabelStyle은 더 이상 적용되지 않으므로
+  폰트 스타일을 여기서 직접 지정해야 한다.
+*/
+function TabLabel({ color, children }: { color: string; children: string }) {
+  return (
+    <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.7}
+      allowFontScaling
+      maxFontSizeMultiplier={MAX_NUMERAL_SCALE}
+      style={{ fontFamily: 'NotoSansKR_500Medium', fontSize: 11, color }}
+    >
+      {children}
+    </Text>
+  );
+}
 
 /*
   2026-08-08 (사용자 테스트): 활성/비활성 탭이 색상만으로 구분되는데, 둘 다
@@ -51,6 +75,7 @@ function TabIcon({
  */
 export default function TabsLayout() {
   useRenderTrace('TabsLayout');
+  const { t } = useTranslation('tabs');
 
   /**
    * 2026-08-01 — `useColorScheme()` 구독을 복구했다.
@@ -68,7 +93,8 @@ export default function TabsLayout() {
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
-      tabBarLabelStyle: { fontFamily: 'NotoSansKR_500Medium', fontSize: 11 },
+      // 폰트는 TabLabel(위 커스텀 tabBarLabel)에서 직접 지정한다 — 함수형 tabBarLabel을 쓰면
+      // tabBarLabelStyle은 더 이상 적용되지 않는다.
       tabBarActiveTintColor: c.primary,
       /*
         2026-08-06: subtle → muted (AOS 리뷰 V-3).
@@ -93,7 +119,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '홈',
+          title: t('tabs:home'),
+          tabBarLabel: ({ color, children }) => <TabLabel color={color}>{children}</TabLabel>,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon focused={focused} pillColor={c.surface2}>
               <IconHome color={color} size={22} />
@@ -104,7 +131,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="my-swings"
         options={{
-          title: '내 스윙',
+          title: t('tabs:mySwings'),
+          tabBarLabel: ({ color, children }) => <TabLabel color={color}>{children}</TabLabel>,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon focused={focused} pillColor={c.surface2}>
               <IconTarget color={color} size={22} />
@@ -115,7 +143,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: '기록',
+          title: t('tabs:history'),
+          tabBarLabel: ({ color, children }) => <TabLabel color={color}>{children}</TabLabel>,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon focused={focused} pillColor={c.surface2}>
               <IconTrend color={color} size={22} />

@@ -1,0 +1,44 @@
+{
+  "title": "Your swing tempo",
+  "measuredA11y": "Measured result {{value}}",
+  "toleranceA11y": "Margin of error {{value}}",
+  "breakdownA11y": "Backswing {{backswing}} seconds, downswing {{downswing}} seconds",
+  "suspiciousWarning": "That section came out very short. We'd recommend double-checking your marking.",
+  "recommendation": {
+    "outOfRange": "Your full swing is {{measured}}s. Of the available steps, {{speed}} is closest, but there's still a real gap.",
+    "inRange": "Your full swing is {{measured}}s. Practicing at the {{speed}} step will let you learn this exact rhythm."
+  },
+  "nameSection": {
+    "label": "Give it a name",
+    "placeholder": "July driver",
+    "a11yLabel": "Swing name",
+    "defaultName": "{{month}} swing"
+  },
+  "clubSection": {
+    "label": "Club (optional)"
+  },
+  "tempoSection": {
+    "label": "Tempo",
+    "mine": "Keep my swing as-is",
+    "referenceA11y": "3-to-1 reference rhythm",
+    "referenceLabel": "Use a 3:1 rhythm",
+    "defaultWord": "default",
+    "mineSummary": "{{ratio}} · {{speed}}",
+    "referenceSummaryWithSpeed": "Keeping speed {{speed}}",
+    "referenceSummaryNoSpeed": "Ratio only"
+  },
+  "scrollHint": {
+    "a11y": "Scroll down to check the name and club",
+    "text": "↓ Scroll down to finish"
+  },
+  "registerButton": {
+    "label": "Log this swing",
+    "a11yDisabled": "Log this swing. Scroll down to check the name and club first",
+    "a11yMine": "Log this swing. Starts practice with your swing as-is, ratio {{ratio}}, speed {{speed}}",
+    "a11yReference": "Log this swing. Starts practice with the 3-to-1 reference rhythm, keeping the speed measured from your swing"
+  },
+  "saveOnlyButton": {
+    "label": "Log it, practice later",
+    "a11yLabel": "Log this swing only, practice later"
+  }
+}

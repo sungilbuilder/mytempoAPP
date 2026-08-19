@@ -1,0 +1,41 @@
+{
+  "header": {
+    "mySwing": "내 스윙",
+    "referenceRhythm": "기준 리듬"
+  },
+  "closeButton": {
+    "label": "연습 마치기",
+    "hint": "연습을 끝내고 기록을 저장한 뒤 홈으로 돌아갑니다"
+  },
+  "markers": {
+    "start": "백스윙 시작",
+    "impact": "임팩트"
+  },
+  "elapsed": {
+    "withTime": "{{minutes}}분 {{seconds}}초 · {{swingCount}}스윙",
+    "notStarted": "아직 시작 전이에요"
+  },
+  "playButton": {
+    "play": "재생",
+    "stop": "정지",
+    "a11yPlay": "연습 재생",
+    "a11yStop": "연습 정지",
+    "playHint": "선택한 템포로 소리가 반복 재생됩니다",
+    "stopHint": "메트로놈 소리를 멈춥니다"
+  },
+  "shotIntervalHint": "{{interval}}초마다 한 번 · 카운트인 {{countIn}}초가 울리면 어드레스",
+  "swingSpeedSection": {
+    "title": "스윙 속도 — 빠른 게 더 좋은 건 아니에요",
+    "a11yLabel": "스윙 속도 {{seconds}}",
+    "recommendedSuffix": ", 내 템포 추천",
+    "myTempo": "내 템포"
+  },
+  "breakdown": "백스윙 {{backswing}}초 · 다운스윙 {{downswing}}초",
+  "recommendation": {
+    "a11yLabel": "내 스윙은 {{measured}}초입니다. 추천 속도 {{recommended}}로 맞추기",
+    "text": "내 스윙은 {{measured}}초예요 · 탭하면 {{recommended}}로 맞춰요"
+  },
+  "toast": {
+    "minRecordSec": "{{seconds}}초 넘게 연습해야 기록에 남아요"
+  }
+}

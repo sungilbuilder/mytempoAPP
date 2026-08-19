@@ -80,11 +80,15 @@ export type SwingSpeed = {
   id: SwingSpeedId;
   /** 이 속도에서 스윙 전체(백스윙+다운스윙)에 걸리는 시간 */
   swingSec: number;
-  /** 화면에 크게 띄우는 값 — "1.20초" */
-  label: string;
-  /** 짧은 성격 설명. 우열이 아니라 느낌을 말한다. */
-  nickname: string;
 };
+
+/**
+ * 화면에 크게 띄우는 값 — "1.20초"/"1.20s". 화면에서
+ * `t('domain:units.seconds', { value: swingSecLabel(s.swingSec) })`처럼 쓴다.
+ */
+export function swingSecLabel(swingSec: number): string {
+  return swingSec.toFixed(2);
+}
 
 /**
  * 기준 스윙 길이 — 오디오 생성 스크립트의 `BASE_SWING`과 같아야 한다.
@@ -95,21 +99,19 @@ export type SwingSpeed = {
  */
 export const BASE_SWING_SEC = 1.1;
 
-function speed(id: SwingSpeedId, swingSec: number, nickname: string): SwingSpeed {
-  return {
-    id,
-    swingSec,
-    label: `${swingSec.toFixed(2)}초`,
-    nickname,
-  };
+function speed(id: SwingSpeedId, swingSec: number): SwingSpeed {
+  return { id, swingSec };
 }
 
-/** 느린 것 → 빠른 것 순. **순서일 뿐 등급이 아니다.** */
+/**
+ * 느린 것 → 빠른 것 순. **순서일 뿐 등급이 아니다.**
+ * nickname 문자열은 `domain.json`의 `swingSpeeds.<id>.nickname`에 있다.
+ */
 export const SWING_SPEEDS: SwingSpeed[] = [
-  speed('s133', 1.333, '느긋하게'),
-  speed('s120', 1.2, '여유 있게'),
-  speed('s107', 1.067, '탄력 있게'),
-  speed('s093', 0.933, '경쾌하게'),
+  speed('s133', 1.333),
+  speed('s120', 1.2),
+  speed('s107', 1.067),
+  speed('s093', 0.933),
 ];
 
 /** 측정 이력이 없는 사용자에게 처음 보여줄 단계 */

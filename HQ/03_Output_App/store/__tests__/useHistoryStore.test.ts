@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import {
   FREE_HISTORY_DAYS,
   MIN_RECORD_SEC,
@@ -174,18 +175,40 @@ describe('visibleSessions — 무료 티어 표시 제한', () => {
   });
 });
 
+/**
+ * humanDate/humanDuration은 i18n `t()`를 받아 문자열을 만든다(2026-08-08 i18n
+ * 리팩터). 실제 리소스 대신 여기서 쓰는 키만 흉내 낸 최소 스텁을 쓴다 —
+ * i18next 전체를 초기화하지 않고도 포맷 로직 자체를 검증하기 위함이다.
+ */
+const fakeT = ((key: string, params?: Record<string, unknown>): string => {
+  switch (key) {
+    case 'common:today':
+      return '오늘';
+    case 'common:yesterday':
+      return '어제';
+    case 'common:monthDay':
+      return `${params?.month}월 ${params?.day}일`;
+    case 'domain:units.seconds':
+      return `${params?.value}초`;
+    case 'domain:units.minutes':
+      return `${params?.value}분`;
+    default:
+      return key;
+  }
+}) as TFunction;
+
 describe('humanDate / humanDuration', () => {
   it('오늘·어제는 말로, 그 전은 날짜로', () => {
-    expect(humanDate(dayKey(0))).toBe('오늘');
-    expect(humanDate(dayKey(1))).toBe('어제');
-    expect(humanDate('2026-07-27')).toBe('7월 27일');
+    expect(humanDate(dayKey(0), fakeT)).toBe('오늘');
+    expect(humanDate(dayKey(1), fakeT)).toBe('어제');
+    expect(humanDate('2026-07-27', fakeT)).toBe('7월 27일');
   });
 
   it('60초 미만은 초, 이상은 분', () => {
-    expect(humanDuration(45)).toBe('45초');
-    expect(humanDuration(59)).toBe('59초');
-    expect(humanDuration(60)).toBe('1분');
-    expect(humanDuration(1234)).toBe('21분');
+    expect(humanDuration(45, fakeT)).toBe('45초');
+    expect(humanDuration(59, fakeT)).toBe('59초');
+    expect(humanDuration(60, fakeT)).toBe('1분');
+    expect(humanDuration(1234, fakeT)).toBe('21분');
   });
 });
 

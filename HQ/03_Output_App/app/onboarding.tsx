@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -90,6 +91,7 @@ const DEMO_BACKSWING_FRACTION = 0.75;
   달고, 비율 숫자(3:1)를 그 위에 크게 보여준다.
 */
 function TempoBar({ primary, accent, track }: { primary: string; accent: string; track: string }) {
+  const { t } = useTranslation('onboarding');
   return (
     <View className="w-full max-w-[220px] items-center gap-s2">
       <Text {...numeralScaling} className="font-display-bold text-h1 text-ink dark:text-inkDark">
@@ -113,7 +115,7 @@ function TempoBar({ primary, accent, track }: { primary: string; accent: string;
       */}
       <View className="w-full" style={{ height: 18 }}>
         <View style={{ position: 'absolute', left: 0 }}>
-          <Caption>백스윙 시작</Caption>
+          <Caption>{t('markers.start')}</Caption>
         </View>
         <View
           style={{
@@ -122,10 +124,10 @@ function TempoBar({ primary, accent, track }: { primary: string; accent: string;
             transform: [{ translateX: -9 }],
           }}
         >
-          <Caption>탑</Caption>
+          <Caption>{t('markers.top')}</Caption>
         </View>
         <View style={{ position: 'absolute', right: 0 }}>
-          <Caption>임팩트</Caption>
+          <Caption>{t('markers.impact')}</Caption>
         </View>
       </View>
     </View>
@@ -218,11 +220,12 @@ function ThemeOption({
   accent: string;
   onPress: () => void;
 }) {
+  const { t } = useTranslation('onboarding');
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="radio"
-      accessibilityLabel={`${label} 화면, ${hint}`}
+      accessibilityLabel={t('theme.optionA11y', { label, hint })}
       accessibilityState={{ checked: selected, selected }}
       className="flex-1 active:opacity-80"
     >
@@ -254,6 +257,7 @@ function ThemeOption({
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { t } = useTranslation('onboarding');
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
   const markSeen = useOnboardingStore((s) => s.markOnboardingSeen);
@@ -342,23 +346,23 @@ export default function OnboardingScreen() {
 
   const SLIDES = [
     {
-      title: '프로의 템포가 아니라,\n내 최고의 스윙의 템포',
+      title: t('slides.1.title'),
       /* 2026-08-08 문구 단순화 (사용자 테스트: 긴 설명은 안 읽힘) — 2줄 이내로 축약 */
-      body: '누구나 자신만의 리듬이 있어요.\n마이템포가 그 리듬을 찾아드려요.',
+      body: t('slides.1.body'),
       visualAbove: true,
       visual: <BallBadge color={c.primary} />,
     },
     {
       /* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */
-      title: '내 인생 최고의 스윙\n한 번을 등록하세요',
+      title: t('slides.2.title'),
       /* 2026-08-08 문구 단순화: 영상이 필요하다는 사실만 남기고 나머지는 뺐다 */
-      body: '내 스윙 영상 하나면\n나만의 템포를 저장할 수 있어요.',
+      body: t('slides.2.body'),
       visualAbove: false,
       visual: <TempoBar primary={c.primary} accent={c.accent} track={c.surface2} />,
     },
     {
-      title: '그 리듬을 소리로\n반복 연습합니다',
-      body: '소리에 맞춰 스윙하며\n몸에 익히세요.',
+      title: t('slides.3.title'),
+      body: t('slides.3.body'),
       visualAbove: false,
       /*
         2026-08-08 (사용자 피드백): 이전엔 골드 원 하나가 오르내리는 펄스 링
@@ -385,9 +389,9 @@ export default function OnboardingScreen() {
       ),
     },
     {
-      title: '화면은 어떻게\n보여드릴까요',
+      title: t('slides.4.title'),
       /* 2026-08-08 문구 단순화 — 설정 변경 안내는 아래 샷 간격 섹션과 겹쳐 뺐다 */
-      body: '야간·실내에선 어둡게가 편해요.',
+      body: t('slides.4.body'),
       visualAbove: false,
       visual: (
         <View className="w-full gap-s3">
@@ -400,16 +404,16 @@ export default function OnboardingScreen() {
             */}
             <View className="flex-row gap-[12px]">
               <ThemeOption
-                label="밝게"
-                hint="낮·실외 연습장"
+                label={t('theme.light.label')}
+                hint={t('theme.light.hint')}
                 colors={lightColors}
                 selected={themeMode === 'light'}
                 accent={c.primary}
                 onPress={() => setThemeMode('light')}
               />
               <ThemeOption
-                label="어둡게"
-                hint="야간·실내 스크린"
+                label={t('theme.dark.label')}
+                hint={t('theme.dark.hint')}
                 colors={darkColors as unknown as AppColors}
                 selected={themeMode === 'dark'}
                 accent={c.primary}
@@ -429,17 +433,19 @@ export default function OnboardingScreen() {
               {...textScaling}
               className="font-kr-bold text-caption text-muted dark:text-mutedDark text-center"
             >
-              샷 간격 — 스윙 사이 쉬는 시간
+              {t('shotInterval.title')}
             </Text>
             <View className="flex-row gap-[8px]">
               {SHOT_INTERVALS.map((d) => {
                 const selected = shotIntervalSec === d.value;
+                const label = t(`domain:shotIntervals.${d.value}.label`);
+                const hint = t(`domain:shotIntervals.${d.value}.hint`);
                 return (
                   <Pressable
                     key={d.value}
                     onPress={() => setShotInterval(d.value as ShotIntervalSec)}
                     accessibilityRole="radio"
-                    accessibilityLabel={`${d.label}, ${d.hint}`}
+                    accessibilityLabel={`${label}, ${hint}`}
                     accessibilityState={{ checked: selected, selected }}
                     style={{ minHeight: MIN_TOUCH }}
                     className="flex-1 items-center justify-center rounded-card active:opacity-80"
@@ -452,10 +458,13 @@ export default function OnboardingScreen() {
                     >
                       <Text
                         {...textScaling}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}
                         className="font-kr-bold text-caption"
                         style={{ color: selected ? c.onPrimary : c.ink }}
                       >
-                        {d.label}
+                        {label}
                       </Text>
                     </View>
                   </Pressable>
@@ -500,7 +509,7 @@ export default function OnboardingScreen() {
         <Pressable
           onPress={finish}
           accessibilityRole="button"
-          accessibilityLabel="소개 건너뛰기"
+          accessibilityLabel={t('skipA11y')}
           hitSlop={14}
           style={{ minHeight: MIN_TOUCH, minWidth: 48 }}
           className="items-end justify-center"
@@ -509,7 +518,7 @@ export default function OnboardingScreen() {
             {...textScaling}
             className="font-kr-bold text-caption text-muted dark:text-mutedDark"
           >
-            건너뛰기
+            {t('skip')}
           </Text>
         </Pressable>
       </View>
@@ -551,7 +560,7 @@ export default function OnboardingScreen() {
                   <Pressable
                     onPress={finish}
                     accessibilityRole="button"
-                    accessibilityLabel="시작하기"
+                    accessibilityLabel={t('start')}
                     style={{ backgroundColor: c.primary, minHeight: MIN_TOUCH }}
                     className="rounded-card py-s2 items-center justify-center active:opacity-85"
                   >
@@ -560,7 +569,7 @@ export default function OnboardingScreen() {
                       className="font-kr-bold text-body"
                       style={{ color: c.onPrimary }}
                     >
-                      시작하기
+                      {t('start')}
                     </Text>
                   </Pressable>
                   {/*
@@ -600,7 +609,7 @@ export default function OnboardingScreen() {
           <Pressable
             onPress={() => goTo(page + 1)}
             accessibilityRole="button"
-            accessibilityLabel="다음 소개"
+            accessibilityLabel={t('nextA11y')}
             className="absolute left-0 right-0 top-[60px] bottom-[120px]"
           />
         )}
@@ -618,7 +627,7 @@ export default function OnboardingScreen() {
             key={i}
             onPress={() => goTo(i)}
             accessibilityRole="button"
-            accessibilityLabel={`${SLIDE_COUNT}장 중 ${i + 1}번째 소개로 이동`}
+            accessibilityLabel={t('dotA11y', { total: SLIDE_COUNT, index: i + 1 })}
             accessibilityState={{ selected: i === page }}
             style={{ width: MIN_TOUCH, height: MIN_TOUCH }}
             className="items-center justify-center"

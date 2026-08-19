@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRenderTrace } from '../../features/debug/useRenderTrace';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../../constants/theme';
@@ -35,6 +36,7 @@ import { useEntitlement, useEntitlementStore } from '../../store/useEntitlementS
  */
 export default function HomeScreen() {
   useRenderTrace('HomeScreen');
+  const { t } = useTranslation(['home', 'common', 'domain']);
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
@@ -75,11 +77,11 @@ export default function HomeScreen() {
               accessibilityRole="header"
               className="font-kr-bold text-h1 text-ink dark:text-inkDark"
             >
-              연습할까요
+              {t('home:greeting')}
             </Text>
           </View>
           <View className="flex-row items-center gap-[4px]">
-            <IconButton label="설정" onPress={() => router.push('/settings')}>
+            <IconButton label={t('home:settingsA11y')} onPress={() => router.push('/settings')}>
               <IconSettings color={c.muted} />
             </IconButton>
           </View>
@@ -98,14 +100,14 @@ export default function HomeScreen() {
             {...textScaling}
             className="font-kr-medium text-caption text-muted dark:text-mutedDark self-start"
           >
-            {tempo.hasHistory ? '이어서 연습' : '이 리듬으로 시작해요'}
+            {tempo.hasHistory ? t('home:resumeLabel') : t('home:startLabel')}
           </Text>
           <Text
             {...koreanWrap}
             {...textScaling}
             className="font-kr-medium text-caption text-muted dark:text-mutedDark self-start pt-[2px]"
           >
-            {tempo.hasHistory ? tempo.sublabel : '내 스윙을 등록하면 내 리듬으로 바뀌어요'}
+            {tempo.hasHistory ? tempo.sublabel : t('home:startSublabel')}
           </Text>
 
           <View className="py-s2">
@@ -128,7 +130,10 @@ export default function HomeScreen() {
               */}
               <Text
                 {...numeralScaling}
-                accessibilityLabel={`템포 비율 ${formatRatio(tempo.ratio)}, ${tempo.label}`}
+                accessibilityLabel={t('home:ratioA11y', {
+                  ratio: formatRatio(tempo.ratio),
+                  label: tempo.label,
+                })}
                 className="font-display-bold text-[38px]"
                 style={{ color: c.ink }}
               >
@@ -153,14 +158,14 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => router.push('/practice')}
             accessibilityRole="button"
-            accessibilityLabel="바로 연습 시작"
-            accessibilityHint={`${tempo.label} 리듬으로 연습 화면을 엽니다`}
+            accessibilityLabel={t('home:startPracticeA11y')}
+            accessibilityHint={t('home:startPracticeHintA11y', { label: tempo.label })}
             style={{ minHeight: MIN_TOUCH }}
             className="w-full flex-row items-center justify-center gap-[8px] bg-accent dark:bg-accent-neon rounded-card py-s2 active:opacity-85"
           >
             <IconPlay color={c.onAccent} size={20} />
             <Text {...textScaling} className="font-kr-bold text-body" style={{ color: c.onAccent }}>
-              바로 연습 시작
+              {t('home:startPractice')}
             </Text>
           </Pressable>
         </View>
@@ -170,31 +175,31 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => router.push('/marking')}
             accessibilityRole="button"
-            accessibilityLabel="내 스윙 등록"
-            accessibilityHint="영상에서 백스윙 시작, 탑, 임팩트 세 지점을 표시합니다"
+            accessibilityLabel={t('home:registerSwingA11y')}
+            accessibilityHint={t('home:registerSwingHintA11y')}
             className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-[10px] gap-[4px] active:opacity-80"
           >
             <IconTarget color={c.primary} size={20} />
             <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
-              내 스윙 등록
+              {t('home:registerSwing')}
             </Text>
             {/* 2026-07-31 문구 수정: "3곳 탭"은 실제 조작(드래그+프레임버튼)과 다르고,
                 검토 끝에 폐기한 "탭 투 템포" 방식을 연상시켜 혼란을 준다. */}
-            <Caption>영상에서 세 지점 표시</Caption>
+            <Caption>{t('home:registerSwingCaption')}</Caption>
           </Pressable>
 
           <Pressable
             onPress={() => router.push('/presets')}
             accessibilityRole="button"
-            accessibilityLabel="템포 바꾸기"
-            accessibilityHint="기준 리듬 3종 중에서 고릅니다"
+            accessibilityLabel={t('home:changeTempoA11y')}
+            accessibilityHint={t('home:changeTempoHintA11y')}
             className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card px-s2 py-[10px] gap-[4px] active:opacity-80"
           >
             <IconBars color={c.primary} size={20} />
             <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
-              템포 바꾸기
+              {t('home:changeTempo')}
             </Text>
-            <Caption>3종 프리셋</Caption>
+            <Caption>{t('home:changeTempoCaption')}</Caption>
           </Pressable>
         </View>
 
@@ -208,24 +213,27 @@ export default function HomeScreen() {
         <Pressable
           onPress={() => router.push('/(tabs)/history')}
           accessibilityRole="button"
-          accessibilityLabel={`이번 주 ${summary.weekDays}일 연습, ${summary.weekSwings}스윙. 기록 보기`}
+          accessibilityLabel={t('home:weekSummaryA11y', {
+            days: summary.weekDays,
+            swings: summary.weekSwings,
+          })}
           style={{ minHeight: MIN_TOUCH }}
           className="flex-row items-center justify-between bg-surface2 dark:bg-surface2Dark rounded-card px-s2 py-[10px] mt-s2 active:opacity-80"
         >
-          <Caption>이번 주</Caption>
+          <Caption>{t('home:weekCaption')}</Caption>
           <View className="flex-row items-baseline gap-[6px]">
             <Text
               {...numeralScaling}
               className="font-display-bold text-h1 text-ink dark:text-inkDark"
             >
-              {summary.weekDays}일
+              {t('home:weekDays', { days: summary.weekDays })}
             </Text>
             {summary.weekSwings > 0 && (
               <Text
                 {...numeralScaling}
                 className="font-kr-medium text-caption text-muted dark:text-mutedDark"
               >
-                · {summary.weekSwings}스윙
+                {t('home:weekSwings', { swings: summary.weekSwings })}
               </Text>
             )}
             {summary.weekMinutes > 0 && (
@@ -233,7 +241,7 @@ export default function HomeScreen() {
                 {...numeralScaling}
                 className="font-kr-medium text-caption text-muted dark:text-mutedDark"
               >
-                · {summary.weekMinutes}분
+                {t('home:weekMinutes', { minutes: summary.weekMinutes })}
               </Text>
             )}
           </View>
@@ -254,13 +262,9 @@ export default function HomeScreen() {
               {...textScaling}
               className="font-kr-medium text-caption text-ink dark:text-inkDark"
             >
-              {trialDaysLeft === 0
-                ? '오늘까지 모든 소리와 샷 간격을 쓸 수 있어요'
-                : '내일까지 모든 소리와 샷 간격을 쓸 수 있어요'}
+              {trialDaysLeft === 0 ? t('home:trialToday') : t('home:trialTomorrow')}
             </Text>
-            <Caption className="pt-[4px]">
-              그 뒤에도 스윙 등록과 연습은 그대로예요. 기록은 최근 7일까지 보여요.
-            </Caption>
+            <Caption className="pt-[4px]">{t('home:trialCaption')}</Caption>
           </View>
         )}
       </ScrollView>

@@ -28,10 +28,8 @@ export type SwingMarks = {
  */
 export type SwingClub = 'driver' | 'iron';
 
-export const SWING_CLUBS: { id: SwingClub; label: string }[] = [
-  { id: 'driver', label: '드라이버' },
-  { id: 'iron', label: '아이언' },
-];
+/** label 문자열은 `domain.json`의 `clubs.<id>`에 있다 (2026-08-08 i18n 리팩터). */
+export const SWING_CLUBS: { id: SwingClub }[] = [{ id: 'driver' }, { id: 'iron' }];
 
 export type SavedSwing = {
   id: string;

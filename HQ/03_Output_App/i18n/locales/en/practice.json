@@ -1,0 +1,41 @@
+{
+  "header": {
+    "mySwing": "My swing",
+    "referenceRhythm": "Reference rhythm"
+  },
+  "closeButton": {
+    "label": "Finish practice",
+    "hint": "Ends practice, saves the session, and returns home"
+  },
+  "markers": {
+    "start": "Backswing start",
+    "impact": "Impact"
+  },
+  "elapsed": {
+    "withTime": "{{minutes}}m {{seconds}}s · {{swingCount}} swings",
+    "notStarted": "Not started yet"
+  },
+  "playButton": {
+    "play": "Play",
+    "stop": "Stop",
+    "a11yPlay": "Play practice",
+    "a11yStop": "Stop practice",
+    "playHint": "Sound repeats at the tempo you picked",
+    "stopHint": "Stops the metronome sound"
+  },
+  "shotIntervalHint": "Once every {{interval}}s · a {{countIn}}s count-in means address up",
+  "swingSpeedSection": {
+    "title": "Swing speed — faster isn't better",
+    "a11yLabel": "Swing speed {{seconds}}",
+    "recommendedSuffix": ", recommended for your tempo",
+    "myTempo": "My tempo"
+  },
+  "breakdown": "Backswing {{backswing}}s · downswing {{downswing}}s",
+  "recommendation": {
+    "a11yLabel": "Your swing is {{measured}} seconds. Match the recommended speed {{recommended}}",
+    "text": "Your swing is {{measured}}s · tap to match {{recommended}}"
+  },
+  "toast": {
+    "minRecordSec": "Practice for more than {{seconds}}s to save it to your history"
+  }
+}

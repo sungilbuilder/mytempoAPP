@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../constants/theme';
@@ -9,11 +11,23 @@ import {
   IconButton,
   IconCheck,
   IconChevronLeft,
+  LockBadge,
+  Segmented,
   numeralScaling,
   textScaling,
 } from '../components/ui';
-import { TEMPO_PRESETS, ratioToBackswingPercent } from '../features/tempo/presets';
+import {
+  TEMPO_PRESETS,
+  isPresetFree,
+  ratioToBackswingPercent,
+  type TempoPresetCategory,
+} from '../features/tempo/presets';
 import { usePracticeStore } from '../store/usePracticeStore';
+import { useEntitlement } from '../store/useEntitlementStore';
+
+/** 세그먼트 순서 = 화면에 보이는 순서. "전체"가 항상 맨 앞이다. */
+type CategoryFilter = 'all' | TempoPresetCategory;
+const CATEGORY_FILTERS: CategoryFilter[] = ['all', 'driver_iron', 'approach', 'putting'];
 
 /**
  * 프리셋 — "템포 고르기"
@@ -24,20 +38,32 @@ import { usePracticeStore } from '../store/usePracticeStore';
  *
  * 탭이 아니라 홈에서 "템포 바꾸기"로 들어오는 화면이다 —
  * 매번 고르는 화면이 아니라 한 번 고르고 마는 화면이라서.
+ *
+ * ⚠️ 2026-08-19 (T-39) — 카테고리 세그먼트 + 프리미엄 잠금 추가.
+ * 어프로치·퍼팅이 신규 프리미엄 축으로 들어오며 드라이버·아이언과 한 목록에
+ * 섞이게 됐다. 잠금은 `settings.tsx`의 사운드팩·샷 간격과 같은 패턴을 그대로
+ * 따른다 — 잠긴 카드도 목록엔 보이되(감추지 않는다), 탭해도 선택되지 않고
+ * `LockBadge`로 표시한다. [[T-39-어프로치퍼팅-프리미엄-프리셋]] 참고.
  */
 export default function PresetsScreen() {
   const router = useRouter();
+  const { t } = useTranslation(['presets', 'common', 'domain']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
   const source = usePracticeStore((s) => s.source);
   const selectPreset = usePracticeStore((s) => s.selectPreset);
+  const { full } = useEntitlement();
+  const [category, setCategory] = useState<CategoryFilter>('all');
 
   const selectedId = source?.kind === 'preset' ? source.presetId : null;
+  const visiblePresets =
+    category === 'all' ? TEMPO_PRESETS : TEMPO_PRESETS.filter((p) => p.category === category);
+  const anyLocked = TEMPO_PRESETS.some((p) => !isPresetFree(p)) && !full;
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-s3 pt-s1 pb-s2">
-        <IconButton label="뒤로" onPress={() => router.back()}>
+        <IconButton label={t('common:back')} onPress={() => router.back()}>
           <IconChevronLeft color={c.ink} size={22} />
         </IconButton>
       </View>
@@ -51,26 +77,46 @@ export default function PresetsScreen() {
           accessibilityRole="header"
           className="font-kr-bold text-h1 text-ink dark:text-inkDark"
         >
-          템포 고르기
+          {t('presets:title')}
         </Text>
-        <Caption className="pt-[6px]">먼저 고르고, 나중에 내 스윙으로 바꿀 수 있어요</Caption>
+        <Caption className="pt-[6px]">{t('presets:subtitle')}</Caption>
+
+        <View className="pt-s3">
+          <Segmented
+            options={CATEGORY_FILTERS.map((f) => ({
+              value: f,
+              label: t(`presets:category.${f}`),
+            }))}
+            value={category}
+            onChange={setCategory}
+            a11yLabel={t('presets:categoryGroupA11y')}
+          />
+        </View>
 
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="기준 리듬"
+          accessibilityLabel={t('presets:radioGroupA11y')}
           className="gap-[12px] pt-s3"
         >
-          {TEMPO_PRESETS.map((preset) => {
-            const active = preset.id === selectedId;
+          {visiblePresets.map((preset) => {
+            const locked = !full && !isPresetFree(preset);
+            const active = preset.id === selectedId && !locked;
             const backPct = ratioToBackswingPercent(preset);
+            const alias = t(`domain:character.${preset.characterId}.label`);
+            const description = t(`domain:presets.${preset.id}.description`);
 
             return (
               <Pressable
                 key={preset.id}
-                onPress={() => selectPreset(preset.id)}
+                onPress={() => {
+                  if (!locked) selectPreset(preset.id);
+                }}
                 accessibilityRole="radio"
-                accessibilityLabel={`${preset.alias}, ${preset.ratioLabel}, ${preset.description}`}
-                accessibilityState={{ checked: active, selected: active }}
+                accessibilityLabel={`${alias}, ${preset.ratioLabel}, ${description}${
+                  locked ? t('presets:premiumSuffix') : ''
+                }`}
+                accessibilityHint={locked ? t('presets:lockedHint') : undefined}
+                accessibilityState={{ checked: active, selected: active, disabled: locked }}
                 className={`rounded-lg p-s2 active:opacity-85 ${
                   active
                     ? 'bg-surface dark:bg-surfaceDark border-2 border-primary dark:border-primary-neon'
@@ -84,15 +130,16 @@ export default function PresetsScreen() {
                         {...textScaling}
                         className="font-kr-bold text-h2 text-ink dark:text-inkDark"
                       >
-                        {preset.alias}
+                        {alias}
                       </Text>
+                      {locked && <LockBadge />}
                       {active && (
                         <View className="w-[20px] h-[20px] rounded-pill items-center justify-center bg-primary dark:bg-primary-neon">
                           <IconCheck color={c.onPrimary} size={13} />
                         </View>
                       )}
                     </View>
-                    <Caption className="pt-[4px]">{preset.description}</Caption>
+                    <Caption className="pt-[4px]">{description}</Caption>
                   </View>
                   <Text
                     {...numeralScaling}
@@ -114,6 +161,7 @@ export default function PresetsScreen() {
             );
           })}
         </View>
+        {anyLocked && <Caption className="pt-s3">{t('presets:freeNote')}</Caption>}
       </ScrollView>
 
       {/*
@@ -125,8 +173,8 @@ export default function PresetsScreen() {
       */}
       <View className="px-s3 pb-s2">
         <Button
-          label="연습 시작"
-          a11yHint="고른 리듬으로 연습 화면을 엽니다"
+          label={t('presets:startButton.label')}
+          a11yHint={t('presets:startButton.hint')}
           onPress={() => router.replace('/practice')}
         />
       </View>

@@ -1,0 +1,19 @@
+{
+  "title": "Choose your tempo",
+  "subtitle": "Pick one now — you can switch to your own swing later",
+  "radioGroupA11y": "Reference rhythm",
+  "categoryGroupA11y": "Club category",
+  "category": {
+    "all": "All",
+    "driver_iron": "Driver & irons",
+    "approach": "Approach",
+    "putting": "Putting"
+  },
+  "premiumSuffix": ", Premium only",
+  "lockedHint": "Can't be selected",
+  "freeNote": "Driver & iron tempos stay free. Approach and putting unlock with Premium.",
+  "startButton": {
+    "label": "Start practice",
+    "hint": "Opens the practice screen with the rhythm you picked"
+  }
+}

@@ -12,13 +12,17 @@ import {
   NotoSansKR_900Black,
 } from '@expo-google-fonts/noto-sans-kr';
 import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+import { useTranslation } from 'react-i18next';
+import '../i18n';
 import { startThemeSync } from '../store/themeSync';
+import { startLanguageSync } from '../store/languageSync';
 
 /**
- * 테마 동기화를 모듈 로드 시점에 한 번 시작한다 (React 밖).
+ * 테마 · 언어 동기화를 모듈 로드 시점에 한 번 시작한다 (React 밖).
  * 렌더 사이클에 참여하지 않으므로 리렌더를 유발하지 않는다.
  */
 startThemeSync();
+startLanguageSync();
 
 /**
  * 폰트 (2026-07-31 디자인 시안 반영):
@@ -40,6 +44,7 @@ startThemeSync();
  * (2026-07-31 웹 흰 화면을 디버깅하면서 추가 — 원인이 안 보이는 게 가장 큰 문제였다)
  */
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  const { t } = useTranslation();
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#2A1414' }}
@@ -52,7 +57,7 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
         selectable
         style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '700', lineHeight: 25 }}
       >
-        {error?.message ?? '알 수 없는 오류'}
+        {error?.message ?? t('common:unknownError')}
       </Text>
       <Text selectable style={{ color: '#FFC9C9', fontSize: 11, lineHeight: 17, marginTop: 20 }}>
         {error?.stack ?? ''}
@@ -71,7 +76,7 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
           overflow: 'hidden',
         }}
       >
-        다시 시도
+        {t('common:retry')}
       </Text>
     </ScrollView>
   );
@@ -123,6 +128,7 @@ function ThemedApp() {
 }
 
 export default function RootLayout() {
+  const { t } = useTranslation();
   const [fontsLoaded, fontError] = useFonts({
     NotoSansKR_400Regular,
     NotoSansKR_500Medium,
@@ -139,7 +145,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View className="flex-1 items-center justify-center bg-bg dark:bg-bgDark">
-        <Text className="text-muted dark:text-mutedDark">불러오는 중…</Text>
+        <Text className="text-muted dark:text-mutedDark">{t('common:loading')}</Text>
       </View>
     );
   }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../../constants/theme';
@@ -24,21 +25,21 @@ import { humanDate } from '../../store/useHistoryStore';
 /** 목록 필터 (2026-08-07, T-06 피드백 — "내 스윙 관리" 방안) */
 type SwingFilter = 'all' | 'favorite' | SwingClub;
 
-const FILTERS: { id: SwingFilter; label: string }[] = [
-  { id: 'all', label: '전체' },
-  { id: 'favorite', label: '즐겨찾기' },
-  ...SWING_CLUBS.map((c) => ({ id: c.id as SwingFilter, label: c.label })),
-];
-
 /**
  * 내 스윙 — 저장해둔 내 템포 목록. (PLANNING.md Feature B)
  * 시안 근거: App UI / Premium — 카드 하나당 비율 하나, 탭하면 그 템포로 연습.
  */
 export default function MySwingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation(['mySwings', 'common', 'domain']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
   const swings = useSwingStore((s) => s.swings);
+  const FILTERS: { id: SwingFilter; label: string }[] = [
+    { id: 'all', label: t('mySwings:filters.all') },
+    { id: 'favorite', label: t('mySwings:filters.favorite') },
+    ...SWING_CLUBS.map((cl) => ({ id: cl.id as SwingFilter, label: t(`domain:clubs.${cl.id}`) })),
+  ];
   const source = usePracticeStore((s) => s.source);
   const selectSwing = usePracticeStore((s) => s.selectSwing);
   const removeSwing = useSwingStore((s) => s.removeSwing);
@@ -65,9 +66,13 @@ export default function MySwingsScreen() {
    * hitSlop으로 실제 터치 영역만 넉넉히 준다 — 오탭으로 지워지는 게 최악이다.
    */
   function confirmDelete(id: string, name: string) {
-    Alert.alert('이 스윙을 지울까요?', `"${name}" 기록이 사라져요. 되돌릴 수 없습니다.`, [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => removeSwing(id) },
+    Alert.alert(t('mySwings:deleteConfirm.title'), t('mySwings:deleteConfirm.body', { name }), [
+      { text: t('mySwings:deleteConfirm.cancel'), style: 'cancel' },
+      {
+        text: t('mySwings:deleteConfirm.confirm'),
+        style: 'destructive',
+        onPress: () => removeSwing(id),
+      },
     ]);
   }
 
@@ -84,7 +89,7 @@ export default function MySwingsScreen() {
           accessibilityRole="header"
           className="font-kr-bold text-h1 text-ink dark:text-inkDark"
         >
-          내 스윙
+          {t('mySwings:title')}
         </Text>
         {/*
           2026-08-08 (사용자 테스트): 이 안내문은 상시 노출인데도 잘 안 읽혔고,
@@ -101,13 +106,11 @@ export default function MySwingsScreen() {
               {...textScaling}
               className="font-kr-bold text-body text-ink dark:text-inkDark pt-s2"
             >
-              아직 등록한 스윙이 없어요
+              {t('mySwings:empty.title')}
             </Text>
-            <Caption className="pt-[6px] text-center">
-              영상에서 백스윙 시작·탑·임팩트{'\n'}세 지점만 찍으면 됩니다
-            </Caption>
+            <Caption className="pt-[6px] text-center">{t('mySwings:empty.body')}</Caption>
             <Button
-              label="내 스윙 등록"
+              label={t('mySwings:registerButton')}
               onPress={() => router.push('/marking')}
               className="w-full mt-s3"
             />
@@ -155,7 +158,7 @@ export default function MySwingsScreen() {
 
             {visibleSwings.length === 0 && (
               <View className="items-center py-s5">
-                <Caption>이 조건에 맞는 스윙이 없어요</Caption>
+                <Caption>{t('mySwings:noFilterMatch')}</Caption>
               </View>
             )}
 
@@ -171,8 +174,12 @@ export default function MySwingsScreen() {
                       router.push('/practice');
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`${swing.name}, 비율 ${formatRatio(swing.ratio)}, ${char.label}`}
-                    accessibilityHint="이 리듬으로 연습을 시작합니다"
+                    accessibilityLabel={t('mySwings:swingCardA11y', {
+                      name: swing.name,
+                      ratio: formatRatio(swing.ratio),
+                      character: t(`domain:character.${char}.label`),
+                    })}
+                    accessibilityHint={t('mySwings:swingCardHint')}
                     accessibilityState={{ selected: active }}
                     className={`rounded-lg p-s2 active:opacity-85 ${
                       active
@@ -191,7 +198,7 @@ export default function MySwingsScreen() {
                           </Text>
                           {active && (
                             <View
-                              accessibilityLabel="현재 연습 중인 템포"
+                              accessibilityLabel={t('mySwings:activeBadgeA11y')}
                               className="w-[20px] h-[20px] rounded-pill items-center justify-center bg-primary dark:bg-primary-neon"
                             >
                               <IconCheck color={c.onPrimary} size={13} />
@@ -205,11 +212,10 @@ export default function MySwingsScreen() {
                             onPress={() => toggleFavorite(swing.id)}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={
-                              swing.favorite
-                                ? `${swing.name} 즐겨찾기 해제`
-                                : `${swing.name} 즐겨찾기 추가`
-                            }
+                            accessibilityLabel={t(
+                              swing.favorite ? 'mySwings:favorite.remove' : 'mySwings:favorite.add',
+                              { name: swing.name },
+                            )}
                             accessibilityState={{ selected: !!swing.favorite }}
                           >
                             <IconStar
@@ -220,10 +226,14 @@ export default function MySwingsScreen() {
                           </Pressable>
                         </View>
                         {/* 2026-08-08: "0.70s : 0.27s" 같은 초 단위 라벨 제거 — 오른쪽 큰 비율 숫자와 중복 */}
-                        <Caption className="pt-[4px]">{char.label}</Caption>
+                        <Caption className="pt-[4px]">
+                          {t(`domain:character.${char}.label`)}
+                        </Caption>
                         {/* 2026-08-06 용어 통일: 저장 → 등록 (AOS 리뷰 B-2) */}
                         <Caption className="pt-[2px]">
-                          {humanDate(swing.createdAt.slice(0, 10))} 등록
+                          {t('mySwings:loggedOn', {
+                            date: humanDate(swing.createdAt.slice(0, 10), t),
+                          })}
                         </Caption>
 
                         {/*
@@ -233,13 +243,17 @@ export default function MySwingsScreen() {
                         <View className="flex-row gap-[6px] pt-[6px]">
                           {SWING_CLUBS.map((cl) => {
                             const clubActive = swing.club === cl.id;
+                            const clubLabel = t(`domain:clubs.${cl.id}`);
                             return (
                               <Pressable
                                 key={cl.id}
                                 onPress={() => setSwingClub(swing.id, clubActive ? null : cl.id)}
                                 hitSlop={4}
                                 accessibilityRole="radio"
-                                accessibilityLabel={`${swing.name}을(를) ${cl.label}로 표시`}
+                                accessibilityLabel={t('mySwings:markAsClub', {
+                                  name: swing.name,
+                                  club: clubLabel,
+                                })}
                                 accessibilityState={{ checked: clubActive, selected: clubActive }}
                                 style={{ minHeight: 28 }}
                                 className={`px-[8px] justify-center rounded-sm ${
@@ -253,7 +267,7 @@ export default function MySwingsScreen() {
                                   className="font-kr-medium text-[11px]"
                                   style={{ color: clubActive ? c.onPrimary : c.muted }}
                                 >
-                                  {cl.label}
+                                  {clubLabel}
                                 </Text>
                               </Pressable>
                             );
@@ -279,8 +293,8 @@ export default function MySwingsScreen() {
                           */}
                           {swing.videoUri ? (
                             <IconButton
-                              label={`${swing.name} 다시 마킹`}
-                              hint="원본 영상에서 세 지점을 다시 찍습니다"
+                              label={t('mySwings:remark.label', { name: swing.name })}
+                              hint={t('mySwings:remark.hint')}
                               onPress={() =>
                                 router.push({
                                   pathname: '/marking',
@@ -292,15 +306,15 @@ export default function MySwingsScreen() {
                                 {...textScaling}
                                 className="font-kr-medium text-caption text-muted dark:text-mutedDark"
                               >
-                                다시 마킹
+                                {t('mySwings:remark.short')}
                               </Text>
                             </IconButton>
                           ) : null}
 
                           {/* 삭제 — 카드 탭(연습 시작)과 겹치지 않게 별도 영역 */}
                           <IconButton
-                            label={`${swing.name} 삭제`}
-                            hint="되돌릴 수 없습니다"
+                            label={t('mySwings:deleteButton.label', { name: swing.name })}
+                            hint={t('mySwings:deleteButton.hint')}
                             onPress={() => confirmDelete(swing.id, swing.name)}
                           >
                             <IconClose color={c.muted} size={17} />
@@ -314,7 +328,7 @@ export default function MySwingsScreen() {
             </View>
 
             <Button
-              label="내 스윙 등록"
+              label={t('mySwings:registerButton')}
               variant="ghost"
               onPress={() => router.push('/marking')}
               className="mt-s3"

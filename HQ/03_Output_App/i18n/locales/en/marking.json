@@ -1,0 +1,75 @@
+{
+  "pickVideoScreen": {
+    "title": "Choose your swing video",
+    "steps": {
+      "1": "Pick a video",
+      "2": "Mark three points — start, top, impact",
+      "3": "Done!"
+    },
+    "pickButton": "Choose video from gallery"
+  },
+  "header": {
+    "leaveA11yLabel": "Cancel marking",
+    "leaveA11yHint": "The points you've marked so far will be lost",
+    "stepIndicatorA11y": "Step {{step}} of 3",
+    "undoA11yLabelFirst": "Cancel marking",
+    "undoA11yLabelOther": "Undo to previous step",
+    "undo": "Undo"
+  },
+  "stepper": {
+    "start": "Start",
+    "top": "Top",
+    "impact": "Impact",
+    "done": "Done",
+    "current": "Now"
+  },
+  "stepMeta": {
+    "start": {
+      "title": "The moment your backswing begins",
+      "hint": "Where the club first starts moving"
+    },
+    "top": {
+      "title": "The moment the club is at its highest",
+      "hint": "Where the club changes direction at the top"
+    },
+    "impact": {
+      "title": "The moment the club meets the ball",
+      "hint": "Where the clubhead touches the ball"
+    }
+  },
+  "zoom": {
+    "resetA11yLabel": "Zoomed {{zoom}}x, tap to reset to original size",
+    "resetLabel": "Reset"
+  },
+  "rate": {
+    "groupA11yLabel": "Playback speed",
+    "optionA11yLabel": "{{rate}}x speed"
+  },
+  "timeline": {
+    "a11yLabel": "Video timeline",
+    "a11yHint": "Slide to roughly line up, then fine-tune with the frame buttons below",
+    "a11yValue": "{{sec}}s, frame {{frame}}"
+  },
+  "frameButtons": {
+    "back5A11yLabel": "Back five frames",
+    "back1A11yLabel": "Back one frame",
+    "forward1A11yLabel": "Forward one frame",
+    "forward5A11yLabel": "Forward five frames",
+    "play": "Play",
+    "pause": "Pause",
+    "playA11yLabel": "Play video",
+    "pauseA11yLabel": "Pause video"
+  },
+  "hintCaption": "Slide to line up, then fine-tune with the buttons",
+  "markButton": {
+    "start": "This is the start",
+    "top": "This is the top",
+    "impact": "This is the impact"
+  },
+  "discardAlert": {
+    "title": "Stop marking?",
+    "body": "The {{count}} point(s) you've marked so far will be lost.",
+    "continue": "Keep going",
+    "discard": "Stop"
+  }
+}

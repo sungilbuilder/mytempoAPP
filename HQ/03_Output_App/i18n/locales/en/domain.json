@@ -1,0 +1,80 @@
+{
+  "soundPacks": {
+    "wood": { "label": "Wood", "description": "A knock on wood — the most natural of the set" },
+    "string": {
+      "label": "Piano",
+      "description": "A hammered piano note — bright enough to enjoy for a long session"
+    },
+    "mallet": {
+      "label": "Marimba",
+      "description": "A softer mallet strike than wood — warm and round"
+    },
+    "rhythm": {
+      "label": "Rhythm",
+      "description": "Piano marks the three key points, a drum fills the beat between"
+    },
+    "pulseBadge": "Pulse"
+  },
+  "shotIntervals": {
+    "0": { "label": "Continuous", "hint": "For repeating practice swings with no ball" },
+    "15": { "label": "15s", "hint": "For bays where the next ball comes up fast" },
+    "25": { "label": "25s", "hint": "Default — time to check the result and reset" },
+    "40": { "label": "40s", "hint": "To go through your full pre-shot routine" }
+  },
+  "character": {
+    "balanced": {
+      "label": "Even",
+      "headline": "Your backswing and downswing take about the same time",
+      "detail": "There isn't much difference between the backswing and downswing."
+    },
+    "stable": {
+      "label": "Unhurried",
+      "headline": "You take your time going up",
+      "detail": "You bring it up slowly, then bring it down precisely."
+    },
+    "power": {
+      "label": "Extended",
+      "headline": "You take the backswing further back",
+      "detail": "You draw it up long, then bring it down quickly."
+    },
+    "approach": {
+      "label": "Approach",
+      "headline": "The rhythm for shots around the green",
+      "detail": "The backswing takes twice as long as the downswing."
+    },
+    "putting": {
+      "label": "Putting",
+      "headline": "The rhythm for your putting stroke",
+      "detail": "The backstroke takes twice as long as the forward stroke."
+    }
+  },
+  "presets": {
+    "preset-3-1": { "description": "Slow going up, precise coming down" },
+    "preset-2-5-1": { "description": "Not much difference between going up and coming down" },
+    "preset-3-5-1": { "description": "Long going up, quick coming down" },
+    "preset-approach-2-1": {
+      "description": "2:1 rhythm for shots around the green (pitch, chip, bunker)"
+    },
+    "preset-putting-2-1": { "description": "2:1 rhythm for your putting stroke" }
+  },
+  "swingSpeeds": {
+    "s133": { "nickname": "Unhurried" },
+    "s120": { "nickname": "Relaxed" },
+    "s107": { "nickname": "Lively" },
+    "s093": { "nickname": "Brisk" }
+  },
+  "units": {
+    "seconds": "{{value}}s",
+    "minutes": "{{value}} min",
+    "ratioApprox": "about {{value}}:1",
+    "ratioA11y": "Tempo ratio {{ratio}}"
+  },
+  "clubs": {
+    "driver": "Driver",
+    "iron": "Iron"
+  },
+  "activeTempo": {
+    "mySwingSublabel": "My swing · logged {{month}}/{{day}}",
+    "presetSublabel": "Preset · {{ratio}}"
+  }
+}

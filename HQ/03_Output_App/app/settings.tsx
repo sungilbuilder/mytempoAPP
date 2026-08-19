@@ -1,5 +1,7 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../constants/theme';
@@ -8,6 +10,7 @@ import {
   IconButton,
   IconCheck,
   IconChevronLeft,
+  LockBadge,
   Logo,
   MIN_TOUCH,
   Segmented,
@@ -16,7 +19,13 @@ import {
   textScaling,
 } from '../components/ui';
 import { useSettingsStore, type ThemeMode } from '../store/useSettingsStore';
-import { SHOT_INTERVALS, SOUND_PACKS } from '../features/audio-engine/soundPacks';
+import { useLanguageStore, type LanguagePref } from '../store/useLanguageStore';
+import {
+  CUSTOM_SHOT_INTERVAL_MAX,
+  CUSTOM_SHOT_INTERVAL_MIN,
+  SHOT_INTERVALS,
+  SOUND_PACKS,
+} from '../features/audio-engine/soundPacks';
 import { playCue } from '../features/audio-engine/cues';
 import { useSoundPreview } from '../features/audio-engine/useSoundPreview';
 import { useOnboardingStore } from '../store/useOnboardingStore';
@@ -65,19 +74,86 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 /**
- * 잠금 배지 (2026-08-06, Premium 게이팅)
+ * 샷 간격 직접 입력 (2026-08-09 신설)
  *
- * 잠긴 항목을 **목록에서 감추지 않는다.** 무엇이 유료인지 보이지 않으면
- * 결제할 이유도 생기지 않고, 체험 중에 쓰던 게 갑자기 사라지면 "고장 났나"가 된다.
- * 대신 눌러도 적용되지 않는다는 걸 시각·스크린리더 양쪽으로 분명히 한다.
+ * [[v1.0-출시사양]] Premium §2 "어드레스 대기시간 커스텀"은 스펙에만 있고 코드로는
+ * 없던 항목이었다 — 프리셋 4종(soundPacks.ts SHOT_INTERVALS) 밖의 임의 초 값을
+ * 프리미엄 사용자에게 열어준다. 재생 엔진(metronome.ts startShotCycle)이 이미
+ * 임의의 초 값을 안전하게 처리하므로(하한 500ms 클램프) 새 프리셋을 추가하는 게
+ * 아니라 값 자체를 그대로 저장소에 흘려보낸다.
+ *
+ * 타이핑 중간값("2" → "20")이 그대로 적용되지 않도록, 커밋은 blur(엔터/포커스
+ * 아웃) 시점에만 하고 그 사이엔 로컬 텍스트만 갱신한다.
  */
-function LockBadge() {
+function CustomShotIntervalRow({
+  value,
+  locked,
+  onCommit,
+  c,
+}: {
+  value: number;
+  locked: boolean;
+  onCommit: (v: number) => void;
+  c: ReturnType<typeof palette>;
+}) {
+  const { t } = useTranslation(['settings', 'common']);
+  const isCustomSelected = !SHOT_INTERVALS.some((s) => s.value === value);
+  const [text, setText] = useState(isCustomSelected ? String(value) : '');
+
+  // 다른 화면(온보딩 등)에서 값이 바뀌어 돌아와도 표시값이 어긋나지 않게 한다.
+  useEffect(() => {
+    if (isCustomSelected) setText(String(value));
+  }, [value, isCustomSelected]);
+
+  function commit() {
+    const n = Math.round(Number(text));
+    if (!Number.isFinite(n) || text === '') {
+      setText(isCustomSelected ? String(value) : '');
+      return;
+    }
+    const clamped = Math.min(CUSTOM_SHOT_INTERVAL_MAX, Math.max(CUSTOM_SHOT_INTERVAL_MIN, n));
+    setText(String(clamped));
+    onCommit(clamped);
+  }
+
+  const label = t('settings:shotIntervalGroup.custom.label');
+  const hint = t('settings:shotIntervalGroup.custom.hint', {
+    min: CUSTOM_SHOT_INTERVAL_MIN,
+    max: CUSTOM_SHOT_INTERVAL_MAX,
+  });
+
   return (
-    <View className="px-[6px] py-[2px] rounded-sm bg-surface2 dark:bg-surface2Dark">
-      <Text {...textScaling} className="font-kr-bold text-[10px] text-muted dark:text-mutedDark">
-        프리미엄
-      </Text>
-    </View>
+    <Row label={label} hint={hint}>
+      <View className="flex-row items-center gap-[8px]">
+        {locked && <LockBadge />}
+        <TextInput
+          value={text}
+          editable={!locked}
+          onChangeText={(s) => setText(s.replace(/[^0-9]/g, ''))}
+          onEndEditing={commit}
+          onSubmitEditing={commit}
+          placeholder={t('settings:shotIntervalGroup.custom.placeholder')}
+          placeholderTextColor={c.muted}
+          keyboardType="number-pad"
+          returnKeyType="done"
+          maxLength={3}
+          accessibilityLabel={`${label}, ${hint}${locked ? t('settings:soundPackGroup.premiumSuffix') : ''}`}
+          accessibilityState={{ disabled: locked }}
+          {...numeralScaling}
+          className={`w-[48px] text-right font-kr-medium text-body py-[2px] border-b ${
+            locked
+              ? 'text-muted dark:text-mutedDark border-line dark:border-lineDark'
+              : 'text-ink dark:text-inkDark border-line dark:border-lineDark'
+          }`}
+        />
+        <Caption>{t('settings:shotIntervalGroup.custom.unit')}</Caption>
+        {isCustomSelected && !locked ? (
+          <IconCheck color={c.primary} size={20} />
+        ) : (
+          <View className="w-[20px]" />
+        )}
+      </View>
+    </Row>
   );
 }
 
@@ -85,11 +161,14 @@ const VOLUME_STEPS = [0.4, 0.6, 0.8, 1.0];
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation(['settings', 'common', 'domain']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
 
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const beepVolume = useSettingsStore((s) => s.beepVolume);
   const setBeepVolume = useSettingsStore((s) => s.setBeepVolume);
   const hapticOnImpact = useSettingsStore((s) => s.hapticOnImpact);
@@ -110,7 +189,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-s3 pt-s1 pb-s1">
-        <IconButton label="뒤로" onPress={() => router.back()}>
+        <IconButton label={t('settings:backA11y')} onPress={() => router.back()}>
           <IconChevronLeft color={c.ink} size={22} />
         </IconButton>
       </View>
@@ -124,31 +203,48 @@ export default function SettingsScreen() {
           accessibilityRole="header"
           className="font-kr-bold text-h1 text-ink dark:text-inkDark"
         >
-          설정
+          {t('settings:title')}
         </Text>
 
-        <Group title="화면">
-          <Row label="테마">
+        <Group title={t('settings:screenGroup')}>
+          <Row label={t('settings:theme.label')}>
             <View className="w-[190px]">
               <Segmented<ThemeMode>
                 value={themeMode}
                 onChange={setThemeMode}
-                a11yLabel="테마"
+                a11yLabel={t('settings:theme.label')}
                 options={[
-                  { value: 'light', label: '라이트' },
-                  { value: 'dark', label: '다크' },
-                  { value: 'auto', label: '자동' },
+                  { value: 'light', label: t('settings:theme.light') },
+                  { value: 'dark', label: t('settings:theme.dark') },
+                  { value: 'auto', label: t('settings:theme.auto') },
                 ]}
               />
             </View>
           </Row>
         </Group>
 
-        <Group title="소리 · 진동">
-          <Row label="소리 크기" hint={`${Math.round(beepVolume * 100)}%`}>
+        <Group title={t('settings:languageGroup')}>
+          <Row label={t('settings:language.label')}>
+            <View className="w-[220px]">
+              <Segmented<LanguagePref>
+                value={language}
+                onChange={setLanguage}
+                a11yLabel={t('settings:language.label')}
+                options={[
+                  { value: 'auto', label: t('settings:language.auto') },
+                  { value: 'ko', label: t('settings:language.ko') },
+                  { value: 'en', label: t('settings:language.en') },
+                ]}
+              />
+            </View>
+          </Row>
+        </Group>
+
+        <Group title={t('settings:soundGroup')}>
+          <Row label={t('settings:volume.label')} hint={`${Math.round(beepVolume * 100)}%`}>
             <View
               accessibilityRole="radiogroup"
-              accessibilityLabel="소리 크기"
+              accessibilityLabel={t('settings:volume.label')}
               className="flex-row gap-[6px]"
             >
               {VOLUME_STEPS.map((v) => {
@@ -158,7 +254,7 @@ export default function SettingsScreen() {
                     key={v}
                     onPress={() => setBeepVolume(v)}
                     accessibilityRole="radio"
-                    accessibilityLabel={`${Math.round(v * 100)} 퍼센트`}
+                    accessibilityLabel={t('common:percent', { value: Math.round(v * 100) })}
                     accessibilityState={{ checked: active, selected: active }}
                     style={{ minHeight: 44 }}
                     className={`w-[42px] rounded-sm items-center justify-center ${
@@ -182,8 +278,12 @@ export default function SettingsScreen() {
 
           <View className="h-[1px] bg-line dark:bg-lineDark" />
 
-          <Row label="임팩트에 진동" hint="임팩트 소리에 맞춰 폰이 짧게 울립니다">
-            <Switch label="임팩트에 진동" value={hapticOnImpact} onPress={toggleHaptic} />
+          <Row label={t('settings:haptic.label')} hint={t('settings:haptic.hint')}>
+            <Switch
+              label={t('settings:haptic.label')}
+              value={hapticOnImpact}
+              onPress={toggleHaptic}
+            />
           </Row>
 
           <View className="h-[1px] bg-line dark:bg-lineDark" />
@@ -193,9 +293,9 @@ export default function SettingsScreen() {
             메트로놈 볼륨과 **다른 축**이라 별도 토글이다. 소리는 켜두고 싶지만
             등록할 때마다 나는 확인음은 싫은 경우가 실제로 있다.
           */}
-          <Row label="확인음" hint="마킹·등록이 끝났을 때 짧게 울립니다">
+          <Row label={t('settings:uiSounds.label')} hint={t('settings:uiSounds.hint')}>
             <Switch
-              label="확인음"
+              label={t('settings:uiSounds.label')}
               value={uiSounds}
               onPress={() => {
                 toggleUiSounds();
@@ -207,16 +307,22 @@ export default function SettingsScreen() {
 
           <View className="h-[1px] bg-line dark:bg-lineDark" />
 
-          <Row label="화면 항상 켜기" hint="연습 중 화면이 자동으로 꺼지지 않습니다">
-            <Switch label="화면 항상 켜기" value={keepAwake} onPress={toggleKeepAwake} />
+          <Row label={t('settings:keepAwake.label')} hint={t('settings:keepAwake.hint')}>
+            <Switch
+              label={t('settings:keepAwake.label')}
+              value={keepAwake}
+              onPress={toggleKeepAwake}
+            />
           </Row>
         </Group>
 
         {/* 사운드 팩 (2026-08-01, 창업자 요청 / 2026-08-06 게이팅) */}
-        <Group title="연습 소리 — 탭하면 들어볼 수 있어요">
+        <Group title={t('settings:soundPackGroup.title')}>
           {SOUND_PACKS.map((p, i) => {
             const locked = !hasFullAccess && !p.free;
             const selected = soundPack === p.id;
+            const label = t(`domain:soundPacks.${p.id}.label`);
+            const description = t(`domain:soundPacks.${p.id}.description`);
             return (
               <View key={p.id}>
                 {i > 0 && <View className="h-[1px] bg-line dark:bg-lineDark" />}
@@ -234,12 +340,16 @@ export default function SettingsScreen() {
                     playPreview(p.id, beepVolume);
                   }}
                   accessibilityRole="radio"
-                  accessibilityLabel={`${p.label}, ${p.description}${locked ? ', 프리미엄 전용' : ''}`}
-                  accessibilityHint={locked ? '미리듣기만 됩니다' : '이 소리로 연습합니다'}
+                  accessibilityLabel={`${label}, ${description}${locked ? t('settings:soundPackGroup.premiumSuffix') : ''}`}
+                  accessibilityHint={
+                    locked
+                      ? t('settings:soundPackGroup.previewOnlyHint')
+                      : t('settings:soundPackGroup.practiceWithThisHint')
+                  }
                   accessibilityState={{ checked: selected, selected, disabled: locked }}
                   className="active:opacity-70"
                 >
-                  <Row label={p.label} hint={p.description}>
+                  <Row label={label} hint={description}>
                     <View className="flex-row items-center gap-[8px]">
                       {/*
                         박자 층이 있는 팩만 표시 (2026-08-01).
@@ -257,7 +367,7 @@ export default function SettingsScreen() {
                             className="font-kr-bold text-[10px]"
                             style={{ color: c.onAccent }}
                           >
-                            박자
+                            {t('domain:soundPacks.pulseBadge')}
                           </Text>
                         </View>
                       )}
@@ -266,7 +376,7 @@ export default function SettingsScreen() {
                         {...textScaling}
                         className="font-kr-medium text-caption text-muted dark:text-mutedDark"
                       >
-                        듣기
+                        {t('settings:soundPackGroup.listenLabel')}
                       </Text>
                       {selected && !locked ? (
                         <IconCheck color={c.primary} size={20} />
@@ -283,9 +393,7 @@ export default function SettingsScreen() {
             <>
               <View className="h-[1px] bg-line dark:bg-lineDark" />
               <View className="py-s2">
-                <Caption>
-                  기본 소리는 계속 무료로 쓸 수 있어요. 나머지는 들어볼 수만 있습니다.
-                </Caption>
+                <Caption>{t('settings:soundPackGroup.freeNote')}</Caption>
               </View>
             </>
           )}
@@ -300,10 +408,12 @@ export default function SettingsScreen() {
           약 15~30초가 걸린다. 이제 간격을 사이클 안에 넣는다.
           자세한 근거는 features/audio-engine/soundPacks.ts 주석 참고.
         */}
-        <Group title="샷 간격 — 한 스윙에서 다음 스윙까지">
+        <Group title={t('settings:shotIntervalGroup.title')}>
           {SHOT_INTERVALS.map((d, i) => {
             const locked = !hasFullAccess && !d.free;
             const selected = shotIntervalSec === d.value;
+            const label = t(`domain:shotIntervals.${d.value}.label`);
+            const hint = t(`domain:shotIntervals.${d.value}.hint`);
             return (
               <View key={d.value}>
                 {i > 0 && <View className="h-[1px] bg-line dark:bg-lineDark" />}
@@ -312,11 +422,11 @@ export default function SettingsScreen() {
                     if (!locked) setShotInterval(d.value);
                   }}
                   accessibilityRole="radio"
-                  accessibilityLabel={`${d.label}, ${d.hint}${locked ? ', 프리미엄 전용' : ''}`}
+                  accessibilityLabel={`${label}, ${hint}${locked ? t('settings:soundPackGroup.premiumSuffix') : ''}`}
                   accessibilityState={{ checked: selected, selected, disabled: locked }}
                   className="active:opacity-70"
                 >
-                  <Row label={d.label} hint={d.hint}>
+                  <Row label={label} hint={hint}>
                     <View className="flex-row items-center gap-[8px]">
                       {locked && <LockBadge />}
                       {selected && !locked ? (
@@ -331,11 +441,15 @@ export default function SettingsScreen() {
             );
           })}
           <View className="h-[1px] bg-line dark:bg-lineDark" />
+          <CustomShotIntervalRow
+            value={shotIntervalSec}
+            locked={!hasFullAccess}
+            onCommit={setShotInterval}
+            c={c}
+          />
+          <View className="h-[1px] bg-line dark:bg-lineDark" />
           <View className="py-s2">
-            <Caption>
-              연속을 뺀 나머지는 매 스윙 직전에 5초 카운트인이 울려요. 그 소리가 “지금 어드레스”
-              신호가 됩니다.
-            </Caption>
+            <Caption>{t('settings:shotIntervalGroup.note')}</Caption>
           </View>
         </Group>
 
@@ -346,17 +460,23 @@ export default function SettingsScreen() {
           팩트 기반"에 맞추려면 여기서 파는 말을 하지 않는 편이 낫다 —
           무엇이 열려 있고 무엇이 아닌지만 말한다.
         */}
-        <Group title="플랜">
+        <Group title={t('settings:planGroup.title')}>
           <Row
-            label={hasFullAccess ? (trialActive ? '체험 중' : '프리미엄') : '무료'}
+            label={
+              hasFullAccess
+                ? trialActive
+                  ? t('settings:planGroup.trialActive')
+                  : t('settings:planGroup.premium')
+                : t('settings:planGroup.free')
+            }
             hint={
               trialActive
                 ? trialDaysLeft > 0
-                  ? `${trialDaysLeft}일 뒤 무료로 바뀌어요. 스윙 등록과 연습은 그대로예요.`
-                  : '오늘까지 모든 기능을 쓸 수 있어요'
+                  ? t('settings:planGroup.trialDaysLeft', { count: trialDaysLeft })
+                  : t('settings:planGroup.trialEndsToday')
                 : hasFullAccess
-                  ? '모든 소리와 샷 간격을 쓸 수 있어요'
-                  : '기본 소리 · 기본 샷 간격 · 최근 7일 기록'
+                  ? t('settings:planGroup.premiumHint')
+                  : t('settings:planGroup.freeHint')
             }
           >
             <View className="w-[20px]" />
@@ -379,18 +499,21 @@ export default function SettingsScreen() {
           저장된 값이 있는 사용자를 깨뜨리지 않기 위함이고, 구현 시 바로 쓴다.
         */}
 
-        <Group title="앱 정보">
+        <Group title={t('settings:aboutGroup.title')}>
           <Pressable
             onPress={() => {
               resetOnboarding();
               router.replace('/onboarding');
             }}
             accessibilityRole="button"
-            accessibilityLabel="온보딩 다시 보기"
-            accessibilityHint="처음 실행했을 때 나오는 소개 화면을 다시 봅니다"
+            accessibilityLabel={t('settings:aboutGroup.replayOnboardingLabel')}
+            accessibilityHint={t('settings:aboutGroup.replayOnboardingA11yHint')}
             className="active:opacity-70"
           >
-            <Row label="온보딩 다시 보기" hint="처음 실행했을 때 나오는 소개 화면">
+            <Row
+              label={t('settings:aboutGroup.replayOnboardingLabel')}
+              hint={t('settings:aboutGroup.replayOnboardingHint')}
+            >
               <Text
                 {...textScaling}
                 importantForAccessibility="no"
@@ -415,7 +538,7 @@ export default function SettingsScreen() {
         <View className="pt-s4 items-center gap-[10px]">
           <Logo size={20} color={c.primary} accentColor={c.accent} />
           <View className="items-center">
-            <Caption>Noto Sans KR, Space Grotesk · SIL Open Font License 1.1</Caption>
+            <Caption>{t('settings:fontLicense')}</Caption>
             <Caption className="pt-[4px]">v0.1.0</Caption>
           </View>
         </View>

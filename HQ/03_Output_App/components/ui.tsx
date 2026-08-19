@@ -4,6 +4,7 @@
  */
 import { Pressable, Text, View, type PressableProps, type ViewProps } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 /* ───────────────────────── 텍스트 ───────────────────────── */
 
@@ -123,6 +124,27 @@ export function Caption({
     >
       {children}
     </Text>
+  );
+}
+
+/**
+ * 잠금 배지 (2026-08-06, Premium 게이팅. 2026-08-08 settings.tsx에서 이곳으로 이동)
+ *
+ * 잠긴 항목을 **목록에서 감추지 않는다.** 무엇이 유료인지 보이지 않으면
+ * 결제할 이유도 생기지 않고, 체험 중에 쓰던 게 갑자기 사라지면 "고장 났나"가 된다.
+ * 대신 눌러도 적용되지 않는다는 걸 시각·스크린리더 양쪽으로 분명히 한다.
+ *
+ * 원래 settings.tsx(사운드팩·샷 간격)에만 있던 지역 컴포넌트였는데, T-39로
+ * presets.tsx(어프로치·퍼팅)에도 같은 잠금 UI가 필요해져 공용으로 옮겼다.
+ */
+export function LockBadge() {
+  const { t } = useTranslation('common');
+  return (
+    <View className="px-[6px] py-[2px] rounded-sm bg-surface2 dark:bg-surface2Dark">
+      <Text {...textScaling} className="font-kr-bold text-[10px] text-muted dark:text-mutedDark">
+        {t('premiumBadge')}
+      </Text>
+    </View>
   );
 }
 
@@ -302,6 +324,11 @@ export function Switch({
   );
 }
 
+/**
+ * 세그먼트 하나당 폭이 옵션 수로 균등 분할되므로, 로케일이 영어일 때 "English"처럼
+ * 긴 단어가 한 줄에 못 들어가 줄바꿈되며 필 모양이 깨지는 문제가 있었다(2026-08-19).
+ * numberOfLines + adjustsFontSizeToFit로 줄바꿈 대신 글자를 축소해 한 줄을 지킨다.
+ */
 export function Segmented<T extends string>({
   options,
   value,
@@ -336,6 +363,9 @@ export function Segmented<T extends string>({
           >
             <Text
               {...textScaling}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
               className={`text-caption ${
                 active
                   ? 'font-kr-bold text-ink dark:text-inkDark'
@@ -425,12 +455,13 @@ export function Logo({
   accentColor: string;
   className?: string;
 }) {
+  const { t } = useTranslation('common');
   return (
     <View
       /* 심볼과 워드마크를 한 덩어리로 읽는다 — 따로 읽으면 "mytempo"가 두 번 나온다 */
       accessible
       accessibilityRole="image"
-      accessibilityLabel="마이템포"
+      accessibilityLabel={t('appName')}
       className={`flex-row items-center ${className}`}
       style={{ gap: size * 0.4 }}
     >

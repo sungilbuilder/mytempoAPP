@@ -1,0 +1,78 @@
+{
+  "soundPacks": {
+    "wood": { "label": "나무", "description": "나무를 두드리는 소리 — 가장 자연스러워요" },
+    "string": {
+      "label": "피아노",
+      "description": "해머로 때리는 피아노 — 화사해서 오래 들어도 편안해요"
+    },
+    "mallet": {
+      "label": "마림바",
+      "description": "나무보다 부드러운 말렛 타격 — 따뜻하고 둥글어요"
+    },
+    "rhythm": {
+      "label": "리듬",
+      "description": "피아노가 세 지점을, 북이 그 사이 박자를 잡아줍니다"
+    },
+    "pulseBadge": "박자"
+  },
+  "shotIntervals": {
+    "0": { "label": "연속", "hint": "공 없이 빈 스윙을 반복할 때" },
+    "15": { "label": "15초", "hint": "공이 빨리 올라오는 타석" },
+    "25": { "label": "25초", "hint": "기본 — 결과를 확인하고 다시 준비할 여유" },
+    "40": { "label": "40초", "hint": "프리샷 루틴을 온전히 지킬 때" }
+  },
+  "character": {
+    "balanced": {
+      "label": "고르게",
+      "headline": "올리고 내리는 시간이 고른 편이에요",
+      "detail": "백스윙과 다운스윙의 차이가 크지 않습니다."
+    },
+    "stable": {
+      "label": "여유롭게",
+      "headline": "올릴 때 여유를 두는 편이에요",
+      "detail": "천천히 올렸다가 정확하게 내려놓습니다."
+    },
+    "power": {
+      "label": "길게",
+      "headline": "백스윙을 길게 가져가는 편이에요",
+      "detail": "길게 끌어 올렸다가 짧게 내려옵니다."
+    },
+    "approach": {
+      "label": "어프로치",
+      "headline": "그린 주변 샷의 리듬이에요",
+      "detail": "백스윙이 다운스윙보다 두 배 깁니다."
+    },
+    "putting": {
+      "label": "퍼팅",
+      "headline": "퍼팅 스트로크의 리듬이에요",
+      "detail": "백스트로크가 포워드스트로크보다 두 배 깁니다."
+    }
+  },
+  "presets": {
+    "preset-3-1": { "description": "천천히 올렸다가 정확하게 내려놓는 리듬" },
+    "preset-2-5-1": { "description": "올리고 내리는 시간 차가 크지 않은 리듬" },
+    "preset-3-5-1": { "description": "길게 끌어 올렸다가 짧게 내려오는 리듬" },
+    "preset-approach-2-1": { "description": "그린 주변 샷(피치·칩·벙커)에 쓰는 2:1 리듬" },
+    "preset-putting-2-1": { "description": "퍼팅 스트로크에 쓰는 2:1 리듬" }
+  },
+  "swingSpeeds": {
+    "s133": { "nickname": "느긋하게" },
+    "s120": { "nickname": "여유 있게" },
+    "s107": { "nickname": "탄력 있게" },
+    "s093": { "nickname": "경쾌하게" }
+  },
+  "units": {
+    "seconds": "{{value}}초",
+    "minutes": "{{value}}분",
+    "ratioApprox": "약 {{value}}:1",
+    "ratioA11y": "템포 비율 {{ratio}}"
+  },
+  "clubs": {
+    "driver": "드라이버",
+    "iron": "아이언"
+  },
+  "activeTempo": {
+    "mySwingSublabel": "내 스윙 · {{month}}/{{day}} 등록",
+    "presetSublabel": "프리셋 · {{ratio}}"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "title": "내 스윙 템포",
+  "measuredA11y": "측정 결과 {{value}}",
+  "toleranceA11y": "오차 범위 {{value}}",
+  "breakdownA11y": "백스윙 {{backswing}}초, 다운스윙 {{downswing}}초",
+  "suspiciousWarning": "구간이 매우 짧게 찍혔어요. 마킹을 다시 확인해보는 걸 권합니다.",
+  "recommendation": {
+    "outOfRange": "스윙 전체가 {{measured}}초예요. 준비된 단계 중에서는 {{speed}}가 가장 가깝지만 차이가 있는 편이에요.",
+    "inRange": "스윙 전체가 {{measured}}초예요. {{speed}} 단계로 연습하면 지금 리듬 그대로 익힐 수 있어요."
+  },
+  "nameSection": {
+    "label": "이름 붙이기",
+    "placeholder": "7월 드라이버",
+    "a11yLabel": "스윙 이름",
+    "defaultName": "{{month}}월 스윙"
+  },
+  "clubSection": {
+    "label": "클럽 종류 (선택)"
+  },
+  "tempoSection": {
+    "label": "템포",
+    "mine": "내 스윙 그대로",
+    "referenceA11y": "3대 1 기준 리듬",
+    "referenceLabel": "3:1 리듬으로",
+    "defaultWord": "기본",
+    "mineSummary": "{{ratio}} · {{speed}}",
+    "referenceSummaryWithSpeed": "속도 {{speed}} 유지",
+    "referenceSummaryNoSpeed": "비율만 기준으로"
+  },
+  "scrollHint": {
+    "a11y": "아래로 스크롤해 이름과 클럽을 확인하세요",
+    "text": "↓ 아래로 스크롤해 완료하세요"
+  },
+  "registerButton": {
+    "label": "등록하기",
+    "a11yDisabled": "등록하기. 아래로 스크롤해 이름과 클럽을 먼저 확인하세요",
+    "a11yMine": "등록하기. 내 스윙 그대로, 비율 {{ratio}}, 속도 {{speed}}로 연습을 시작합니다",
+    "a11yReference": "등록하기. 3대 1 기준 리듬으로 연습을 시작합니다. 속도는 내 스윙에 맞춘 값을 유지합니다"
+  },
+  "saveOnlyButton": {
+    "label": "등록만 하고 나중에 연습하기",
+    "a11yLabel": "등록만 하고 연습은 나중에"
+  }
+}

@@ -9,12 +9,13 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { setAudioModeAsync } from 'expo-audio';
+import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -73,18 +74,7 @@ function touchDistance(touches: { pageX: number; pageY: number }[]) {
 const FALLBACK_FPS = 30;
 
 type Step = 0 | 1 | 2;
-/**
- * 힌트는 "무엇을 찾는지"만 말한다 (2026-07-31 기획·디자인 리뷰 반영).
- *
- * 이전엔 1단계만 "클럽이 움직이기 시작하는 지점"(무엇), 2·3단계는 "느리게 재생하며
- * 찾아보세요"(어떻게)로 초점이 섞여 있었다. 조작법은 힌트가 아니라 버튼 옆 상시
- * 안내로 분리한다 — 단계마다 바뀌면 오히려 못 읽는다.
- */
-const STEP_META: { key: keyof SwingMarks; title: string; hint: string }[] = [
-  { key: 'start', title: '백스윙을 시작하는 순간', hint: '클럽이 처음 움직이기 시작하는 곳이에요' },
-  { key: 'top', title: '클럽이 가장 높은 순간', hint: '올라간 클럽이 방향을 바꾸는 곳이에요' },
-  { key: 'impact', title: '공에 맞는 순간', hint: '클럽 헤드가 공에 닿는 곳이에요' },
-];
+/** STEP_META(힌트 문구 설계 배경 포함)는 t()가 필요해 컴포넌트 내부로 이동했다 — 아래 MarkingScreen 참고. */
 
 /** 각 단계가 등장하는 간격(ms) — 1 → 2 → 3이 또렷이 순서대로 읽히도록 넉넉하게 둔다. */
 const STEP_STAGGER_MS = 650;
@@ -211,10 +201,34 @@ function StepItem({
  */
 export default function MarkingScreen() {
   const router = useRouter();
+  const { t } = useTranslation(['marking', 'common']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
   const uiSounds = useSettingsStore((s) => s.uiSounds);
   const beepVolume = useSettingsStore((s) => s.beepVolume);
+
+  /**
+   * 힌트는 "무엇을 찾는지"만 말한다 (2026-07-31 기획·디자인 리뷰 반영).
+   *
+   * 이전엔 1단계만 "클럽이 움직이기 시작하는 지점"(무엇), 2·3단계는 "느리게 재생하며
+   * 찾아보세요"(어떻게)로 초점이 섞여 있었다. 조작법은 힌트가 아니라 버튼 옆 상시
+   * 안내로 분리한다 — 단계마다 바뀌면 오히려 못 읽는다.
+   *
+   * t()를 써야 해서 컴포넌트 내부로 이동했다(원래는 모듈 최상단 상수였다).
+   */
+  const STEP_META: { key: keyof SwingMarks; title: string; hint: string }[] = [
+    {
+      key: 'start',
+      title: t('marking:stepMeta.start.title'),
+      hint: t('marking:stepMeta.start.hint'),
+    },
+    { key: 'top', title: t('marking:stepMeta.top.title'), hint: t('marking:stepMeta.top.hint') },
+    {
+      key: 'impact',
+      title: t('marking:stepMeta.impact.title'),
+      hint: t('marking:stepMeta.impact.hint'),
+    },
+  ];
 
   /**
    * 오디오 세션 설정 (2026-08-08 신설).
@@ -233,13 +247,25 @@ export default function MarkingScreen() {
    *
    * 화면 진입 즉시(사용자가 첫 지점을 찍기 훨씬 전에) `playsInSilentMode: true`로
    * 세션을 명시적으로 잡아둬서, 어떤 순서로 조작하든 확인음이 항상 들리게 한다.
+   *
+   * ⚠️ 2026-08-09 추가 — 위 수정 이후에도 "시작만 무음" 제보가 재현됐다. 원인은
+   * `setAudioModeAsync`가 세션 **카테고리**만 정하고 **활성화(activate)는 하지 않는다**는
+   * 점이었다(expo-audio 네이티브 구현 확인: iOS `setAudioMode()`는 `setActive`를 호출하지
+   * 않고, `setIsAudioActiveAsync`와 각 플레이어의 `play()`만 호출한다). 연습 화면을 먼저
+   * 거쳤다가 나온 세션은 `pause()` 뒤 자동 `deactivateSession()`으로 비활성 상태가
+   * 남아있을 수 있는데, 카테고리 재설정만으로는 이걸 되살리지 못한다. `play()`가 내부적으로
+   * 세션을 재활성화하긴 하지만, 그 활성화가 실패(throw)하면 `playCue`가 조용히 삼켜서
+   * 첫 재생만 소리 없이 사라진다. `setIsAudioActiveAsync(true)`로 화면 진입 시 세션을
+   * 명시적으로 활성화해 이 경로를 없앤다.
    */
   useEffect(() => {
     setAudioModeAsync({
       playsInSilentMode: true,
       shouldPlayInBackground: false,
       interruptionMode: 'duckOthers',
-    }).catch(() => {});
+    })
+      .then(() => setIsAudioActiveAsync(true))
+      .catch(() => {});
   }, []);
 
   /**
@@ -654,11 +680,19 @@ export default function MarkingScreen() {
       router.back();
       return;
     }
-    Alert.alert('마킹을 그만둘까요?', `지금까지 찍은 ${marked}개 지점이 사라져요.`, [
-      { text: '계속하기', style: 'cancel' },
-      { text: '그만두기', style: 'destructive', onPress: () => router.back() },
-    ]);
-  }, [marks, router]);
+    Alert.alert(
+      t('marking:discardAlert.title'),
+      t('marking:discardAlert.body', { count: marked }),
+      [
+        { text: t('marking:discardAlert.continue'), style: 'cancel' },
+        {
+          text: t('marking:discardAlert.discard'),
+          style: 'destructive',
+          onPress: () => router.back(),
+        },
+      ],
+    );
+  }, [marks, router, t]);
 
   /*
     포커스 기반 구독 (2026-08-08 버그 수정).
@@ -702,7 +736,7 @@ export default function MarkingScreen() {
     return (
       <SafeAreaView className="flex-1 bg-bg dark:bg-bgDark" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-s3 pt-s1 pb-s2">
-          <IconButton label="뒤로" onPress={() => router.back()}>
+          <IconButton label={t('common:back')} onPress={() => router.back()}>
             <IconChevronLeft color={c.ink} size={22} />
           </IconButton>
         </View>
@@ -714,7 +748,7 @@ export default function MarkingScreen() {
             accessibilityRole="header"
             className="font-kr-black text-h1 text-ink dark:text-inkDark leading-[40px]"
           >
-            스윙 영상을 골라주세요
+            {t('marking:pickVideoScreen.title')}
           </Text>
 
           {/*
@@ -727,9 +761,9 @@ export default function MarkingScreen() {
           */}
           <View className="gap-[10px]">
             {[
-              { n: '1', label: '영상 고르기' },
-              { n: '2', label: '세 지점 찍기 — 시작·탑·임팩트' },
-              { n: '3', label: '완성!' },
+              { n: '1', label: t('marking:pickVideoScreen.steps.1') },
+              { n: '2', label: t('marking:pickVideoScreen.steps.2') },
+              { n: '3', label: t('marking:pickVideoScreen.steps.3') },
             ].map((s, i) => (
               <StepItem
                 key={s.n}
@@ -746,7 +780,7 @@ export default function MarkingScreen() {
             {loading ? (
               <ActivityIndicator color={c.primary} />
             ) : (
-              <Button label="갤러리에서 영상 고르기" onPress={pickVideo} />
+              <Button label={t('marking:pickVideoScreen.pickButton')} onPress={pickVideo} />
             )}
           </View>
         </View>
@@ -760,15 +794,15 @@ export default function MarkingScreen() {
       {/* 헤더 — 진행 단계 + 되돌리기 상시 노출 */}
       <View className="flex-row items-center justify-between px-s3 pt-s1 pb-s2">
         <IconButton
-          label="마킹 그만두기"
-          hint="지금까지 찍은 지점이 사라집니다"
+          label={t('marking:header.leaveA11yLabel')}
+          hint={t('marking:header.leaveA11yHint')}
           onPress={confirmLeave}
         >
           <IconChevronLeft color={c.ink} size={22} />
         </IconButton>
         <Text
           {...numeralScaling}
-          accessibilityLabel={`3단계 중 ${step + 1}단계`}
+          accessibilityLabel={t('marking:header.stepIndicatorA11y', { step: step + 1 })}
           className="font-display-bold text-body text-ink dark:text-inkDark"
         >
           {step + 1} / 3
@@ -776,7 +810,11 @@ export default function MarkingScreen() {
         <Pressable
           onPress={undo}
           accessibilityRole="button"
-          accessibilityLabel={step === 0 ? '마킹 그만두기' : '직전 단계로 되돌리기'}
+          accessibilityLabel={
+            step === 0
+              ? t('marking:header.undoA11yLabelFirst')
+              : t('marking:header.undoA11yLabelOther')
+          }
           hitSlop={14}
           style={{ minHeight: MIN_TOUCH, minWidth: 48 }}
           className="items-end justify-center"
@@ -785,7 +823,7 @@ export default function MarkingScreen() {
             {...textScaling}
             className="font-kr-medium text-caption text-muted dark:text-mutedDark"
           >
-            되돌리기
+            {t('marking:header.undo')}
           </Text>
         </Pressable>
       </View>
@@ -809,7 +847,7 @@ export default function MarkingScreen() {
                 className={isCurrent ? 'font-kr-black text-body' : 'font-kr-bold text-caption'}
                 style={{ color: stepColor }}
               >
-                {['시작', '탑', '임팩트'][i]}
+                {t(`marking:stepper.${m.key}`)}
               </Text>
               <Text
                 {...numeralScaling}
@@ -820,7 +858,11 @@ export default function MarkingScreen() {
                 }
                 style={{ color: stepColor }}
               >
-                {value !== undefined ? '완료' : isCurrent ? '지금' : '—'}
+                {value !== undefined
+                  ? t('marking:stepper.done')
+                  : isCurrent
+                    ? t('marking:stepper.current')
+                    : '—'}
               </Text>
             </View>
           );
@@ -904,7 +946,7 @@ export default function MarkingScreen() {
           <Pressable
             onPress={() => setZoom(1)}
             accessibilityRole="button"
-            accessibilityLabel={`확대 ${zoom.toFixed(1)}배, 탭하면 원래 크기로`}
+            accessibilityLabel={t('marking:zoom.resetA11yLabel', { zoom: zoom.toFixed(1) })}
             hitSlop={12}
             style={{ minHeight: MIN_TOUCH }}
             className="flex-row items-center justify-center gap-[4px] bg-surface2 dark:bg-surface2Dark rounded-pill px-s1 active:opacity-70"
@@ -919,7 +961,7 @@ export default function MarkingScreen() {
               {...textScaling}
               className="font-kr-medium text-caption text-muted dark:text-mutedDark"
             >
-              해제
+              {t('marking:zoom.resetLabel')}
             </Text>
           </Pressable>
         )}
@@ -939,7 +981,7 @@ export default function MarkingScreen() {
         */}
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="재생 배속"
+          accessibilityLabel={t('marking:rate.groupA11yLabel')}
           className="flex-row items-center gap-[6px]"
         >
           {RATES.map((r, i) => (
@@ -947,7 +989,7 @@ export default function MarkingScreen() {
               key={r}
               onPress={() => setRateIndex(i)}
               accessibilityRole="radio"
-              accessibilityLabel={`${r}배속`}
+              accessibilityLabel={t('marking:rate.optionA11yLabel', { rate: r })}
               accessibilityState={{ checked: i === rateIndex, selected: i === rateIndex }}
               style={{ minHeight: MIN_TOUCH, minWidth: 44 }}
               className={`px-s1 rounded-card items-center justify-center ${
@@ -979,10 +1021,10 @@ export default function MarkingScreen() {
             measureTrack();
           }}
           accessibilityRole="adjustable"
-          accessibilityLabel="영상 타임라인"
-          accessibilityHint="좌우로 밀어 대략 맞춘 뒤 아래 프레임 버튼으로 조정하세요"
+          accessibilityLabel={t('marking:timeline.a11yLabel')}
+          accessibilityHint={t('marking:timeline.a11yHint')}
           accessibilityValue={{
-            text: `${currentSec.toFixed(2)}초, ${frameNo}번째 프레임`,
+            text: t('marking:timeline.a11yValue', { sec: currentSec.toFixed(2), frame: frameNo }),
           }}
           className="h-[48px] justify-center"
         >
@@ -1026,7 +1068,7 @@ export default function MarkingScreen() {
           <Pressable
             onPress={() => stepFrame(-1, 5)}
             accessibilityRole="button"
-            accessibilityLabel="다섯 프레임 뒤로"
+            accessibilityLabel={t('marking:frameButtons.back5A11yLabel')}
             style={{ minHeight: MIN_TOUCH }}
             className="px-s1 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
@@ -1041,7 +1083,7 @@ export default function MarkingScreen() {
           <Pressable
             onPress={() => stepFrame(-1)}
             accessibilityRole="button"
-            accessibilityLabel="한 프레임 뒤로"
+            accessibilityLabel={t('marking:frameButtons.back1A11yLabel')}
             style={{ minHeight: MIN_TOUCH }}
             className="px-s2 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
@@ -1056,19 +1098,23 @@ export default function MarkingScreen() {
           <Pressable
             onPress={togglePlay}
             accessibilityRole="button"
-            accessibilityLabel={isPlaying ? '영상 일시정지' : '영상 재생'}
+            accessibilityLabel={
+              isPlaying
+                ? t('marking:frameButtons.pauseA11yLabel')
+                : t('marking:frameButtons.playA11yLabel')
+            }
             style={{ minHeight: MIN_TOUCH }}
             className="px-s2 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
             <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
-              {isPlaying ? '일시정지' : '재생'}
+              {isPlaying ? t('marking:frameButtons.pause') : t('marking:frameButtons.play')}
             </Text>
           </Pressable>
 
           <Pressable
             onPress={() => stepFrame(1)}
             accessibilityRole="button"
-            accessibilityLabel="한 프레임 앞으로"
+            accessibilityLabel={t('marking:frameButtons.forward1A11yLabel')}
             style={{ minHeight: MIN_TOUCH }}
             className="px-s2 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
@@ -1083,7 +1129,7 @@ export default function MarkingScreen() {
           <Pressable
             onPress={() => stepFrame(1, 5)}
             accessibilityRole="button"
-            accessibilityLabel="다섯 프레임 앞으로"
+            accessibilityLabel={t('marking:frameButtons.forward5A11yLabel')}
             style={{ minHeight: MIN_TOUCH }}
             className="px-s1 rounded-card justify-center bg-surface2 dark:bg-surface2Dark active:opacity-70"
           >
@@ -1106,12 +1152,16 @@ export default function MarkingScreen() {
           {...textScaling}
           className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pb-[6px]"
         >
-          밀어서 맞추고, 버튼으로 미세 조정하세요
+          {t('marking:hintCaption')}
         </Text>
 
         <Button
           label={
-            step === 2 ? '여기가 임팩트예요' : step === 1 ? '여기가 탑이에요' : '여기가 시작이에요'
+            step === 2
+              ? t('marking:markButton.impact')
+              : step === 1
+                ? t('marking:markButton.top')
+                : t('marking:markButton.start')
           }
           onPress={markHere}
           className="mb-s2"

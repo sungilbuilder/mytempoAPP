@@ -9,6 +9,7 @@
  * 클라우드 동기화는 여전히 V2 — 여기 있는 건 전부 기기 로컬 저장이다.
  */
 import { create } from 'zustand';
+import type { TFunction } from 'i18next';
 import { persisted } from './persist';
 
 /**
@@ -207,16 +208,20 @@ export function visibleSessions(
   return sessions.filter((s) => keys.has(s.date));
 }
 
-/** "어제", "7월 27일" 같은 사람이 읽는 날짜 */
-export function humanDate(dateKey: string): string {
-  if (dateKey === daysAgoKey(0)) return '오늘';
-  if (dateKey === daysAgoKey(1)) return '어제';
+/**
+ * "어제", "7월 27일" 같은 사람이 읽는 날짜.
+ * 문자열은 `i18n/locales/{ko,en}/common.json`에 있다 — 호출부가 `t()`를 넘긴다
+ * (2026-08-08 i18n 리팩터).
+ */
+export function humanDate(dateKey: string, t: TFunction): string {
+  if (dateKey === daysAgoKey(0)) return t('common:today');
+  if (dateKey === daysAgoKey(1)) return t('common:yesterday');
   const [, m, d] = dateKey.split('-');
-  return `${Number(m)}월 ${Number(d)}일`;
+  return t('common:monthDay', { month: Number(m), day: Number(d) });
 }
 
 /** 1234초 → "20분" / 45초 → "45초" */
-export function humanDuration(sec: number): string {
-  if (sec < 60) return `${Math.round(sec)}초`;
-  return `${Math.round(sec / 60)}분`;
+export function humanDuration(sec: number, t: TFunction): string {
+  if (sec < 60) return t('domain:units.seconds', { value: Math.round(sec) });
+  return t('domain:units.minutes', { value: Math.round(sec / 60) });
 }

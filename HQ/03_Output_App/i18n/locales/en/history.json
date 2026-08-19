@@ -1,0 +1,20 @@
+{
+  "title": "History",
+  "weekSummary": "{{days}} days this week · {{swings}} swings · {{minutes}} min",
+  "avgRatioA11y": "Average tempo {{ratio}}",
+  "avgRatioLabel": "Average tempo",
+  "noRatio": "None yet",
+  "ratioDeltaLabel": "{{delta}} vs. last week",
+  "streakA11y": "{{days}}-day streak",
+  "streakLabel": "Streak",
+  "streakDays": "{{days}}d",
+  "streakOngoing": "Going strong",
+  "streakStart": "Start today?",
+  "emptyTitle": "No practice sessions yet",
+  "emptyCaption": "One session is all it takes to show up here",
+  "sessionA11y": "{{date}}, {{swings}} swings, {{duration}}, {{source}}, ratio {{ratio}}",
+  "sessionCaptionWithSwing": "{{swings}} swings · {{duration}} · {{source}}",
+  "sessionCaption": "{{duration}} · {{source}}",
+  "hiddenNotice": "Showing the last {{days}} days",
+  "hiddenCaption": "Your other {{count}} sessions are still saved. Nothing gets deleted."
+}

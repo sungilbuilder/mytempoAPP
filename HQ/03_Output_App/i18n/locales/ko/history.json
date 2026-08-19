@@ -1,0 +1,20 @@
+{
+  "title": "기록",
+  "weekSummary": "이번 주 {{days}}일 · {{swings}}스윙 · {{minutes}}분",
+  "avgRatioA11y": "평균 템포 {{ratio}}",
+  "avgRatioLabel": "평균 템포",
+  "noRatio": "아직 없음",
+  "ratioDeltaLabel": "지난주 대비 {{delta}}",
+  "streakA11y": "연속 {{days}}일",
+  "streakLabel": "연속",
+  "streakDays": "{{days}}일",
+  "streakOngoing": "이어가는 중",
+  "streakStart": "오늘 시작해볼까요",
+  "emptyTitle": "아직 연습 기록이 없어요",
+  "emptyCaption": "한 번만 연습해도 여기에 남습니다",
+  "sessionA11y": "{{date}}, {{swings}}스윙, {{duration}}, {{source}}, 비율 {{ratio}}",
+  "sessionCaptionWithSwing": "{{swings}}스윙 · {{duration}} · {{source}}",
+  "sessionCaption": "{{duration}} · {{source}}",
+  "hiddenNotice": "최근 {{days}}일까지 보여드리고 있어요",
+  "hiddenCaption": "이전 기록 {{count}}건도 그대로 남아 있어요. 지워지지 않습니다."
+}

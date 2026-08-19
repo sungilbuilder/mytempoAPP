@@ -1,0 +1,69 @@
+{
+  "pickVideoScreen": {
+    "title": "스윙 영상을 골라주세요",
+    "steps": {
+      "1": "영상 고르기",
+      "2": "세 지점 찍기 — 시작·탑·임팩트",
+      "3": "완성!"
+    },
+    "pickButton": "갤러리에서 영상 고르기"
+  },
+  "header": {
+    "leaveA11yLabel": "마킹 그만두기",
+    "leaveA11yHint": "지금까지 찍은 지점이 사라집니다",
+    "stepIndicatorA11y": "3단계 중 {{step}}단계",
+    "undoA11yLabelFirst": "마킹 그만두기",
+    "undoA11yLabelOther": "직전 단계로 되돌리기",
+    "undo": "되돌리기"
+  },
+  "stepper": {
+    "start": "시작",
+    "top": "탑",
+    "impact": "임팩트",
+    "done": "완료",
+    "current": "지금"
+  },
+  "stepMeta": {
+    "start": {
+      "title": "백스윙을 시작하는 순간",
+      "hint": "클럽이 처음 움직이기 시작하는 곳이에요"
+    },
+    "top": { "title": "클럽이 가장 높은 순간", "hint": "올라간 클럽이 방향을 바꾸는 곳이에요" },
+    "impact": { "title": "공에 맞는 순간", "hint": "클럽 헤드가 공에 닿는 곳이에요" }
+  },
+  "zoom": {
+    "resetA11yLabel": "확대 {{zoom}}배, 탭하면 원래 크기로",
+    "resetLabel": "해제"
+  },
+  "rate": {
+    "groupA11yLabel": "재생 배속",
+    "optionA11yLabel": "{{rate}}배속"
+  },
+  "timeline": {
+    "a11yLabel": "영상 타임라인",
+    "a11yHint": "좌우로 밀어 대략 맞춘 뒤 아래 프레임 버튼으로 조정하세요",
+    "a11yValue": "{{sec}}초, {{frame}}번째 프레임"
+  },
+  "frameButtons": {
+    "back5A11yLabel": "다섯 프레임 뒤로",
+    "back1A11yLabel": "한 프레임 뒤로",
+    "forward1A11yLabel": "한 프레임 앞으로",
+    "forward5A11yLabel": "다섯 프레임 앞으로",
+    "play": "재생",
+    "pause": "일시정지",
+    "playA11yLabel": "영상 재생",
+    "pauseA11yLabel": "영상 일시정지"
+  },
+  "hintCaption": "밀어서 맞추고, 버튼으로 미세 조정하세요",
+  "markButton": {
+    "start": "여기가 백스윙 시작점이에요",
+    "top": "여기가 탑이에요",
+    "impact": "여기가 임팩트예요"
+  },
+  "discardAlert": {
+    "title": "마킹을 그만둘까요?",
+    "body": "지금까지 찍은 {{count}}개 지점이 사라져요.",
+    "continue": "계속하기",
+    "discard": "그만두기"
+  }
+}

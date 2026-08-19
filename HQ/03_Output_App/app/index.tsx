@@ -1,4 +1,5 @@
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRenderTrace } from '../features/debug/useRenderTrace';
 import { Redirect } from 'expo-router';
 import { useOnboardingStore } from '../store/useOnboardingStore';
@@ -12,13 +13,14 @@ import { useHydrated } from '../store/persist';
  */
 export default function Index() {
   useRenderTrace('Index(진입가드)');
+  const { t } = useTranslation('common');
   const hydrated = useHydrated(useOnboardingStore);
   const hasSeenOnboarding = useOnboardingStore((s) => s.hasSeenOnboarding);
 
   if (!hydrated) {
     return (
       <View className="flex-1 items-center justify-center bg-bg dark:bg-bgDark">
-        <Text className="text-body text-muted dark:text-mutedDark">불러오는 중…</Text>
+        <Text className="text-body text-muted dark:text-mutedDark">{t('loading')}</Text>
       </View>
     );
   }

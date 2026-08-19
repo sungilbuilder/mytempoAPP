@@ -1,0 +1,19 @@
+{
+  "title": "템포 고르기",
+  "subtitle": "먼저 고르고, 나중에 내 스윙으로 바꿀 수 있어요",
+  "radioGroupA11y": "기준 리듬",
+  "categoryGroupA11y": "클럽 카테고리",
+  "category": {
+    "all": "전체",
+    "driver_iron": "드라이버·아이언",
+    "approach": "어프로치",
+    "putting": "퍼팅"
+  },
+  "premiumSuffix": ", 프리미엄 전용",
+  "lockedHint": "선택할 수 없습니다",
+  "freeNote": "드라이버·아이언 템포는 계속 무료로 쓸 수 있어요. 어프로치·퍼팅은 Premium에서 열립니다.",
+  "startButton": {
+    "label": "연습 시작",
+    "hint": "고른 리듬으로 연습 화면을 엽니다"
+  }
+}

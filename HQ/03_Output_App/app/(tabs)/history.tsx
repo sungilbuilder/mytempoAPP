@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { palette } from '../../constants/theme';
@@ -26,6 +27,7 @@ import { formatRatio } from '../../features/tempo/character';
  * 2026-07-31 디자인 시안 채택으로 추가됐다(창업자 승인). 저장은 전부 기기 로컬.
  */
 export default function HistoryScreen() {
+  const { t } = useTranslation(['history', 'common']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
   const sessions = useHistoryStore((s) => s.sessions);
@@ -54,21 +56,27 @@ export default function HistoryScreen() {
           accessibilityRole="header"
           className="font-kr-bold text-h1 text-ink dark:text-inkDark"
         >
-          기록
+          {t('history:title')}
         </Text>
         {/* 2026-08-06 (AOS 리뷰 P-6): NSM 단위인 스윙 수를 함께 보여준다 */}
         <Caption className="pt-[6px]">
-          이번 주 {summary.weekDays}일 · {summary.weekSwings}스윙 · {summary.weekMinutes}분
+          {t('history:weekSummary', {
+            days: summary.weekDays,
+            swings: summary.weekSwings,
+            minutes: summary.weekMinutes,
+          })}
         </Caption>
 
         {/* 요약 2칸 */}
         <View className="flex-row gap-[12px] pt-s3">
           <View
             accessible
-            accessibilityLabel={`평균 템포 ${summary.avgRatio > 0 ? formatRatio(summary.avgRatio) : '아직 없음'}`}
+            accessibilityLabel={t('history:avgRatioA11y', {
+              ratio: summary.avgRatio > 0 ? formatRatio(summary.avgRatio) : t('history:noRatio'),
+            })}
             className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card p-s2"
           >
-            <Caption>평균 템포</Caption>
+            <Caption>{t('history:avgRatioLabel')}</Caption>
             <Text
               {...numeralScaling}
               className="font-display-bold text-[28px] text-ink dark:text-inkDark pt-[4px]"
@@ -83,8 +91,9 @@ export default function HistoryScreen() {
                   className="font-kr-medium text-caption"
                   style={{ color: c.primary }}
                 >
-                  지난주 대비 {summary.ratioDelta >= 0 ? '+' : ''}
-                  {(Math.round(summary.ratioDelta * 10) / 10).toFixed(1)}
+                  {t('history:ratioDeltaLabel', {
+                    delta: `${summary.ratioDelta >= 0 ? '+' : ''}${(Math.round(summary.ratioDelta * 10) / 10).toFixed(1)}`,
+                  })}
                 </Text>
               </View>
             )}
@@ -92,18 +101,18 @@ export default function HistoryScreen() {
 
           <View
             accessible
-            accessibilityLabel={`연속 ${summary.streak}일`}
+            accessibilityLabel={t('history:streakA11y', { days: summary.streak })}
             className="flex-1 bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-card p-s2"
           >
-            <Caption>연속</Caption>
+            <Caption>{t('history:streakLabel')}</Caption>
             <Text
               {...numeralScaling}
               className="font-display-bold text-[28px] text-ink dark:text-inkDark pt-[4px]"
             >
-              {summary.streak}일
+              {t('history:streakDays', { days: summary.streak })}
             </Text>
             <Caption className="pt-[2px]">
-              {summary.streak > 0 ? '이어가는 중' : '오늘 시작해볼까요'}
+              {summary.streak > 0 ? t('history:streakOngoing') : t('history:streakStart')}
             </Caption>
           </View>
         </View>
@@ -112,9 +121,9 @@ export default function HistoryScreen() {
         {sessions.length === 0 ? (
           <View className="items-center bg-surface2 dark:bg-surface2Dark rounded-lg px-s3 py-s6 mt-s3">
             <Text {...koreanWrap} className="font-kr-bold text-body text-ink dark:text-inkDark">
-              아직 연습 기록이 없어요
+              {t('history:emptyTitle')}
             </Text>
-            <Caption className="pt-[6px] text-center">한 번만 연습해도 여기에 남습니다</Caption>
+            <Caption className="pt-[6px] text-center">{t('history:emptyCaption')}</Caption>
           </View>
         ) : (
           <View className="pt-s3">
@@ -122,7 +131,13 @@ export default function HistoryScreen() {
               <View
                 key={s.id}
                 accessible
-                accessibilityLabel={`${humanDate(s.date)}, ${s.swingCount ?? 0}스윙, ${humanDuration(s.durationSec)}, ${s.sourceLabel}, 비율 ${formatRatio(s.ratio)}`}
+                accessibilityLabel={t('history:sessionA11y', {
+                  date: humanDate(s.date, t),
+                  swings: s.swingCount ?? 0,
+                  duration: humanDuration(s.durationSec, t),
+                  source: s.sourceLabel,
+                  ratio: formatRatio(s.ratio),
+                })}
                 className="flex-row items-center justify-between py-s2 border-b border-line dark:border-lineDark"
               >
                 <View className="flex-1 pr-s2">
@@ -130,7 +145,7 @@ export default function HistoryScreen() {
                     {...textScaling}
                     className="font-kr-bold text-body text-ink dark:text-inkDark"
                   >
-                    {humanDate(s.date)}
+                    {humanDate(s.date, t)}
                   </Text>
                   {/*
                     2026-08-06 (AOS 리뷰 P-6): 스윙 횟수를 앞에 둔다.
@@ -138,8 +153,16 @@ export default function HistoryScreen() {
                     화면은 계속 분만 보여주고 있었다. 시간은 보조로 남긴다.
                   */}
                   <Caption className="pt-[2px]">
-                    {s.swingCount > 0 ? `${s.swingCount}스윙 · ` : ''}
-                    {humanDuration(s.durationSec)} · {s.sourceLabel}
+                    {s.swingCount > 0
+                      ? t('history:sessionCaptionWithSwing', {
+                          swings: s.swingCount,
+                          duration: humanDuration(s.durationSec, t),
+                          source: s.sourceLabel,
+                        })
+                      : t('history:sessionCaption', {
+                          duration: humanDuration(s.durationSec, t),
+                          source: s.sourceLabel,
+                        })}
                   </Caption>
                 </View>
                 <Text
@@ -165,10 +188,10 @@ export default function HistoryScreen() {
                   {...textScaling}
                   className="font-kr-medium text-caption text-ink dark:text-inkDark"
                 >
-                  {`최근 ${FREE_HISTORY_DAYS}일까지 보여드리고 있어요`}
+                  {t('history:hiddenNotice', { days: FREE_HISTORY_DAYS })}
                 </Text>
                 <Caption className="pt-[4px]">
-                  {`이전 기록 ${hiddenCount}건도 그대로 남아 있어요. 지워지지 않습니다.`}
+                  {t('history:hiddenCaption', { count: hiddenCount })}
                 </Caption>
               </View>
             )}

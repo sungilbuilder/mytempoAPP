@@ -1,0 +1,68 @@
+{
+  "title": "Settings",
+  "backA11y": "Back",
+  "screenGroup": "Display",
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto"
+  },
+  "languageGroup": "Language",
+  "language": {
+    "label": "Language",
+    "auto": "Auto",
+    "ko": "한국어",
+    "en": "English"
+  },
+  "soundGroup": "Sound & Vibration",
+  "volume": { "label": "Volume" },
+  "haptic": {
+    "label": "Vibrate on impact",
+    "hint": "Your phone buzzes briefly with the impact sound"
+  },
+  "uiSounds": {
+    "label": "Confirmation sound",
+    "hint": "A short sound when marking or logging finishes"
+  },
+  "keepAwake": {
+    "label": "Keep screen on",
+    "hint": "The screen won't turn off automatically during practice"
+  },
+  "soundPackGroup": {
+    "title": "Practice sounds — tap to preview",
+    "premiumSuffix": ", premium only",
+    "previewOnlyHint": "Preview only",
+    "practiceWithThisHint": "Practice with this sound",
+    "listenLabel": "Listen",
+    "freeNote": "The default sound stays free forever. The rest can be previewed only."
+  },
+  "shotIntervalGroup": {
+    "title": "Shot interval — from one swing to the next",
+    "note": "Except for Continuous, a 5-second count-in plays right before each shot. That sound is your \"address now\" cue.",
+    "custom": {
+      "label": "Custom",
+      "hint": "Enter a value between {{min}} and {{max}} seconds",
+      "placeholder": "e.g. 20",
+      "unit": "sec",
+      "a11yLabel": "Custom shot interval, in seconds"
+    }
+  },
+  "planGroup": {
+    "title": "Plan",
+    "trialActive": "Trial",
+    "premium": "Premium",
+    "free": "Free",
+    "trialDaysLeft": "Switches to Free in {{count}} days. Logging and practicing swings stay the same.",
+    "trialEndsToday": "You can use every feature through today",
+    "premiumHint": "You can use every sound and shot interval",
+    "freeHint": "Default sound · default shot interval · last 7 days of history"
+  },
+  "aboutGroup": {
+    "title": "About",
+    "replayOnboardingLabel": "Replay onboarding",
+    "replayOnboardingHint": "The intro screens shown on first launch",
+    "replayOnboardingA11yHint": "Watch the intro screens shown on first launch again"
+  },
+  "fontLicense": "Noto Sans KR, Space Grotesk · SIL Open Font License 1.1"
+}

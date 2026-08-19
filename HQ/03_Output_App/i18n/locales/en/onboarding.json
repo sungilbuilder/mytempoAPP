@@ -1,0 +1,38 @@
+{
+  "slides": {
+    "1": {
+      "title": "Not a pro's tempo —\nthe tempo of your best swing",
+      "body": "Everyone has their own rhythm.\nmytempo finds yours."
+    },
+    "2": {
+      "title": "Log the one swing\nof your life",
+      "body": "One video of your swing\nis all it takes to save your tempo."
+    },
+    "3": {
+      "title": "Practice that rhythm\nback with sound",
+      "body": "Swing along to the sound\nuntil it's second nature."
+    },
+    "4": {
+      "title": "How should we\nlight the screen?",
+      "body": "Dark is easier at night or indoors."
+    }
+  },
+  "markers": {
+    "start": "Backswing start",
+    "top": "Top",
+    "impact": "Impact"
+  },
+  "theme": {
+    "light": { "label": "Light", "hint": "Day · outdoor range" },
+    "dark": { "label": "Dark", "hint": "Night · indoor screen" },
+    "optionA11y": "{{label}} screen, {{hint}}"
+  },
+  "shotInterval": {
+    "title": "Shot interval — rest time between swings"
+  },
+  "skip": "Skip",
+  "skipA11y": "Skip intro",
+  "start": "Get started",
+  "nextA11y": "Next intro",
+  "dotA11y": "Go to intro {{index}} of {{total}}"
+}

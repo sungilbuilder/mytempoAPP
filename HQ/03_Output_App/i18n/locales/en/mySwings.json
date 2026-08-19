@@ -1,0 +1,37 @@
+{
+  "title": "My swings",
+  "filters": {
+    "all": "All",
+    "favorite": "Favorites"
+  },
+  "empty": {
+    "title": "No swings logged yet",
+    "body": "Just mark backswing start, top, and impact\non a video — that's it"
+  },
+  "registerButton": "Log a swing",
+  "noFilterMatch": "No swings match this filter",
+  "swingCardA11y": "{{name}}, ratio {{ratio}}, {{character}}",
+  "swingCardHint": "Starts practice with this rhythm",
+  "activeBadgeA11y": "Currently practicing this tempo",
+  "favorite": {
+    "add": "Add {{name}} to favorites",
+    "remove": "Remove {{name}} from favorites"
+  },
+  "loggedOn": "Logged {{date}}",
+  "markAsClub": "Mark {{name}} as {{club}}",
+  "remark": {
+    "label": "Re-mark {{name}}",
+    "hint": "Re-marks the three points on the original video",
+    "short": "Re-mark"
+  },
+  "deleteButton": {
+    "label": "Delete {{name}}",
+    "hint": "This can't be undone"
+  },
+  "deleteConfirm": {
+    "title": "Delete this swing?",
+    "body": "\"{{name}}\" will be gone for good. This can't be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  }
+}

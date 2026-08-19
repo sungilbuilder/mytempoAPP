@@ -1,0 +1,15 @@
+{
+  "appName": "mytempo",
+  "back": "Back",
+  "close": "Close",
+  "confirm": "OK",
+  "cancel": "Cancel",
+  "retry": "Try again",
+  "loading": "Loading…",
+  "premiumBadge": "Premium",
+  "percent": "{{value}} percent",
+  "unknownError": "Unknown error",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "monthDay": "{{month}}/{{day}}"
+}

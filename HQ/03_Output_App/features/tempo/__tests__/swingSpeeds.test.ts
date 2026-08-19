@@ -4,6 +4,7 @@ import {
   getSwingSpeed,
   recommendSwingSpeed,
   swingBreakdown,
+  swingSecLabel,
   type SwingSpeedId,
 } from '../swingSpeeds';
 
@@ -20,9 +21,9 @@ describe('SWING_SPEEDS 목록', () => {
     }
   });
 
-  it('label 은 소수 둘째자리 "초" 표기', () => {
-    expect(getSwingSpeed('s120').label).toBe('1.20초');
-    expect(getSwingSpeed('s093').label).toBe('0.93초');
+  it('swingSecLabel 은 소수 둘째자리로 표기한다', () => {
+    expect(swingSecLabel(getSwingSpeed('s120').swingSec)).toBe('1.20');
+    expect(swingSecLabel(getSwingSpeed('s093').swingSec)).toBe('0.93');
   });
 
   it('기본값은 목록 안에 있다', () => {

@@ -1,0 +1,59 @@
+{
+  "title": "설정",
+  "backA11y": "뒤로",
+  "screenGroup": "화면",
+  "theme": {
+    "label": "테마",
+    "light": "라이트",
+    "dark": "다크",
+    "auto": "자동"
+  },
+  "languageGroup": "언어",
+  "language": {
+    "label": "언어",
+    "auto": "자동",
+    "ko": "한국어",
+    "en": "English"
+  },
+  "soundGroup": "소리 · 진동",
+  "volume": { "label": "소리 크기" },
+  "haptic": { "label": "임팩트에 진동", "hint": "임팩트 소리에 맞춰 폰이 짧게 울립니다" },
+  "uiSounds": { "label": "확인음", "hint": "마킹·등록이 끝났을 때 짧게 울립니다" },
+  "keepAwake": { "label": "화면 항상 켜기", "hint": "연습 중 화면이 자동으로 꺼지지 않습니다" },
+  "soundPackGroup": {
+    "title": "연습 소리 — 탭하면 들어볼 수 있어요",
+    "premiumSuffix": ", 프리미엄 전용",
+    "previewOnlyHint": "미리듣기만 됩니다",
+    "practiceWithThisHint": "이 소리로 연습합니다",
+    "listenLabel": "듣기",
+    "freeNote": "기본 소리는 계속 무료로 쓸 수 있어요. 나머지는 들어볼 수만 있습니다."
+  },
+  "shotIntervalGroup": {
+    "title": "샷 간격 — 한 스윙에서 다음 스윙까지",
+    "note": "연속을 뺀 나머지는 매 스윙 직전에 5초 카운트인이 울려요. 그 소리가 \"지금 어드레스\" 신호가 됩니다.",
+    "custom": {
+      "label": "직접 입력",
+      "hint": "{{min}}~{{max}}초 사이로 원하는 간격을 입력하세요",
+      "placeholder": "예: 20",
+      "unit": "초",
+      "a11yLabel": "샷 간격 직접 입력, 초 단위"
+    }
+  },
+  "planGroup": {
+    "title": "플랜",
+    "trialActive": "체험 중",
+    "premium": "프리미엄",
+    "free": "무료",
+    "trialDaysLeft": "{{count}}일 뒤 무료로 바뀌어요. 스윙 등록과 연습은 그대로예요.",
+    "trialEndsToday": "오늘까지 모든 기능을 쓸 수 있어요",
+    "premiumHint": "모든 소리와 샷 간격을 쓸 수 있어요",
+    "freeHint": "기본 소리 · 기본 샷 간격 · 최근 7일 기록"
+  },
+  "aboutGroup": {
+    "title": "앱 정보",
+    "replayOnboardingLabel": "온보딩 다시 보기",
+    "replayOnboardingHint": "처음 실행했을 때 나오는 소개 화면",
+    "replayOnboardingA11yHint": "처음 실행했을 때 나오는 소개 화면을 다시 봅니다"
+  },
+  "fontLicense": "Noto Sans KR, Space Grotesk · SIL Open Font License 1.1"
+}

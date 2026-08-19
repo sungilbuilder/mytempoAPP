@@ -1,0 +1,37 @@
+{
+  "title": "내 스윙",
+  "filters": {
+    "all": "전체",
+    "favorite": "즐겨찾기"
+  },
+  "empty": {
+    "title": "아직 등록한 스윙이 없어요",
+    "body": "영상에서 백스윙 시작·탑·임팩트\n세 지점만 찍으면 됩니다"
+  },
+  "registerButton": "내 스윙 등록",
+  "noFilterMatch": "이 조건에 맞는 스윙이 없어요",
+  "swingCardA11y": "{{name}}, 비율 {{ratio}}, {{character}}",
+  "swingCardHint": "이 리듬으로 연습을 시작합니다",
+  "activeBadgeA11y": "현재 연습 중인 템포",
+  "favorite": {
+    "add": "{{name}} 즐겨찾기 추가",
+    "remove": "{{name}} 즐겨찾기 해제"
+  },
+  "loggedOn": "{{date}} 등록",
+  "markAsClub": "{{name}}을(를) {{club}}로 표시",
+  "remark": {
+    "label": "{{name}} 다시 마킹",
+    "hint": "원본 영상에서 세 지점을 다시 찍습니다",
+    "short": "다시 마킹"
+  },
+  "deleteButton": {
+    "label": "{{name}} 삭제",
+    "hint": "되돌릴 수 없습니다"
+  },
+  "deleteConfirm": {
+    "title": "이 스윙을 지울까요?",
+    "body": "\"{{name}}\" 기록이 사라져요. 되돌릴 수 없습니다.",
+    "cancel": "취소",
+    "confirm": "삭제"
+  }
+}
