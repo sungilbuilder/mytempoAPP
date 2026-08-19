@@ -74,9 +74,3 @@ HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/*.html
 HQ/📑_02_Workspace/product_design/design-proposal-2026-07-31/support.js
 HQ/📑_02_Workspace/product_design/mytempo-implemented-preview.html
 HQ/📑_02_Workspace/product_design/mytempo-ui-wireframes.html
-
-# 중간 작업본 데모 스냅샷 — 그날그날 작업 중 저장된 날짜 찍힌 사본으로,
-# 이후 정식본(HQ/04_Demo/마이템포-체험판.html·마이템포-체험판-공유용.html)으로
-# 대체됐다(diff로 확인: 임시 문구 "오늘(8/8) 추가된 기능이에요" 포함, 정식본엔 없음).
-# 정식본만 배포물로 추적한다 (2026-08-20)
-HQ/04_Demo/마이템포-체험판-2026-08-08.html
