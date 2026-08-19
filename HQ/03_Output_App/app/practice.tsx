@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
@@ -34,6 +35,7 @@ import {
   getSwingSpeed,
   recommendSwingSpeed,
   swingBreakdown,
+  swingSecLabel,
   type SwingSpeedId,
 } from '../features/tempo/swingSpeeds';
 import { useSwingStore } from '../store/useSwingStore';
@@ -59,6 +61,7 @@ import {
 export default function PracticeScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { t } = useTranslation(['practice', 'domain']);
   const { colorScheme } = useColorScheme();
   const c = palette(colorScheme);
 
@@ -100,6 +103,20 @@ export default function PracticeScreen() {
    */
   const onSwingSignalRef = useRef<(lateSec?: number) => void>(() => {});
   const startPlaybackRef = useRef<(m: Metronome) => Promise<void>>(async () => {});
+  /**
+   * 지금 로드된 오디오의 실제 타이밍 (2026-08-19, 실측 스윙 동적 합성 신설).
+   *
+   * ⚠️ `tempo.audioFileFor()`가 비동기라 로드가 끝나야 값을 안다. 내 스윙은
+   * 이 값이 4단계 enum으로 계산될 수 없는 임의값이라(`useActiveTempo.ts` 참고),
+   * 링 애니메이션·임팩트 진동·샷 사이클 대기시간이 전부 이 값을 진실의
+   * 출처로 써야 한다 — `swingSpeed`(enum)에서 역산하면 프리셋 값이 새어든다.
+   * ref는 콜백(onSwingSignal/startPlayback)이, state는 렌더(TempoRing)가 읽는다.
+   */
+  const resolvedTimingRef = useRef<{ cycleSec: number; swingSec: number } | null>(null);
+  const [resolvedTiming, setResolvedTiming] = useState<{
+    cycleSec: number;
+    swingSec: number;
+  } | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [swingCount, setSwingCount] = useState(0);
   const { message: toastMessage, show: showToast } = useToast();
@@ -150,7 +167,17 @@ export default function PracticeScreen() {
         // 볼륨은 ref로 읽는다. 상태를 그대로 쓰면 슬라이더를 만질 때마다 이
         // effect가 다시 돌아 오디오가 통째로 재로드된다. 재생 중 볼륨 반영은
         // 아래 전용 effect(setVolume)가 재로드 없이 처리한다.
-        await m.load(tempo.audioFileFor(soundPack, swingSpeedRef.current), volumeRef.current);
+        /*
+          2026-08-19: `audioFileFor`가 비동기가 됐다 — 내 스윙은 캐시에 없으면
+          온디바이스에서 그 자리에서 합성해야 하기 때문이다(`useActiveTempo.ts`
+          참고). 반환된 cycleSec/swingSec을 ref+state에 함께 저장한다 — 이 값이
+          링 애니메이션·임팩트 진동·샷 사이클 대기시간의 진실의 출처가 된다.
+        */
+        const resolved = await tempo.audioFileFor(soundPack, swingSpeedRef.current);
+        if (cancelled) return;
+        resolvedTimingRef.current = { cycleSec: resolved.cycleSec, swingSec: resolved.swingSec };
+        setResolvedTiming(resolvedTimingRef.current);
+        await m.load(resolved.source, volumeRef.current);
         if (cancelled) return;
         // 2026-08-07 (T-06 실기기 검증): 카운트인도 여기서 미리 로드해 둔다 —
         // 샷마다 새로 만들면 레이턴시·정지 경합이 생긴다(metronome.ts 주석 참고).
@@ -185,9 +212,14 @@ export default function PracticeScreen() {
     // eslint 는 `tempo` 객체 전체를 의존성에 넣으라고 하지만 넣으면 안 된다.
     // `useActiveTempo()`가 매 렌더 새 객체 리터럴을 돌려주므로, 의존성에 넣는
     // 순간 **렌더마다 오디오가 언로드→재로드**된다. 실제로 오디오 재로드가
-    // 필요한 조건은 어느 파일을 읽느냐뿐이고, 그건 `presetIdForAudio`가 대표한다.
+    // 필요한 조건은 어느 파일을 읽느냐뿐이고, 그건 `audioKey`가 대표한다.
+    //
+    // ⚠️ 2026-08-19: `presetIdForAudio` → `audioKey`로 바꿨다. 내 스윙 둘이
+    // "가장 가까운 프리셋" 구간(presetIdForAudio)은 같아도 실측값이 다르면
+    // 서로 다른 오디오라, presetIdForAudio만 보면 스윙을 바꿔도 재로드가
+    // 안 되는 사고가 난다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempo.presetIdForAudio, soundPack, swingSpeed]);
+  }, [tempo.audioKey, soundPack, swingSpeed]);
 
   // 볼륨은 재로드 없이 반영
   useEffect(() => {
@@ -266,8 +298,15 @@ export default function PracticeScreen() {
     /*
       2026-08-07: 배속으로 나누던 계산이 사라졌다. 이제 파일 자체가 그 속도로
       렌더링돼 있으므로 임팩트 시각은 속도에서 바로 나온다.
+
+      2026-08-19: 내 스윙은 `swingSpeedRef`(4단계 enum)로 임팩트 시각을 계산할
+      수 없다 — 실측값이 임의라서다. `resolvedTimingRef`(지금 로드된 오디오가
+      실제로 합성된 swingSec)를 우선 쓰고, 아직 로드가 안 끝났을 때만(이론상
+      onCycle이 로드 전에 불릴 일은 없지만 방어적으로) enum 값으로 fallback한다.
     */
-    const delay = impactAtMs(swingSpeedRef.current) - lateSec * 1000;
+    const swingSec =
+      resolvedTimingRef.current?.swingSec ?? getSwingSpeed(swingSpeedRef.current).swingSec;
+    const delay = swingSec * 1000 - lateSec * 1000;
     if (delay <= 0) {
       // 이미 임팩트가 지났으면 굳이 늦게 울리지 않는다 — 틀린 신호가 없느니만 못하다.
       return;
@@ -299,8 +338,14 @@ export default function PracticeScreen() {
       m.startShotCycle({
         countInSec: COUNT_IN_SEC,
         intervalSec: shotIntervalRef.current,
-        // 2026-08-07: 루프 길이가 속도마다 다르므로 상수가 아니라 함수로 구한다
-        swingCycleSec: cycleSec(speedId),
+        /*
+          2026-08-07: 루프 길이가 속도마다 다르므로 상수가 아니라 함수로 구한다.
+          2026-08-19: 내 스윙은 이 길이가 4단계 enum과 무관한 임의값이라
+          `resolvedTimingRef`(실제로 로드된 오디오의 cycleSec)를 우선 쓴다 —
+          안 그러면 실측이 느린 사용자의 안전 대기시간이 실제보다 짧게 잡혀
+          스윙 사운드가 끝나기 전에 다음 카운트인이 시작될 수 있다.
+        */
+        swingCycleSec: resolvedTimingRef.current?.cycleSec ?? cycleSec(speedId),
         /* 샷 모드에서도 카운트·진동 경로를 하나로 유지한다 (2026-08-06) */
         onSwing: () => onSwingSignalRef.current(0),
       });
@@ -314,7 +359,7 @@ export default function PracticeScreen() {
   /** 오디오 엔진에 카운트 콜백을 물린다. 재생 중 갈아끼워도 카운트는 유지된다. */
   useEffect(() => {
     metronomeRef.current?.setOnCycle(onSwingSignal);
-  }, [onSwingSignal, soundPack, swingSpeed, tempo.presetIdForAudio]);
+  }, [onSwingSignal, soundPack, swingSpeed, tempo.audioKey]);
 
   useEffect(
     () => () => {
@@ -465,7 +510,7 @@ export default function PracticeScreen() {
         completed,
         countSource: 'audio',
         ratio: tempo.ratio,
-        sourceLabel: tempo.isOwnSwing ? '내 스윙' : tempo.label,
+        sourceLabel: tempo.isOwnSwing ? t('practice:header.mySwing') : tempo.label,
       });
     } else if (durationSec > 0 && !warnedRef.current) {
       /*
@@ -474,7 +519,7 @@ export default function PracticeScreen() {
         단, 안내는 한 번만 — 두 번째로 나가려 하면 그대로 내보낸다.
       */
       warnedRef.current = true;
-      showToast(`${MIN_RECORD_SEC}초 넘게 연습해야 기록에 남아요`);
+      showToast(t('practice:toast.minRecordSec', { seconds: MIN_RECORD_SEC }));
       closingRef.current = false;
       return;
     }
@@ -486,7 +531,7 @@ export default function PracticeScreen() {
       연습을 마친 뒤 갈 곳은 언제나 홈이다.
     */
     router.replace('/(tabs)');
-  }, [addSession, router, setIsPlaying, showToast, tempo.isOwnSwing, tempo.label, tempo.ratio]);
+  }, [addSession, router, setIsPlaying, showToast, t, tempo.isOwnSwing, tempo.label, tempo.ratio]);
 
   /**
    * 안드로이드 시스템 뒤로가기 → `close()`로 흘려보낸다. (2026-08-06)
@@ -547,8 +592,8 @@ export default function PracticeScreen() {
       {/* 헤더 */}
       <View className="flex-row items-center justify-between px-s3 pt-s1">
         <IconButton
-          label="연습 마치기"
-          hint="연습을 끝내고 기록을 저장한 뒤 홈으로 돌아갑니다"
+          label={t('practice:closeButton.label')}
+          hint={t('practice:closeButton.hint')}
           onPress={close}
         >
           <IconClose color={c.muted} size={22} />
@@ -557,7 +602,8 @@ export default function PracticeScreen() {
           {...textScaling}
           className="font-kr-medium text-caption text-muted dark:text-mutedDark"
         >
-          {tempo.isOwnSwing ? '내 스윙' : '기준 리듬'} · {tempo.label}
+          {tempo.isOwnSwing ? t('practice:header.mySwing') : t('practice:header.referenceRhythm')} ·{' '}
+          {tempo.label}
         </Text>
         <View style={{ width: 48 }} />
       </View>
@@ -599,13 +645,19 @@ export default function PracticeScreen() {
               시점에 불리므로, 어드레스·대기 구간에는 링이 그대로 멈춰 있는다.
             */
             swingTick={swingCount}
-            swingMs={impactAtMs(swingSpeed)}
+            /*
+              2026-08-19: 내 스윙은 링 애니메이션도 실측 속도를 따라가야 한다 —
+              `resolvedTiming`(지금 로드된 오디오의 실제 swingSec, state라 렌더에
+              반영된다)을 우선 쓰고, 아직 첫 로드가 안 끝났을 때만 enum 기반
+              값으로 fallback한다.
+            */
+            swingMs={resolvedTiming ? resolvedTiming.swingSec * 1000 : impactAtMs(swingSpeed)}
             colors={{ primary: c.primary, accent: c.accent, track: c.track, dot: c.ink }}
           >
             {/* 2026-08-01: 홈과 동일하게 색 출처를 팔레트로 통일 (링 안 숫자 실종 대응) */}
             <Text
               {...numeralScaling}
-              accessibilityLabel={`템포 비율 ${formatRatio(tempo.ratio)}`}
+              accessibilityLabel={t('domain:units.ratioA11y', { ratio: formatRatio(tempo.ratio) })}
               className="font-display-bold text-[50px]"
               style={{ color: c.ink }}
             >
@@ -620,14 +672,14 @@ export default function PracticeScreen() {
                 className="w-[8px] h-[8px] rounded-pill"
                 style={{ backgroundColor: c.primary }}
               />
-              <Caption>백스윙 시작</Caption>
+              <Caption>{t('practice:markers.start')}</Caption>
             </View>
             <View className="flex-row items-center gap-[6px]">
               <View
                 className="w-[8px] h-[8px] rounded-pill"
                 style={{ backgroundColor: c.accent }}
               />
-              <Caption>임팩트</Caption>
+              <Caption>{t('practice:markers.impact')}</Caption>
             </View>
           </View>
 
@@ -643,7 +695,9 @@ export default function PracticeScreen() {
             accessibilityLiveRegion="polite"
             className="font-kr-medium text-caption text-muted dark:text-mutedDark pt-s2"
           >
-            {elapsedSec > 0 ? `${mm}분 ${ss}초 · ${swingCount}스윙` : '아직 시작 전이에요'}
+            {elapsedSec > 0
+              ? t('practice:elapsed.withTime', { minutes: mm, seconds: ss, swingCount })
+              : t('practice:elapsed.notStarted')}
           </Text>
         </View>
 
@@ -652,9 +706,11 @@ export default function PracticeScreen() {
           <Pressable
             onPress={toggle}
             accessibilityRole="button"
-            accessibilityLabel={isPlaying ? '연습 정지' : '연습 재생'}
+            accessibilityLabel={
+              isPlaying ? t('practice:playButton.a11yStop') : t('practice:playButton.a11yPlay')
+            }
             accessibilityHint={
-              isPlaying ? '메트로놈 소리를 멈춥니다' : '선택한 템포로 소리가 반복 재생됩니다'
+              isPlaying ? t('practice:playButton.stopHint') : t('practice:playButton.playHint')
             }
             accessibilityState={{ busy: isPlaying }}
             className="flex-row items-center justify-center gap-[8px] bg-accent dark:bg-accent-neon rounded-lg py-s2 active:opacity-85"
@@ -673,7 +729,7 @@ export default function PracticeScreen() {
               <IconPlay color={onAccentText} size={22} />
             )}
             <Text {...textScaling} className="font-kr-bold text-h2" style={{ color: onAccentText }}>
-              {isPlaying ? '정지' : '재생'}
+              {isPlaying ? t('practice:playButton.stop') : t('practice:playButton.play')}
             </Text>
           </Pressable>
 
@@ -688,7 +744,7 @@ export default function PracticeScreen() {
               {...textScaling}
               className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
             >
-              {`${shotIntervalSec}초마다 한 번 · 카운트인 ${COUNT_IN_SEC}초가 울리면 어드레스`}
+              {t('practice:shotIntervalHint', { interval: shotIntervalSec, countIn: COUNT_IN_SEC })}
             </Text>
           )}
 
@@ -702,18 +758,21 @@ export default function PracticeScreen() {
         */}
           <View className="pt-s2">
             <Caption className="text-center pb-[6px]">
-              스윙 속도 — 빠른 게 더 좋은 건 아니에요
+              {t('practice:swingSpeedSection.title')}
             </Caption>
             <View className="flex-row gap-[6px]">
               {SWING_SPEEDS.map((s) => {
                 const active = s.id === swingSpeed;
                 const isPick = s.id === recommendation?.speed.id;
+                const secondsLabel = t('domain:units.seconds', {
+                  value: swingSecLabel(s.swingSec),
+                });
                 return (
                   <Pressable
                     key={s.id}
                     onPress={() => changeSpeed(s.id)}
                     accessibilityRole="radio"
-                    accessibilityLabel={`스윙 속도 ${s.label}${isPick ? ', 내 템포 추천' : ''}`}
+                    accessibilityLabel={`${t('practice:swingSpeedSection.a11yLabel', { seconds: secondsLabel })}${isPick ? t('practice:swingSpeedSection.recommendedSuffix') : ''}`}
                     accessibilityState={{ checked: active, selected: active }}
                     className={`flex-1 items-center justify-center py-[8px] rounded-card ${
                       active
@@ -732,14 +791,19 @@ export default function PracticeScreen() {
                       className="font-display-bold text-body"
                       style={{ color: active ? c.onPrimary : c.ink }}
                     >
-                      {s.label}
+                      {secondsLabel}
                     </Text>
                     <Text
                       {...numeralScaling}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
                       className="font-kr-medium text-[11px] pt-[2px]"
                       style={{ color: active ? c.onPrimary : c.muted }}
                     >
-                      {isPick ? '내 템포' : s.nickname}
+                      {isPick
+                        ? t('practice:swingSpeedSection.myTempo')
+                        : t(`domain:swingSpeeds.${s.id}.nickname`)}
                     </Text>
                   </Pressable>
                 );
@@ -755,7 +819,10 @@ export default function PracticeScreen() {
               {...textScaling}
               className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
             >
-              {`백스윙 ${breakdown.backswingSec.toFixed(2)}초 · 다운스윙 ${breakdown.downswingSec.toFixed(2)}초`}
+              {t('practice:breakdown', {
+                backswing: breakdown.backswingSec.toFixed(2),
+                downswing: breakdown.downswingSec.toFixed(2),
+              })}
             </Text>
 
             {/*
@@ -769,7 +836,12 @@ export default function PracticeScreen() {
               <Pressable
                 onPress={() => changeSpeed(recommendation.speed.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초입니다. 추천 속도 ${recommendation.speed.label}로 맞추기`}
+                accessibilityLabel={t('practice:recommendation.a11yLabel', {
+                  measured: recommendation.measuredSec.toFixed(2),
+                  recommended: t('domain:units.seconds', {
+                    value: swingSecLabel(recommendation.speed.swingSec),
+                  }),
+                })}
                 style={{ minHeight: 44 }}
                 className="mt-s1 rounded-card border border-line dark:border-lineDark px-s2 py-[8px] justify-center active:opacity-70"
               >
@@ -778,7 +850,12 @@ export default function PracticeScreen() {
                   {...textScaling}
                   className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center"
                 >
-                  {`내 스윙은 ${recommendation.measuredSec.toFixed(2)}초예요 · 탭하면 ${recommendation.speed.label}로 맞춰요`}
+                  {t('practice:recommendation.text', {
+                    measured: recommendation.measuredSec.toFixed(2),
+                    recommended: t('domain:units.seconds', {
+                      value: swingSecLabel(recommendation.speed.swingSec),
+                    }),
+                  })}
                 </Text>
               </Pressable>
             )}

@@ -65,7 +65,15 @@
       "expo-audio",
       "expo-video",
       "expo-asset",
-      "expo-localization"
+      "expo-localization",
+      [
+        "react-native-audio-api",
+        {
+          "iosBackgroundMode": false,
+          "androidPermissions": ["android.permission.MODIFY_AUDIO_SETTINGS"],
+          "androidForegroundService": false
+        }
+      ]
     ],
     "extra": {
       "router": {},
