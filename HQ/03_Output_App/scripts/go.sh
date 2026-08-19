@@ -5,9 +5,10 @@
 #  실행:  npm run go            (같은 Wi-Fi일 때, 가장 빠름)
 #         npm run go:tunnel     (Wi-Fi가 다르거나 안 될 때)
 #
-#  폰에서 Expo Go 앱을 열고 QR을 스캔하면 됩니다.
-#  ⚠ Expo Go는 최신 SDK 하나만 지원합니다. "Something went wrong"이 뜨면
-#    Wi-Fi 문제가 아니라 SDK 버전 불일치일 가능성이 높습니다 (2026-07-30에 하루 날린 원인).
+#  폰에 dev-client(npm run android 로 빌드·설치)가 깔려 있어야 합니다.
+#  일반 Expo Go 앱으로는 안 됩니다 — react-native-audio-api 등 서드파티
+#  네이티브 모듈은 Expo Go 바이너리에 들어있지 않습니다 (T-38).
+#  dev-client를 열고 QR을 스캔하면 됩니다.
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -27,18 +28,19 @@ echo ""
 echo "  ┌────────────────────────────────────────┐"
 echo "  │   마이템포 — 폰에서 열기               │"
 echo "  ├────────────────────────────────────────┤"
-echo "  │  1. 폰에서 Expo Go 앱을 켭니다         │"
+echo "  │  1. 폰에서 dev-client 앱을 켭니다      │"
 echo "  │  2. 아래 QR코드를 스캔합니다           │"
 echo "  │  3. 안 되면 Ctrl+C 후                  │"
 echo "  │       npm run go:tunnel                │"
 echo "  └────────────────────────────────────────┘"
 echo ""
 
-# expo-dev-client가 설치돼 있으면 expo CLI가 기본 타깃을 "개발 빌드"로 자동
-# 전환한다 (아직 만든 적 없음, T-12 진행 중). 폰에는 여전히 일반 Expo Go 앱을
-# 쓰므로 --go로 명시해서 강제로 Expo Go 타깃을 유지한다.
-# (실제 개발 빌드를 만들고 나면 이 플래그를 빼고 --dev-client로 바꿀 것.)
-GO_FLAG="--go"
+# react-native-audio-api(리버브, T-38) 네이티브 모듈이 들어오면서 Expo Go로는
+# 더 이상 실행이 안 된다 — Expo Go는 서드파티 네이티브 코드를 담을 수 없고,
+# app.json의 config plugin도 prebuild를 거치는 dev-client에서만 적용된다.
+# 폰에 dev-client APK(npm run android 또는 eas build --profile development)를
+# 설치해뒀다는 전제로 --dev-client 타깃을 강제한다.
+GO_FLAG="--dev-client"
 
 if [ "$MODE" = "--tunnel" ]; then
   echo "  터널 모드로 시작합니다 (Wi-Fi가 달라도 됩니다. 조금 느립니다)"
