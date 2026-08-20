@@ -140,7 +140,8 @@ function CustomShotIntervalRow({
           accessibilityLabel={`${label}, ${hint}${locked ? t('settings:soundPackGroup.premiumSuffix') : ''}`}
           accessibilityState={{ disabled: locked }}
           {...numeralScaling}
-          className={`w-[48px] text-right font-kr-medium text-body py-[2px] border-b ${
+          textAlignVertical="center"
+          className={`w-[48px] text-right font-kr-medium text-body py-s1 border-b ${
             locked
               ? 'text-muted dark:text-mutedDark border-line dark:border-lineDark'
               : 'text-ink dark:text-inkDark border-line dark:border-lineDark'

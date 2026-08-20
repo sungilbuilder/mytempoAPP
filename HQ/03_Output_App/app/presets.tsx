@@ -25,9 +25,17 @@ import {
 import { usePracticeStore } from '../store/usePracticeStore';
 import { useEntitlement } from '../store/useEntitlementStore';
 
-/** 세그먼트 순서 = 화면에 보이는 순서. "전체"가 항상 맨 앞이다. */
-type CategoryFilter = 'all' | TempoPresetCategory;
-const CATEGORY_FILTERS: CategoryFilter[] = ['all', 'driver_iron', 'approach', 'putting'];
+/**
+ * 세그먼트 순서 = 화면에 보이는 순서.
+ *
+ * 2026-08-20: "전체" 탭을 없앴다 — 드라이버·아이언 3종(여유롭게/고르게/길게)과
+ * 어프로치·퍼팅(프리미엄 잠금)이 한 목록에 섞여 보이면 "템포 바꾸기"가 원래
+ * 약속한 "3종 프리셋"(홈 화면 캡션)과 어긋나 보인다는 창업자 지적. 기본값을
+ * driver_iron으로 두어 진입 즉시 3종만 보이게 하고, 어프로치·퍼팅은 별개 탭으로
+ * 분리해 접근 경로는 그대로 유지한다(T-39 프리미엄 진입점 유지).
+ */
+type CategoryFilter = TempoPresetCategory;
+const CATEGORY_FILTERS: CategoryFilter[] = ['driver_iron', 'approach', 'putting'];
 
 /**
  * 프리셋 — "템포 고르기"
@@ -53,11 +61,10 @@ export default function PresetsScreen() {
   const source = usePracticeStore((s) => s.source);
   const selectPreset = usePracticeStore((s) => s.selectPreset);
   const { full } = useEntitlement();
-  const [category, setCategory] = useState<CategoryFilter>('all');
+  const [category, setCategory] = useState<CategoryFilter>('driver_iron');
 
   const selectedId = source?.kind === 'preset' ? source.presetId : null;
-  const visiblePresets =
-    category === 'all' ? TEMPO_PRESETS : TEMPO_PRESETS.filter((p) => p.category === category);
+  const visiblePresets = TEMPO_PRESETS.filter((p) => p.category === category);
   const anyLocked = TEMPO_PRESETS.some((p) => !isPresetFree(p)) && !full;
 
   return (

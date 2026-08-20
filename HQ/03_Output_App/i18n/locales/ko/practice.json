@@ -28,7 +28,8 @@
     "title": "스윙 속도 — 빠른 게 더 좋은 건 아니에요",
     "a11yLabel": "스윙 속도 {{seconds}}",
     "recommendedSuffix": ", 내 템포 추천",
-    "myTempo": "내 템포"
+    "myTempo": "내 템포",
+    "myTempoTitle": "내 스윙 그대로의 속도"
   },
   "breakdown": "백스윙 {{backswing}}초 · 다운스윙 {{downswing}}초",
   "recommendation": {

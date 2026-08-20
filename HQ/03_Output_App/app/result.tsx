@@ -72,7 +72,6 @@ export default function ResultScreen() {
     impact: Number(params.impact ?? 0),
   };
   const { backswingSec, downswingSec, ratio, suspicious } = computeTempo(marks);
-  const character = characterForRatio(ratio);
 
   /**
    * 표시 정밀도 (2026-07-31 신설)
@@ -93,6 +92,14 @@ export default function ResultScreen() {
    * my-swings 목록에서 나중에 붙여도 된다.
    */
   const [club, setClub] = useState<SwingClub | null>(null);
+  /**
+   * 성향 한 줄 (2026-08-20 수정) — `characterForRatio()`의 임계값(2.75/3.25)은
+   * 드라이버·아이언 풀스윙 전제라, 어프로치·퍼팅(2:1 근방)을 그 잣대로 재면
+   * "고르게"(올리고 내리는 시간 차가 작다) 같은 안 맞는 문구가 나온다
+   * (`character.ts` 2026-08-19 T-39 주석에 남아 있던 미해결 이슈). 클럽을
+   * 어프로치·퍼팅으로 고르면 비율 계산 대신 그 클럽 전용 라벨을 직접 쓴다.
+   */
+  const character = club === 'approach' || club === 'putting' ? club : characterForRatio(ratio);
   /**
    * 템포 선택 (2026-08-08, 실기기 검증 — "등록하기 버튼이 없어서 헷갈림").
    *
@@ -333,7 +340,17 @@ export default function ResultScreen() {
               return (
                 <Pressable
                   key={c2.id}
-                  onPress={() => setClub(active ? null : c2.id)}
+                  onPress={() => {
+                    const next = active ? null : c2.id;
+                    setClub(next);
+                    /*
+                      2026-08-20: 어프로치·퍼팅엔 무료 기준 리듬(3:1)이 없다 —
+                      3:1은 드라이버·아이언 전용 관찰치다. "기준 리듬으로" 선택지
+                      자체를 숨기므로, 이미 그쪽을 고른 상태에서 클럽을 바꾸면
+                      선택을 "내 스윙 그대로"로 되돌려 숨겨진 상태값이 안 남게 한다.
+                    */
+                    if (next === 'approach' || next === 'putting') setTempoMode('mine');
+                  }}
                   accessibilityRole="radio"
                   accessibilityLabel={label}
                   accessibilityState={{ checked: active, selected: active }}
@@ -383,29 +400,38 @@ export default function ResultScreen() {
                 {t('result:tempoSection.mine')}
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => setTempoMode('reference')}
-              accessibilityRole="radio"
-              accessibilityLabel={t('result:tempoSection.referenceA11y')}
-              accessibilityState={{
-                checked: tempoMode === 'reference',
-                selected: tempoMode === 'reference',
-              }}
-              style={{ minHeight: MIN_TOUCH }}
-              className={`flex-1 items-center justify-center rounded-card px-s2 ${
-                tempoMode === 'reference'
-                  ? 'bg-primary dark:bg-primary-neon'
-                  : 'bg-surface2 dark:bg-surface2Dark'
-              } active:opacity-80`}
-            >
-              <Text
-                {...textScaling}
-                className="font-kr-medium text-body"
-                style={{ color: tempoMode === 'reference' ? c.onPrimary : c.ink }}
+            {/*
+              2026-08-20: "기준 리듬으로"(3:1)는 드라이버·아이언 전용 — 3:1은
+              그 두 클럽에서만 반복 관찰된 값이고, 어프로치·퍼팅의 근거 있는 비율은
+              2:1([[T-39]] 조사)이라 다르다. 무료로 내보낼 수 있는 2:1 기준 리듬이
+              아직 없으므로(카탈로그의 2:1은 프리미엄 전용), 어프로치·퍼팅을 고른
+              동안엔 이 선택지 자체를 숨긴다 — 없는 근거를 있는 척 보여주지 않는다.
+            */}
+            {club !== 'approach' && club !== 'putting' && (
+              <Pressable
+                onPress={() => setTempoMode('reference')}
+                accessibilityRole="radio"
+                accessibilityLabel={t('result:tempoSection.referenceA11y')}
+                accessibilityState={{
+                  checked: tempoMode === 'reference',
+                  selected: tempoMode === 'reference',
+                }}
+                style={{ minHeight: MIN_TOUCH }}
+                className={`flex-1 items-center justify-center rounded-card px-s2 ${
+                  tempoMode === 'reference'
+                    ? 'bg-primary dark:bg-primary-neon'
+                    : 'bg-surface2 dark:bg-surface2Dark'
+                } active:opacity-80`}
               >
-                {t('result:tempoSection.referenceLabel')}
-              </Text>
-            </Pressable>
+                <Text
+                  {...textScaling}
+                  className="font-kr-medium text-body"
+                  style={{ color: tempoMode === 'reference' ? c.onPrimary : c.ink }}
+                >
+                  {t('result:tempoSection.referenceLabel')}
+                </Text>
+              </Pressable>
+            )}
           </View>
           <Caption className="pt-[6px]">
             {tempoMode === 'mine'

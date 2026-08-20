@@ -69,7 +69,9 @@
   },
   "clubs": {
     "driver": "드라이버",
-    "iron": "아이언"
+    "iron": "아이언",
+    "approach": "어프로치",
+    "putting": "퍼팅"
   },
   "activeTempo": {
     "mySwingSublabel": "내 스윙 · {{month}}/{{day}} 등록",

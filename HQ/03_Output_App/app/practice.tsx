@@ -218,8 +218,14 @@ export default function PracticeScreen() {
     // "가장 가까운 프리셋" 구간(presetIdForAudio)은 같아도 실측값이 다르면
     // 서로 다른 오디오라, presetIdForAudio만 보면 스윙을 바꿔도 재로드가
     // 안 되는 사고가 난다.
+    //
+    // ⚠️ 2026-08-20: 내 스윙(own swing)은 `swingSpeed`를 재로드 조건에서 뺀다.
+    // `audioFileFor`가 own-swing일 땐 이 값을 아예 안 읽으므로(위 주석), 예전엔
+    // 화면에서 안 쓰이게 된 4단계 버튼을 눌러도(또는 다른 화면에서 남아있던
+    // 값이 바뀌어도) 아무 효과 없이 오디오만 통째로 멈췄다 다시 로드하는 공백이
+    // 생겼다(T-37/T-38 계열 "정지 후 재개 렉" 제보의 실체).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempo.audioKey, soundPack, swingSpeed]);
+  }, [tempo.audioKey, soundPack, tempo.isOwnSwing ? null : swingSpeed]);
 
   // 볼륨은 재로드 없이 반영
   useEffect(() => {
@@ -581,6 +587,12 @@ export default function PracticeScreen() {
   /** 지금 속도·비율에서 백스윙/다운스윙이 각각 몇 초인지 (2026-08-01) */
   const breakdown = swingBreakdown(speed, tempo.ratio);
   /**
+   * 내 스윙 전용 — 실제 합성된 오디오의 스윙 길이 (2026-08-20, T-38 화면 반영).
+   * 로드가 아직 안 끝났으면 enum 기본값으로 잠깐 대체한다(깜빡임 방지).
+   */
+  const ownSwingSec = resolvedTiming?.swingSec ?? speed.swingSec;
+  const ownBreakdown = swingBreakdown({ id: swingSpeed, swingSec: ownSwingSec }, tempo.ratio);
+  /**
    * 저장된 내 스윙에서 계산한 추천 단계 (2026-08-01).
    * 마킹 이력이 없으면 null — 그 경우 추천 UI 자체가 나타나지 않는다.
    * (근거 없이 추천하느니 아무 말도 하지 않는 편이 낫다)
@@ -757,107 +769,145 @@ export default function PracticeScreen() {
           절대 속도만 바뀐다는 점이 화면에서 바로 읽혀야 한다. (features/tempo/swingSpeeds.ts)
         */}
           <View className="pt-s2">
-            <Caption className="text-center pb-[6px]">
-              {t('practice:swingSpeedSection.title')}
-            </Caption>
-            <View className="flex-row gap-[6px]">
-              {SWING_SPEEDS.map((s) => {
-                const active = s.id === swingSpeed;
-                const isPick = s.id === recommendation?.speed.id;
-                const secondsLabel = t('domain:units.seconds', {
-                  value: swingSecLabel(s.swingSec),
-                });
-                return (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => changeSpeed(s.id)}
-                    accessibilityRole="radio"
-                    accessibilityLabel={`${t('practice:swingSpeedSection.a11yLabel', { seconds: secondsLabel })}${isPick ? t('practice:swingSpeedSection.recommendedSuffix') : ''}`}
-                    accessibilityState={{ checked: active, selected: active }}
-                    className={`flex-1 items-center justify-center py-[8px] rounded-card ${
-                      active
-                        ? 'bg-primary dark:bg-primary-neon'
-                        : 'bg-surface2 dark:bg-surface2Dark'
-                    } active:opacity-80`}
-                    style={[
-                      { minHeight: 48 },
-                      /* 추천 단계는 선택돼 있지 않아도 테두리로 표시해 눈에 띄게 한다 */
-                      !active && isPick ? { borderWidth: 1, borderColor: c.accent } : null,
-                    ]}
-                  >
-                    {/* 초를 주인공으로 — 형용사가 아니라 사실이 먼저 읽혀야 한다 */}
-                    <Text
-                      {...numeralScaling}
-                      className="font-display-bold text-body"
-                      style={{ color: active ? c.onPrimary : c.ink }}
-                    >
-                      {secondsLabel}
-                    </Text>
-                    <Text
-                      {...numeralScaling}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.7}
-                      className="font-kr-medium text-[11px] pt-[2px]"
-                      style={{ color: active ? c.onPrimary : c.muted }}
-                    >
-                      {isPick
-                        ? t('practice:swingSpeedSection.myTempo')
-                        : t(`domain:swingSpeeds.${s.id}.nickname`)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {tempo.isOwnSwing ? (
+              /*
+                2026-08-20: 내 스윙 전용 표시로 교체.
 
-            {/*
-            선택한 속도에서 백스윙·다운스윙이 각각 몇 초인지 사실대로 보여준다.
-            "왜 이 속도를 골랐는지"를 스스로 설명할 수 있게 하는 장치다.
-          */}
-            <Text
-              {...koreanWrap}
-              {...textScaling}
-              className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
-            >
-              {t('practice:breakdown', {
-                backswing: breakdown.backswingSec.toFixed(2),
-                downswing: breakdown.downswingSec.toFixed(2),
-              })}
-            </Text>
-
-            {/*
-            추천 안내 (2026-08-01)
-
-            추천은 "네가 도달해야 할 목표"가 아니라 **측정된 네 스윙에 가장 가까운
-            출발점**이다. 그래서 근거가 된 실측값을 반드시 함께 보여준다 —
-            숫자를 감추고 "이게 당신에게 맞아요"라고만 하면 근거 없는 단정이 된다.
-          */}
-            {recommendation && recommendation.speed.id !== swingSpeed && (
-              <Pressable
-                onPress={() => changeSpeed(recommendation.speed.id)}
-                accessibilityRole="button"
-                accessibilityLabel={t('practice:recommendation.a11yLabel', {
-                  measured: recommendation.measuredSec.toFixed(2),
-                  recommended: t('domain:units.seconds', {
-                    value: swingSecLabel(recommendation.speed.swingSec),
-                  }),
-                })}
-                style={{ minHeight: 44 }}
-                className="mt-s1 rounded-card border border-line dark:border-lineDark px-s2 py-[8px] justify-center active:opacity-70"
-              >
+                T-38(2026-08-19)로 내 스윙 오디오는 항상 실측 backswingSec/
+                downswingSec 그대로 합성된다 — 아래 4단계 버튼은 더 이상 아무
+                효과가 없는데도(`useActiveTempo.ts`의 `audioFileFor`가 own-swing
+                일 땐 `speed` 인자를 무시함) 화면엔 여전히 눌러지는 버튼으로
+                남아 있어 "선택했는데 왜 1.22초가 그대로 나오지"라는 혼란을 줬다.
+                버튼을 지우고 실제 합성된 값을 그대로 보여준다 — 고를 게 없으니
+                고르는 UI도 없앤다.
+              */
+              <View className="items-center">
+                <Caption className="text-center pb-[6px]">
+                  {t('practice:swingSpeedSection.myTempoTitle')}
+                </Caption>
+                <Text
+                  {...numeralScaling}
+                  className="font-display-bold text-h1"
+                  style={{ color: c.ink }}
+                >
+                  {t('domain:units.seconds', { value: swingSecLabel(ownSwingSec) })}
+                </Text>
                 <Text
                   {...koreanWrap}
                   {...textScaling}
-                  className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center"
+                  className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
                 >
-                  {t('practice:recommendation.text', {
-                    measured: recommendation.measuredSec.toFixed(2),
-                    recommended: t('domain:units.seconds', {
-                      value: swingSecLabel(recommendation.speed.swingSec),
-                    }),
+                  {t('practice:breakdown', {
+                    backswing: ownBreakdown.backswingSec.toFixed(2),
+                    downswing: ownBreakdown.downswingSec.toFixed(2),
                   })}
                 </Text>
-              </Pressable>
+              </View>
+            ) : (
+              <>
+                <Caption className="text-center pb-[6px]">
+                  {t('practice:swingSpeedSection.title')}
+                </Caption>
+                <View className="flex-row gap-[6px]">
+                  {SWING_SPEEDS.map((s) => {
+                    const active = s.id === swingSpeed;
+                    const isPick = s.id === recommendation?.speed.id;
+                    const secondsLabel = t('domain:units.seconds', {
+                      value: swingSecLabel(s.swingSec),
+                    });
+                    return (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => changeSpeed(s.id)}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`${t('practice:swingSpeedSection.a11yLabel', { seconds: secondsLabel })}${isPick ? t('practice:swingSpeedSection.recommendedSuffix') : ''}`}
+                        accessibilityState={{ checked: active, selected: active }}
+                        className={`flex-1 items-center justify-center py-[8px] rounded-card ${
+                          active
+                            ? 'bg-primary dark:bg-primary-neon'
+                            : 'bg-surface2 dark:bg-surface2Dark'
+                        } active:opacity-80`}
+                        style={[
+                          { minHeight: 48 },
+                          /* 추천 단계는 선택돼 있지 않아도 테두리로 표시해 눈에 띄게 한다 */
+                          !active && isPick ? { borderWidth: 1, borderColor: c.accent } : null,
+                        ]}
+                      >
+                        {/* 초를 주인공으로 — 형용사가 아니라 사실이 먼저 읽혀야 한다 */}
+                        <Text
+                          {...numeralScaling}
+                          className="font-display-bold text-body"
+                          style={{ color: active ? c.onPrimary : c.ink }}
+                        >
+                          {secondsLabel}
+                        </Text>
+                        <Text
+                          {...numeralScaling}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}
+                          className="font-kr-medium text-[11px] pt-[2px]"
+                          style={{ color: active ? c.onPrimary : c.muted }}
+                        >
+                          {isPick
+                            ? t('practice:swingSpeedSection.myTempo')
+                            : t(`domain:swingSpeeds.${s.id}.nickname`)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/*
+                선택한 속도에서 백스윙·다운스윙이 각각 몇 초인지 사실대로 보여준다.
+                "왜 이 속도를 골랐는지"를 스스로 설명할 수 있게 하는 장치다.
+              */}
+                <Text
+                  {...koreanWrap}
+                  {...textScaling}
+                  className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center pt-s1"
+                >
+                  {t('practice:breakdown', {
+                    backswing: breakdown.backswingSec.toFixed(2),
+                    downswing: breakdown.downswingSec.toFixed(2),
+                  })}
+                </Text>
+
+                {/*
+                추천 안내 (2026-08-01)
+
+                추천은 "네가 도달해야 할 목표"가 아니라 **측정된 네 스윙에 가장 가까운
+                출발점**이다. 그래서 근거가 된 실측값을 반드시 함께 보여준다 —
+                숫자를 감추고 "이게 당신에게 맞아요"라고만 하면 근거 없는 단정이 된다.
+              */}
+                {recommendation && recommendation.speed.id !== swingSpeed && (
+                  <Pressable
+                    onPress={() => changeSpeed(recommendation.speed.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('practice:recommendation.a11yLabel', {
+                      measured: recommendation.measuredSec.toFixed(2),
+                      recommended: t('domain:units.seconds', {
+                        value: swingSecLabel(recommendation.speed.swingSec),
+                      }),
+                    })}
+                    style={{ minHeight: 44 }}
+                    className="mt-s1 rounded-card border border-line dark:border-lineDark px-s2 py-[8px] justify-center active:opacity-70"
+                  >
+                    <Text
+                      {...koreanWrap}
+                      {...textScaling}
+                      className="font-kr-medium text-caption text-muted dark:text-mutedDark text-center"
+                    >
+                      {t('practice:recommendation.text', {
+                        measured: recommendation.measuredSec.toFixed(2),
+                        recommended: t('domain:units.seconds', {
+                          value: swingSecLabel(recommendation.speed.swingSec),
+                        }),
+                      })}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
             )}
           </View>
         </View>

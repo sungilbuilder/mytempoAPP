@@ -4,7 +4,6 @@
   "radioGroupA11y": "기준 리듬",
   "categoryGroupA11y": "클럽 카테고리",
   "category": {
-    "all": "전체",
     "driver_iron": "드라이버·아이언",
     "approach": "어프로치",
     "putting": "퍼팅"

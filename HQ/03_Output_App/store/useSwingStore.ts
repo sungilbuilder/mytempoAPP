@@ -25,11 +25,22 @@ export type SwingMarks = {
  * 등 다변화 카테고리"를 그대로 반영하면 두 축(즐겨찾기·클럽)이 섞여 나중에 꼬인다
  * — "favorite"은 단일 플래그(아래 `favorite`), 클럽 종류는 이 타입으로 분리했다.
  * 목록을 늘릴 땐 여기 하나만 고치면 된다(선택 UI는 이 타입을 그대로 순회한다).
+ *
+ * 2026-08-20: `approach`·`putting` 추가 — "내 스윙"엔 드라이버·아이언만 있고
+ * 어프로치·퍼팅은 등록할 곳이 없다는 창업자 지적. [[T-39]]가 만든
+ * `TempoPresetCategory`(프리셋 카탈로그, 프리미엄)와는 다른 축이다 — 이건
+ * 사용자가 자기 영상을 직접 마킹해 등록하는 무료 흐름이라 처음부터 프리미엄
+ * 경계 밖이었다("`app/swing-editor`는 손대지 않고 무료 유지", T-39 결정문).
  */
-export type SwingClub = 'driver' | 'iron';
+export type SwingClub = 'driver' | 'iron' | 'approach' | 'putting';
 
 /** label 문자열은 `domain.json`의 `clubs.<id>`에 있다 (2026-08-08 i18n 리팩터). */
-export const SWING_CLUBS: { id: SwingClub }[] = [{ id: 'driver' }, { id: 'iron' }];
+export const SWING_CLUBS: { id: SwingClub }[] = [
+  { id: 'driver' },
+  { id: 'iron' },
+  { id: 'approach' },
+  { id: 'putting' },
+];
 
 export type SavedSwing = {
   id: string;

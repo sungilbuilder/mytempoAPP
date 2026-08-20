@@ -71,7 +71,9 @@
   },
   "clubs": {
     "driver": "Driver",
-    "iron": "Iron"
+    "iron": "Iron",
+    "approach": "Approach",
+    "putting": "Putting"
   },
   "activeTempo": {
     "mySwingSublabel": "My swing · logged {{month}}/{{day}}",

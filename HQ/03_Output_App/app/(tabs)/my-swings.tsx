@@ -165,7 +165,15 @@ export default function MySwingsScreen() {
             <View className="gap-[12px] pt-s3">
               {visibleSwings.map((swing) => {
                 const active = swing.id === activeId;
-                const char = characterForRatio(swing.ratio);
+                /*
+                  2026-08-20: `characterForRatio()`의 임계값은 드라이버·아이언
+                  풀스윙 전제(character.ts 참고) — 어프로치·퍼팅 스윙은 클럽
+                  라벨을 그대로 성향 라벨로 쓴다(result.tsx와 동일한 판단).
+                */
+                const char =
+                  swing.club === 'approach' || swing.club === 'putting'
+                    ? swing.club
+                    : characterForRatio(swing.ratio);
                 return (
                   <Pressable
                     key={swing.id}

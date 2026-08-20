@@ -31,10 +31,6 @@
     "top": { "title": "클럽이 가장 높은 순간", "hint": "올라간 클럽이 방향을 바꾸는 곳이에요" },
     "impact": { "title": "공에 맞는 순간", "hint": "클럽 헤드가 공에 닿는 곳이에요" }
   },
-  "zoom": {
-    "resetA11yLabel": "확대 {{zoom}}배, 탭하면 원래 크기로",
-    "resetLabel": "해제"
-  },
   "rate": {
     "groupA11yLabel": "재생 배속",
     "optionA11yLabel": "{{rate}}배속"

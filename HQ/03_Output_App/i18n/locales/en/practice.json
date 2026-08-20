@@ -28,7 +28,8 @@
     "title": "Swing speed — faster isn't better",
     "a11yLabel": "Swing speed {{seconds}}",
     "recommendedSuffix": ", recommended for your tempo",
-    "myTempo": "My tempo"
+    "myTempo": "My tempo",
+    "myTempoTitle": "Your swing's exact tempo"
   },
   "breakdown": "Backswing {{backswing}}s · downswing {{downswing}}s",
   "recommendation": {

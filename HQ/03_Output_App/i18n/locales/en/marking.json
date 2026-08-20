@@ -37,10 +37,6 @@
       "hint": "Where the clubhead touches the ball"
     }
   },
-  "zoom": {
-    "resetA11yLabel": "Zoomed {{zoom}}x, tap to reset to original size",
-    "resetLabel": "Reset"
-  },
   "rate": {
     "groupA11yLabel": "Playback speed",
     "optionA11yLabel": "{{rate}}x speed"

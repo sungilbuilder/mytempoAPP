@@ -933,39 +933,16 @@ export default function MarkingScreen() {
       </View>
 
       {/*
-        확대 배율 표시 (2026-08-08: 초·프레임 숫자를 뺐다 — 사용자 테스트에서
-        "굳이 필요 없는 정밀 수치"로 지적됨. 확대 컨트롤만 남긴다.)
-
         2026-08-01 UI 정리 — 확대 컨트롤을 영상 밖으로 뺐다.
         영상 위에 배율 표시와 안내 배너를 얹었더니 **정작 봐야 할 스윙을 가렸다**(창업자 지적).
         골퍼는 보통 화면 중앙~하단에 잡히는데 거기가 딱 가려졌다.
-        영상 영역은 완전히 비우고, 배율은 확대 중일 때만 이 줄에 작게 표시한다.
+        영상 영역은 완전히 비우고, 배속 조절만 이 줄에 남긴다.
+
+        2026-08-20: 배율 표시 + "해제" 버튼을 없앴다(창업자 지적) — 핀치 줌으로
+        이미 자유롭게 확대·축소가 되는데 별도 리셋 버튼까지 있을 필요가 없다는
+        판단. 1x로 되돌리는 것도 손으로 반대로 핀치하면 된다.
       */}
       <View className="px-s3 flex-row items-center justify-end pb-s1">
-        {zoom > 1.02 && (
-          <Pressable
-            onPress={() => setZoom(1)}
-            accessibilityRole="button"
-            accessibilityLabel={t('marking:zoom.resetA11yLabel', { zoom: zoom.toFixed(1) })}
-            hitSlop={12}
-            style={{ minHeight: MIN_TOUCH }}
-            className="flex-row items-center justify-center gap-[4px] bg-surface2 dark:bg-surface2Dark rounded-pill px-s1 active:opacity-70"
-          >
-            <Text
-              {...numeralScaling}
-              className="font-display-bold text-caption text-ink dark:text-inkDark"
-            >
-              {zoom.toFixed(1)}x
-            </Text>
-            <Text
-              {...textScaling}
-              className="font-kr-medium text-caption text-muted dark:text-mutedDark"
-            >
-              {t('marking:zoom.resetLabel')}
-            </Text>
-          </Pressable>
-        )}
-
         {/*
           ⚠️ 2026-08-06 두 가지 수정 (AOS 리뷰 V-2 · A-4)
 
