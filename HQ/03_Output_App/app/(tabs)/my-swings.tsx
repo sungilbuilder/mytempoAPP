@@ -248,7 +248,7 @@ export default function MySwingsScreen() {
                           클럽 종류 (2026-08-07, T-06 피드백). 등록 때 안 골랐어도
                           여기서 붙이거나 바꿀 수 있다 — 같은 걸 다시 탭하면 해제.
                         */}
-                        <View className="flex-row gap-[6px] pt-[6px]">
+                        <View className="flex-row flex-wrap gap-[6px] pt-[6px]">
                           {SWING_CLUBS.map((cl) => {
                             const clubActive = swing.club === cl.id;
                             const clubLabel = t(`domain:clubs.${cl.id}`);

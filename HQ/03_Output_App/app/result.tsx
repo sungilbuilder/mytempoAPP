@@ -361,6 +361,9 @@ export default function ResultScreen() {
                 >
                   <Text
                     {...textScaling}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
                     className="font-kr-medium text-body"
                     style={{ color: active ? c.onPrimary : c.ink }}
                   >

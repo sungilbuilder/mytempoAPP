@@ -141,6 +141,7 @@ function CustomShotIntervalRow({
           accessibilityState={{ disabled: locked }}
           {...numeralScaling}
           textAlignVertical="center"
+          style={{ includeFontPadding: false }}
           className={`w-[48px] text-right font-kr-medium text-body py-s1 border-b ${
             locked
               ? 'text-muted dark:text-mutedDark border-line dark:border-lineDark'
