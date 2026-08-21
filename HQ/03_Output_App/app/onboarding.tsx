@@ -32,8 +32,7 @@ import {
   loopAudio,
   type ShotIntervalSec,
 } from '../features/audio-engine/soundPacks';
-import { DEFAULT_SWING_SPEED } from '../features/tempo/swingSpeeds';
-import { TEMPO_PRESETS } from '../features/tempo/presets';
+import { DEFAULT_SWING_SPEED, SWING_SPEEDS, swingSecLabel } from '../features/tempo/swingSpeeds';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -43,9 +42,10 @@ const SLIDE_COUNT = 5;
 const DEMO_PRESET_ID = 'preset-3-1';
 
 /**
- * 온보딩 — 4장 스와이프
+ * 온보딩 — 5장 스와이프
  *
- * 근거: `mytempo-full-demo.html`의 온보딩 구조 + 2026-07-31 테마 선택 화면 추가.
+ * 근거: `mytempo-full-demo.html`의 온보딩 구조 + 2026-07-31 테마 선택 화면 추가 +
+ * 2026-08-21 추천 템포 설명 장(T-45) 추가.
  *
  * 핵심 원칙: **각 장이 서로 다른 시각 요소를 갖는다.**
  *   ① 골프공 배지 — "내 스윙"이라는 주체
@@ -53,9 +53,12 @@ const DEMO_PRESET_ID = 'preset-3-1';
  *   ③ 3:1 템포 링 — 앱의 시그니처 심볼을 그대로 써서 "소리가 반복된다"는 감각을 전달
  *      (2026-08-08: 의미 없이 오르내리기만 하던 펄스 링 데모를 실제 연습 화면과
  *      같은 컴포넌트로 교체 — 사용자 피드백)
- *   ④ 테마 미리보기 카드 — 첫 실행에서 화면 밝기를 직접 고르게 함
+ *   ④ 3:1 배지 + 속도 눈금 — "비율은 하나(3:1), 속도만 4가지"를 그대로 시각화
+ *      (2026-08-21: 비율 프리셋 3종 리스트였던 초안을 대화로 다시 설계 — 문구가
+ *      말하는 축과 화면이 보여주는 축이 어긋나 있었다)
+ *   ⑤ 테마 미리보기 카드 — 첫 실행에서 화면 밝기를 직접 고르게 함
  *
- * ④를 온보딩에 둔 이유: 이 앱은 야간 연습장·실내 스크린에서 쓰는 경우가 많아
+ * ⑤를 온보딩에 둔 이유: 이 앱은 야간 연습장·실내 스크린에서 쓰는 경우가 많아
  * 첫 화면부터 눈부심 여부가 사용성에 직결된다. 설정에 묻어두면 대부분 안 바꾼다.
  */
 
@@ -136,43 +139,54 @@ function TempoBar({ primary, accent, track }: { primary: string; accent: string;
 }
 
 /*
-  ── ③.5 추천 템포 미리보기 ──────────────────────
-  2026-08-21 (T-45, 창업자 요청) — "템포 바꾸기"가 사실은 프리셋 4단계 중
-  하나를 추천하는 화면이라는 걸 아무도 설명해준 적이 없었다. 새 온보딩 장으로
-  드라이버·아이언 3종 추천 템포를 실제 라벨 그대로 미리 보여주고, "이건 목표가
-  아니라 시작점"이라는 문장으로 왜 이 비율을 추천하는지 짧게 짚는다.
+  ── ③.5 추천 템포 미리보기 — 3:1 배지 + 속도 눈금 ───────────────
+  2026-08-21 (T-45 팔로우업, 창업자 요청) — 처음엔 비율 프리셋 3종(2.5/3/3.5:1)을
+  나열했는데, 문구("3:1 리듬이 반복된다")는 비율 축 얘기고 이 리스트는 다른 축이라
+  화면과 문구가 서로 다른 걸 말하고 있었다. 실제 메시지는 "비율은 3:1 하나, 속도만
+  4가지"라 시각도 거기 맞춘다 — 작은 3:1 배지 + 실제 스윙 4가지 속도를 같은 무게로
+  나열하는 눈금. 숫자는 SWING_SPEEDS를 그대로 읽어와 하드코딩 오차를 막는다.
 */
-function RecommendedTempoPreview({
+function TempoStartingPoints({
   primary,
   ink,
   track,
+  line,
 }: {
   primary: string;
   ink: string;
   track: string;
+  line: string;
 }) {
-  const { t } = useTranslation(['onboarding', 'domain']);
-  const driverIronPresets = TEMPO_PRESETS.filter((p) => p.category === 'driver_iron');
+  const { t } = useTranslation('domain');
   return (
-    <View className="w-full max-w-[260px] gap-[8px]">
-      {driverIronPresets.map((preset) => (
-        <View
-          key={preset.id}
-          className="flex-row items-center justify-between rounded-card px-s2 py-[8px]"
-          style={{ backgroundColor: track }}
+    <View className="w-full max-w-[220px] items-center gap-s3">
+      <View className="rounded-pill px-s2 py-[4px]" style={{ backgroundColor: track }}>
+        <Text
+          {...numeralScaling}
+          className="font-display-bold text-caption"
+          style={{ color: primary }}
         >
-          <Text {...textScaling} className="font-kr-bold text-caption" style={{ color: ink }}>
-            {t(`domain:character.${preset.characterId}.label`)}
-          </Text>
-          <Text
-            {...numeralScaling}
-            className="font-display-bold text-body"
-            style={{ color: primary }}
-          >
-            {preset.ratioLabel}
-          </Text>
+          3:1
+        </Text>
+      </View>
+
+      <View className="w-full" style={{ paddingTop: 3 }}>
+        <View className="w-full" style={{ height: 1, backgroundColor: line }} />
+        <View className="flex-row justify-between" style={{ marginTop: -4 }}>
+          {SWING_SPEEDS.map((s) => (
+            <View key={s.id} className="items-center" style={{ width: 44 }}>
+              <View className="w-[7px] h-[7px] rounded-pill" style={{ backgroundColor: ink }} />
+              <Text
+                {...numeralScaling}
+                className="text-caption text-muted dark:text-mutedDark"
+                style={{ paddingTop: 4 }}
+              >
+                {t('units.seconds', { value: swingSecLabel(s.swingSec) })}
+              </Text>
+            </View>
+          ))}
         </View>
-      ))}
+      </View>
     </View>
   );
 }
@@ -436,11 +450,18 @@ export default function OnboardingScreen() {
         2026-08-21 (T-45, 신설) — "추천 템포"(구 "템포 바꾸기")가 무엇을
         추천하는지, 왜 추천하는지 설명하는 장이 없었다. 3:1 링 장(위) 바로
         다음에 둬 "그 3:1이 어디서 왔는지"를 이어서 설명한다.
+
+        같은 날 팔로우업: 처음엔 여기 비율 프리셋 3종 리스트를 넣었는데,
+        문구는 "비율 3:1 하나, 속도만 4가지"를 말하고 화면은 "비율이 3개"를
+        보여줘 서로 다른 축이 됐다. TempoStartingPoints로 교체해 문구·화면이
+        같은 축(속도 다양성)을 말하게 맞췄다.
       */
       title: t('slides.4.title'),
       body: t('slides.4.body'),
       visualAbove: false,
-      visual: <RecommendedTempoPreview primary={c.primary} ink={c.ink} track={c.surface2} />,
+      visual: (
+        <TempoStartingPoints primary={c.primary} ink={c.ink} track={c.surface2} line={c.line} />
+      ),
     },
     {
       title: t('slides.5.title'),
