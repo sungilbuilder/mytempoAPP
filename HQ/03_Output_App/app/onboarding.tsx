@@ -33,10 +33,11 @@ import {
   type ShotIntervalSec,
 } from '../features/audio-engine/soundPacks';
 import { DEFAULT_SWING_SPEED } from '../features/tempo/swingSpeeds';
+import { TEMPO_PRESETS } from '../features/tempo/presets';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
-const SLIDE_COUNT = 4;
+const SLIDE_COUNT = 5;
 
 /** 3번째 장 템포 링 데모에서 쓰는 프리셋 — 실제 연습 화면과 같은 3:1 무료팩 루프. */
 const DEMO_PRESET_ID = 'preset-3-1';
@@ -130,6 +131,48 @@ function TempoBar({ primary, accent, track }: { primary: string; accent: string;
           <Caption>{t('markers.impact')}</Caption>
         </View>
       </View>
+    </View>
+  );
+}
+
+/*
+  ── ③.5 추천 템포 미리보기 ──────────────────────
+  2026-08-21 (T-45, 창업자 요청) — "템포 바꾸기"가 사실은 프리셋 4단계 중
+  하나를 추천하는 화면이라는 걸 아무도 설명해준 적이 없었다. 새 온보딩 장으로
+  드라이버·아이언 3종 추천 템포를 실제 라벨 그대로 미리 보여주고, "이건 목표가
+  아니라 시작점"이라는 문장으로 왜 이 비율을 추천하는지 짧게 짚는다.
+*/
+function RecommendedTempoPreview({
+  primary,
+  ink,
+  track,
+}: {
+  primary: string;
+  ink: string;
+  track: string;
+}) {
+  const { t } = useTranslation(['onboarding', 'domain']);
+  const driverIronPresets = TEMPO_PRESETS.filter((p) => p.category === 'driver_iron');
+  return (
+    <View className="w-full max-w-[260px] gap-[8px]">
+      {driverIronPresets.map((preset) => (
+        <View
+          key={preset.id}
+          className="flex-row items-center justify-between rounded-card px-s2 py-[8px]"
+          style={{ backgroundColor: track }}
+        >
+          <Text {...textScaling} className="font-kr-bold text-caption" style={{ color: ink }}>
+            {t(`domain:character.${preset.characterId}.label`)}
+          </Text>
+          <Text
+            {...numeralScaling}
+            className="font-display-bold text-body"
+            style={{ color: primary }}
+          >
+            {preset.ratioLabel}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -389,9 +432,20 @@ export default function OnboardingScreen() {
       ),
     },
     {
+      /*
+        2026-08-21 (T-45, 신설) — "추천 템포"(구 "템포 바꾸기")가 무엇을
+        추천하는지, 왜 추천하는지 설명하는 장이 없었다. 3:1 링 장(위) 바로
+        다음에 둬 "그 3:1이 어디서 왔는지"를 이어서 설명한다.
+      */
       title: t('slides.4.title'),
-      /* 2026-08-08 문구 단순화 — 설정 변경 안내는 아래 샷 간격 섹션과 겹쳐 뺐다 */
       body: t('slides.4.body'),
+      visualAbove: false,
+      visual: <RecommendedTempoPreview primary={c.primary} ink={c.ink} track={c.surface2} />,
+    },
+    {
+      title: t('slides.5.title'),
+      /* 2026-08-08 문구 단순화 — 설정 변경 안내는 아래 샷 간격 섹션과 겹쳐 뺐다 */
+      body: t('slides.5.body'),
       visualAbove: false,
       visual: (
         <View className="w-full gap-s3">

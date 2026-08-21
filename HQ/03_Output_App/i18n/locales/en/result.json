@@ -20,6 +20,9 @@
   "tempoSection": {
     "label": "Tempo",
     "mine": "Keep my swing as-is",
+    "mineRefRatioLabel": "My speed · 3:1 ratio",
+    "mineRefRatioA11y": "Keep my speed, but set the ratio to 3-to-1",
+    "mineRefRatioSummary": "Keeping speed {{speed}} · ratio set to 3:1",
     "referenceA11y": "3-to-1 reference rhythm",
     "referenceLabel": "Use a 3:1 rhythm",
     "defaultWord": "default",
@@ -35,6 +38,7 @@
     "label": "Log this swing",
     "a11yDisabled": "Log this swing. Scroll down to check the name and club first",
     "a11yMine": "Log this swing. Starts practice with your swing as-is, ratio {{ratio}}, speed {{speed}}",
+    "a11yMineRefRatio": "Log this swing. Starts practice keeping your speed {{speed}}, with the ratio set to 3-to-1",
     "a11yReference": "Log this swing. Starts practice with the 3-to-1 reference rhythm, keeping the speed measured from your swing"
   },
   "saveOnlyButton": {

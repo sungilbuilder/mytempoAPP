@@ -11,7 +11,20 @@ import { DEFAULT_SWING_SPEED, type SwingSpeedId } from '../features/tempo/swingS
 
 /** 연습 소스: 프리셋 3종 중 하나이거나, 저장해둔 내 스윙 */
 export type PracticeSource =
-  { kind: 'preset'; presetId: string } | { kind: 'swing'; swingId: string };
+  | { kind: 'preset'; presetId: string }
+  | {
+      kind: 'swing';
+      swingId: string;
+      /**
+       * 내 속도(실측 연속값) 유지 + 비율만 3:1로 강제 (2026-08-21, T-45).
+       *
+       * "내 스윙 그대로"와 같은 `kind: 'swing'`이지만, 재생할 배분만 다르다 —
+       * `useActiveTempo.ts`가 이 플래그를 보고 백스윙/다운스윙 초를 3:1로
+       * 재계산한다(총 스윙시간은 실측값 그대로 두고 75%:25%로 재분배 —
+       * 창업자 확정, 2026-08-21). 없으면(undefined) 기존 "내 스윙 그대로"와 동일.
+       */
+      refRatio?: boolean;
+    };
 
 type PracticeState = {
   source: PracticeSource | null;
@@ -34,7 +47,7 @@ type PracticeState = {
   swingSpeed: SwingSpeedId;
   isPlaying: boolean;
   selectPreset: (presetId: string) => void;
-  selectSwing: (swingId: string) => void;
+  selectSwing: (swingId: string, opts?: { refRatio?: boolean }) => void;
   setSwingSpeed: (id: SwingSpeedId) => void;
   setIsPlaying: (playing: boolean) => void;
 };
@@ -47,7 +60,8 @@ export const usePracticeStore = create<PracticeState>()(
       swingSpeed: DEFAULT_SWING_SPEED,
       isPlaying: false,
       selectPreset: (presetId) => set({ source: { kind: 'preset', presetId }, isPlaying: false }),
-      selectSwing: (swingId) => set({ source: { kind: 'swing', swingId }, isPlaying: false }),
+      selectSwing: (swingId, opts) =>
+        set({ source: { kind: 'swing', swingId, refRatio: opts?.refRatio }, isPlaying: false }),
       setSwingSpeed: (id) => set({ swingSpeed: id }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
     }),

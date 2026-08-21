@@ -1,7 +1,7 @@
 {
-  "title": "템포 고르기",
-  "subtitle": "먼저 고르고, 나중에 내 스윙으로 바꿀 수 있어요",
-  "radioGroupA11y": "기준 리듬",
+  "title": "추천 템포",
+  "subtitle": "목표가 아니라 시작점이에요 — 먼저 골라보고, 나중에 내 스윙으로 바꿀 수 있어요",
+  "radioGroupA11y": "추천 템포",
   "categoryGroupA11y": "클럽 카테고리",
   "category": {
     "driver_iron": "드라이버·아이언",

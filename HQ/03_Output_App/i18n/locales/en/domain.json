@@ -77,6 +77,7 @@
   },
   "activeTempo": {
     "mySwingSublabel": "My swing · logged {{month}}/{{day}}",
+    "mySwingRefRatioSublabel": "My swing · 3:1 rhythm · logged {{month}}/{{day}}",
     "presetSublabel": "Preset · {{ratio}}"
   }
 }

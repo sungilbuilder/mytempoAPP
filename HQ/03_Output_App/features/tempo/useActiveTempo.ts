@@ -85,19 +85,45 @@ export function useActiveTempo(): ActiveTempo {
     const swing = getSwingById(swings, source.swingId);
     if (swing) {
       const d = new Date(swing.createdAt);
+      /*
+        내 속도(연속 실측값) + 고정 3:1 비율 (2026-08-21, T-45)
+
+        "내 스윙 그대로"의 기존 `'reference'` 대안은 프리셋 카탈로그로 빠져
+        실측 스윙 전체 길이 대신 이산 4단계(SwingSpeedId) 중 가장 가까운 값을
+        썼다 — 창업자가 "내 스윙을 등록하면 내 속도랑 비율만 따라가고 3:1은
+        안 된다"고 재지적(2026-08-20~21)한 지점이 정확히 이 어긋남이었다.
+
+        여기서는 실측 총 스윙시간(backswingSec+downswingSec)은 그대로 두고
+        75%:25%(3:1)로 다시 나눈다 — "내가 걸리는 시간은 그대로, 리듬만
+        다듬어짐" 감각에 가장 가깝다는 창업자 확정(2026-08-21, 3개 후보 중 1안).
+      */
+      const useRefRatio = source.refRatio === true;
+      const totalSec = swing.backswingSec + swing.downswingSec;
+      const effectiveBackswingSec = useRefRatio ? totalSec * 0.75 : swing.backswingSec;
+      const effectiveDownswingSec = useRefRatio ? totalSec * 0.25 : swing.downswingSec;
+      const effectiveRatio = useRefRatio ? 3 : swing.ratio;
       // 표시용으로만 쓴다 — 오디오는 더 이상 이 프리셋을 빌려 쓰지 않는다(위 주석 참고).
-      const near = nearestPreset(swing.ratio);
+      const near = nearestPreset(effectiveRatio);
       return {
         label: swing.name,
         /* 2026-08-06 용어 통일: 스윙은 "등록"한다 (AOS 리뷰 B-2) */
-        sublabel: t('activeTempo.mySwingSublabel', { month: d.getMonth() + 1, day: d.getDate() }),
-        ratio: swing.ratio,
+        sublabel: useRefRatio
+          ? t('activeTempo.mySwingRefRatioSublabel', {
+              month: d.getMonth() + 1,
+              day: d.getDate(),
+            })
+          : t('activeTempo.mySwingSublabel', { month: d.getMonth() + 1, day: d.getDate() }),
+        ratio: effectiveRatio,
         isOwnSwing: true,
         hasHistory: true,
         presetIdForAudio: near.id,
-        audioKey: `swing:${swing.id}`,
+        audioKey: `swing:${swing.id}${useRefRatio ? ':ref31' : ''}`,
         audioFileFor: async (pack: SoundPackId) => {
-          const rendered = await getOrRenderSwingLoop(pack, swing.backswingSec, swing.downswingSec);
+          const rendered = await getOrRenderSwingLoop(
+            pack,
+            effectiveBackswingSec,
+            effectiveDownswingSec,
+          );
           return {
             source: { uri: rendered.uri },
             cycleSec: rendered.cycleSec,

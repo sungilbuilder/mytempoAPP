@@ -83,14 +83,31 @@ function getPlayer(id: CueId): AudioPlayer {
   }
 });
 
-export function playCue(id: CueId, volume = 1) {
+/**
+ * ⚠️ 2026-08-21 수정 — "마킹 중 확인음이 간헐적으로 안 남" 재현 조사(T-36).
+ *
+ * `p.seekTo(0)`는 **Promise를 반환하는 비동기 호출**인데(expo-audio
+ * `AudioPlayer.seekTo(): Promise<void>`), 기존 코드는 그 결과를 기다리지 않고
+ * 바로 다음 줄에서 `p.play()`를 불렀다. seek이 끝나기 전에 재생이 시작되면
+ * 기기·타이밍에 따라 이전 위치에서 재생되거나(마킹처럼 빠르게 연달아 누를 때
+ * 이전 seek이 아직 안 끝난 채 다음 재생이 걸림) 아예 조용히 무시될 수 있다 —
+ * "간헐적"이라는 제보와 정확히 들어맞는 레이스 컨디션이다. seek 완료를 기다린
+ * 뒤 재생하도록 고친다.
+ *
+ * 실패를 여전히 조용히 삼키긴 하지만(확인음 때문에 본 동작이 막히면 안 된다는
+ * 원칙은 유지), 개발 빌드에서는 `console.warn`으로 원인을 남겨 다음에 같은
+ * 제보가 오면 "로드 자체가 실패"인지 "로드는 됐는데 재생만 실패"인지 바로
+ * 구분할 수 있게 한다(T-35 조사에서 이 구분이 안 돼 막혔던 지점).
+ */
+export async function playCue(id: CueId, volume = 1) {
   try {
     const p = getPlayer(id);
     const extraGain = CUE_EXTRA_GAIN[id] ?? 1;
     p.volume = Math.min(1, Math.max(0, volume * CUE_GAIN * extraGain));
-    p.seekTo(0);
+    await p.seekTo(0);
     p.play();
-  } catch {
+  } catch (e) {
     // 확인음 재생 실패는 무시한다 — 이 소리 때문에 본 동작이 막히면 안 된다.
+    if (__DEV__) console.warn(`[마이템포] 확인음 재생 실패 (${id})`, e);
   }
 }

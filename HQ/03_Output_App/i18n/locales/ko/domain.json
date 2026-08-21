@@ -75,6 +75,7 @@
   },
   "activeTempo": {
     "mySwingSublabel": "내 스윙 · {{month}}/{{day}} 등록",
+    "mySwingRefRatioSublabel": "내 스윙 · 3:1 리듬 · {{month}}/{{day}} 등록",
     "presetSublabel": "프리셋 · {{ratio}}"
   }
 }

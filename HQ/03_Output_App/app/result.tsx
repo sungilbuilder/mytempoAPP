@@ -108,8 +108,16 @@ export default function ResultScreen() {
    * [등록만 하기]뿐이라, 사용자가 그걸 눌러야 등록되는 줄 알고 거기로 몰렸다.
    * 이제 둘은 클럽 종류처럼 **고르기만 하는 선택지**이고, 실제 등록은 아래
    * 단 하나의 [등록하기] 버튼이 담당한다.
+   *
+   * 2026-08-21 (T-45): 세 번째 선택지 'mineRefRatio' 추가 — "내 스윙 등록하면
+   * 내 속도랑 비율만 따라가고 3:1은 안 된다"는 창업자 재지적. 기존 'reference'는
+   * 실측 연속 속도가 아니라 이산 4단계 프리셋 속도로 빠지는 문제가 있어(T-45
+   * 조사) 그대로 두고, 실측 연속 속도를 유지하는 새 선택지를 옆에 둔다.
+   *   'mine'         = 내 비율 + 내 속도        → 방금 친 스윙을 그대로 재현
+   *   'mineRefRatio' = 3:1 비율(강제) + 내 속도  → 내가 걸리는 시간은 그대로, 리듬만 3:1로
+   *   'reference'    = 3:1 비율 + 프리셋 속도    → 속도도 준비된 4단계 중 하나로
    */
-  const [tempoMode, setTempoMode] = useState<'mine' | 'reference'>('mine');
+  const [tempoMode, setTempoMode] = useState<'mine' | 'mineRefRatio' | 'reference'>('mine');
 
   /**
    * 스크롤 완료 후 등록 가능 (2026-08-08, 사용자 테스트 피드백).
@@ -165,7 +173,7 @@ export default function ResultScreen() {
    * 3:1 근처로 모인다는 관찰이 반복해서 확인된다.** 근거가 있는 축에서만 대안을
    * 제시하는 것이다. 강요가 아니라 선택지로 두고, 내 리듬 그대로 하기를 먼저 놓는다.
    */
-  function save(mode: 'mine' | 'reference' | 'saveOnly') {
+  function save(mode: 'mine' | 'mineRefRatio' | 'reference' | 'saveOnly') {
     const id = `swing-${Date.now()}`;
     /*
       등록 완료 확인음 (2026-08-06, T-24)
@@ -188,14 +196,57 @@ export default function ResultScreen() {
     });
 
     if (mode === 'reference') selectPreset(REFERENCE_PRESET_ID);
+    else if (mode === 'mineRefRatio') selectSwing(id, { refRatio: true });
     else selectSwing(id);
 
     // 연습하러 갈 때는 속도까지 맞춰준다.
     // 여기서 안 맞춰주면 사용자가 연습 화면에서 한 번 더 골라야 한다.
+    // ⚠️ 'mineRefRatio'는 이 값을 쓰지 않는다(useActiveTempo가 실측 연속 속도를
+    // 그대로 쓴다) — 그래도 다음 프리셋 연습을 위해 마지막 속도로는 남겨둔다.
     if (pick && mode !== 'saveOnly') setSwingSpeed(pick.speed.id);
 
     if (mode === 'saveOnly') router.replace('/(tabs)/my-swings');
     else router.replace('/practice');
+  }
+
+  /** 클럽 선택 버튼 — 2행 2열 그리드에서 재사용한다(위 클럽 종류 섹션 참고). */
+  function renderClubButton(c2: { id: SwingClub }) {
+    const active = club === c2.id;
+    const label = t(`domain:clubs.${c2.id}`);
+    return (
+      <Pressable
+        key={c2.id}
+        onPress={() => {
+          const next = active ? null : c2.id;
+          setClub(next);
+          /*
+            2026-08-20: 어프로치·퍼팅엔 무료 기준 리듬(3:1)이 없다 —
+            3:1은 드라이버·아이언 전용 관찰치다. "기준 리듬으로" 선택지
+            자체를 숨기므로, 이미 그쪽을 고른 상태에서 클럽을 바꾸면
+            선택을 "내 스윙 그대로"로 되돌려 숨겨진 상태값이 안 남게 한다.
+          */
+          if (next === 'approach' || next === 'putting') setTempoMode('mine');
+        }}
+        accessibilityRole="radio"
+        accessibilityLabel={label}
+        accessibilityState={{ checked: active, selected: active }}
+        style={{ minHeight: MIN_TOUCH }}
+        className={`flex-1 items-center justify-center rounded-card px-s2 py-[10px] ${
+          active ? 'bg-primary dark:bg-primary-neon' : 'bg-surface2 dark:bg-surface2Dark'
+        } active:opacity-80`}
+      >
+        <Text
+          {...textScaling}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          className="font-kr-medium text-body"
+          style={{ color: active ? c.onPrimary : c.ink }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
   }
 
   /* 훅을 전부 호출한 뒤에 분기한다 — 훅 순서가 조건에 따라 달라지면 안 된다 */
@@ -330,48 +381,21 @@ export default function ResultScreen() {
         {/*
           클럽 종류 (2026-08-07, T-06 피드백)
           강제하지 않는다 — 안 골라도 등록은 그대로 된다. 같은 걸 다시 탭하면 해제.
+
+          2026-08-21: 4개를 한 줄에 몰아넣었더니(각 폭 1/4) "드라이버"·"어프로치"
+          처럼 긴 라벨이 `adjustsFontSizeToFit`로 줄어들어 읽기 힘들다는 창업자
+          지적. 2행 2열로 바꿔 폭을 절반으로 넓힌다 — 보통 화면 폭에서는 축소가
+          걸리지 않고, 아주 작은 화면·확대 글꼴 설정에서만 안전망으로 작동한다.
         */}
         <View className="pt-s2">
           <Caption className="pb-[6px]">{t('result:clubSection.label')}</Caption>
-          <View className="flex-row gap-[6px]">
-            {SWING_CLUBS.map((c2) => {
-              const active = club === c2.id;
-              const label = t(`domain:clubs.${c2.id}`);
-              return (
-                <Pressable
-                  key={c2.id}
-                  onPress={() => {
-                    const next = active ? null : c2.id;
-                    setClub(next);
-                    /*
-                      2026-08-20: 어프로치·퍼팅엔 무료 기준 리듬(3:1)이 없다 —
-                      3:1은 드라이버·아이언 전용 관찰치다. "기준 리듬으로" 선택지
-                      자체를 숨기므로, 이미 그쪽을 고른 상태에서 클럽을 바꾸면
-                      선택을 "내 스윙 그대로"로 되돌려 숨겨진 상태값이 안 남게 한다.
-                    */
-                    if (next === 'approach' || next === 'putting') setTempoMode('mine');
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityLabel={label}
-                  accessibilityState={{ checked: active, selected: active }}
-                  style={{ minHeight: MIN_TOUCH }}
-                  className={`flex-1 items-center justify-center rounded-card px-s2 ${
-                    active ? 'bg-primary dark:bg-primary-neon' : 'bg-surface2 dark:bg-surface2Dark'
-                  } active:opacity-80`}
-                >
-                  <Text
-                    {...textScaling}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                    className="font-kr-medium text-body"
-                    style={{ color: active ? c.onPrimary : c.ink }}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          <View className="gap-[6px]">
+            <View className="flex-row gap-[6px]">
+              {SWING_CLUBS.slice(0, 2).map((c2) => renderClubButton(c2))}
+            </View>
+            <View className="flex-row gap-[6px]">
+              {SWING_CLUBS.slice(2, 4).map((c2) => renderClubButton(c2))}
+            </View>
           </View>
         </View>
 
@@ -397,12 +421,49 @@ export default function ResultScreen() {
             >
               <Text
                 {...textScaling}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
                 className="font-kr-medium text-body"
                 style={{ color: tempoMode === 'mine' ? c.onPrimary : c.ink }}
               >
                 {t('result:tempoSection.mine')}
               </Text>
             </Pressable>
+            {/*
+              2026-08-21 (T-45): "내 속도 · 3:1로" — 실측 총 스윙시간은 그대로 두고
+              비율만 3:1로 맞춘다(내 속도 그대로 vs 프리셋 이산 속도의 차이는
+              위 tempoMode 선언부 주석 참고). "기준 리듬으로"와 같은 이유로
+              어프로치·퍼팅에선 숨긴다 — 3:1은 드라이버·아이언 전용 관찰치다.
+            */}
+            {club !== 'approach' && club !== 'putting' && (
+              <Pressable
+                onPress={() => setTempoMode('mineRefRatio')}
+                accessibilityRole="radio"
+                accessibilityLabel={t('result:tempoSection.mineRefRatioA11y')}
+                accessibilityState={{
+                  checked: tempoMode === 'mineRefRatio',
+                  selected: tempoMode === 'mineRefRatio',
+                }}
+                style={{ minHeight: MIN_TOUCH }}
+                className={`flex-1 items-center justify-center rounded-card px-s2 ${
+                  tempoMode === 'mineRefRatio'
+                    ? 'bg-primary dark:bg-primary-neon'
+                    : 'bg-surface2 dark:bg-surface2Dark'
+                } active:opacity-80`}
+              >
+                <Text
+                  {...textScaling}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  className="font-kr-medium text-body"
+                  style={{ color: tempoMode === 'mineRefRatio' ? c.onPrimary : c.ink }}
+                >
+                  {t('result:tempoSection.mineRefRatioLabel')}
+                </Text>
+              </Pressable>
+            )}
             {/*
               2026-08-20: "기준 리듬으로"(3:1)는 드라이버·아이언 전용 — 3:1은
               그 두 클럽에서만 반복 관찰된 값이고, 어프로치·퍼팅의 근거 있는 비율은
@@ -428,6 +489,9 @@ export default function ResultScreen() {
               >
                 <Text
                   {...textScaling}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
                   className="font-kr-medium text-body"
                   style={{ color: tempoMode === 'reference' ? c.onPrimary : c.ink }}
                 >
@@ -444,11 +508,19 @@ export default function ResultScreen() {
                     ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
                     : t('result:tempoSection.defaultWord'),
                 })
-              : pick
-                ? t('result:tempoSection.referenceSummaryWithSpeed', {
-                    speed: t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) }),
+              : tempoMode === 'mineRefRatio'
+                ? t('result:tempoSection.mineRefRatioSummary', {
+                    speed: pick
+                      ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
+                      : t('result:tempoSection.defaultWord'),
                   })
-                : t('result:tempoSection.referenceSummaryNoSpeed')}
+                : pick
+                  ? t('result:tempoSection.referenceSummaryWithSpeed', {
+                      speed: t('domain:units.seconds', {
+                        value: swingSecLabel(pick.speed.swingSec),
+                      }),
+                    })
+                  : t('result:tempoSection.referenceSummaryNoSpeed')}
           </Caption>
         </View>
       </ScrollView>
@@ -488,7 +560,13 @@ export default function ResultScreen() {
                       ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
                       : t('result:tempoSection.defaultWord'),
                   })
-                : t('result:registerButton.a11yReference')
+                : tempoMode === 'mineRefRatio'
+                  ? t('result:registerButton.a11yMineRefRatio', {
+                      speed: pick
+                        ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
+                        : t('result:tempoSection.defaultWord'),
+                    })
+                  : t('result:registerButton.a11yReference')
           }
           style={{ minHeight: MIN_TOUCH, opacity: canRegister ? 1 : 0.4 }}
           className="rounded-card items-center justify-center py-s2 bg-primary dark:bg-primary-neon active:opacity-80"

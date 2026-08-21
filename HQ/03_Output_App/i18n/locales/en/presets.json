@@ -1,7 +1,7 @@
 {
-  "title": "Choose your tempo",
-  "subtitle": "Pick one now — you can switch to your own swing later",
-  "radioGroupA11y": "Reference rhythm",
+  "title": "Recommended tempo",
+  "subtitle": "A starting point, not a goal — pick one now, switch to your own swing later",
+  "radioGroupA11y": "Recommended tempo",
   "categoryGroupA11y": "Club category",
   "category": {
     "driver_iron": "Driver & irons",
