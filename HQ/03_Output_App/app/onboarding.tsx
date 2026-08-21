@@ -139,7 +139,7 @@ function TempoBar({ primary, accent, track }: { primary: string; accent: string;
 }
 
 /*
-  ── ③.5 추천 템포 미리보기 — 3:1 배지 + 속도 눈금 ───────────────
+  ── ④ 3:1 배지 + 속도 눈금 ──────────────────────────────
   2026-08-21 (T-45 팔로우업, 창업자 요청) — 처음엔 비율 프리셋 3종(2.5/3/3.5:1)을
   나열했는데, 문구("3:1 리듬이 반복된다")는 비율 축 얘기고 이 리스트는 다른 축이라
   화면과 문구가 서로 다른 걸 말하고 있었다. 실제 메시지는 "비율은 3:1 하나, 속도만
@@ -150,12 +150,10 @@ function TempoStartingPoints({
   primary,
   ink,
   track,
-  line,
 }: {
   primary: string;
   ink: string;
   track: string;
-  line: string;
 }) {
   const { t } = useTranslation('domain');
   return (
@@ -171,14 +169,14 @@ function TempoStartingPoints({
       </View>
 
       <View className="w-full" style={{ paddingTop: 3 }}>
-        <View className="w-full" style={{ height: 1, backgroundColor: line }} />
+        <View className="w-full h-[1px] bg-line dark:bg-lineDark" />
         <View className="flex-row justify-between" style={{ marginTop: -4 }}>
           {SWING_SPEEDS.map((s) => (
             <View key={s.id} className="items-center" style={{ width: 44 }}>
               <View className="w-[7px] h-[7px] rounded-pill" style={{ backgroundColor: ink }} />
               <Text
                 {...numeralScaling}
-                className="text-caption text-muted dark:text-mutedDark"
+                className="font-display-bold text-caption text-muted dark:text-mutedDark"
                 style={{ paddingTop: 4 }}
               >
                 {t('units.seconds', { value: swingSecLabel(s.swingSec) })}
@@ -191,7 +189,7 @@ function TempoStartingPoints({
   );
 }
 
-/* ── ④ 테마 선택 ───────────────────────────────── */
+/* ── ⑤ 테마 선택 ───────────────────────────────── */
 
 /** 해당 테마가 실제로 어떻게 보이는지 축소해 보여주는 미리보기 */
 function ThemePreview({ c }: { c: AppColors }) {
@@ -460,7 +458,7 @@ export default function OnboardingScreen() {
       body: t('slides.4.body'),
       visualAbove: false,
       visual: (
-        <TempoStartingPoints primary={c.primary} ink={c.ink} track={c.surface2} line={c.line} />
+        <TempoStartingPoints primary={c.primary} ink={c.ink} track={c.surface2} />
       ),
     },
     {
@@ -666,6 +664,8 @@ export default function OnboardingScreen() {
                     "언젠가 유료"라는 예고가 되어 같은 문제를 반쯤 남긴다.
                     유료 안내가 필요한 자리는 여기가 아니라 **체험이 끝나는 시점**이다
                     (역방향 체험 — store/useEntitlementStore.ts).
+
+                    (2026-08-21: CTA를 "내 템포 찾기"로 다시 변경 — 무료를 앞세우지 않는다는 위 원칙은 그대로.)
                   */}
                 </View>
               )}
