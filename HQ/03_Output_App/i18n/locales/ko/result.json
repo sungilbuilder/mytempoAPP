@@ -20,14 +20,17 @@
   "tempoSection": {
     "label": "템포",
     "mine": "내 스윙 그대로",
+    "mineExplain": "속도·리듬 모두 방금 측정한 스윙 그대로예요",
     "mineRefRatioLabel": "내 속도 · 3:1로",
     "mineRefRatioA11y": "내 속도는 그대로, 비율만 3대 1로",
+    "mineRefRatioExplain": "속도는 그대로 두고, 리듬만 3:1로 맞춰요",
     "mineRefRatioSummary": "속도 {{speed}} 유지 · 비율만 3:1로",
     "referenceA11y": "3대 1 기준 리듬",
     "referenceLabel": "3:1 리듬으로",
+    "referenceExplain": "리듬은 3:1, 속도는 준비된 4단계 중 가장 가까운 값이에요",
     "defaultWord": "기본",
     "mineSummary": "{{ratio}} · {{speed}}",
-    "referenceSummaryWithSpeed": "속도 {{speed}} 유지",
+    "referenceSummaryWithSpeed": "추천 속도 {{speed}}로",
     "referenceSummaryNoSpeed": "비율만 기준으로"
   },
   "scrollHint": {
@@ -35,11 +38,11 @@
     "text": "↓ 아래로 스크롤해 완료하세요"
   },
   "registerButton": {
-    "label": "등록하기",
-    "a11yDisabled": "등록하기. 아래로 스크롤해 이름과 클럽을 먼저 확인하세요",
-    "a11yMine": "등록하기. 내 스윙 그대로, 비율 {{ratio}}, 속도 {{speed}}로 연습을 시작합니다",
-    "a11yMineRefRatio": "등록하기. 속도 {{speed}}는 내 스윙 그대로 유지하고, 비율만 3대 1로 맞춰 연습을 시작합니다",
-    "a11yReference": "등록하기. 3대 1 기준 리듬으로 연습을 시작합니다. 속도는 내 스윙에 맞춘 값을 유지합니다"
+    "label": "등록하고 연습하기",
+    "a11yDisabled": "등록하고 연습하기. 아래로 스크롤해 이름과 클럽을 먼저 확인하세요",
+    "a11yMine": "등록하고 연습하기. 내 스윙 그대로, 비율 {{ratio}}, 속도 {{speed}}로 연습을 시작합니다",
+    "a11yMineRefRatio": "등록하고 연습하기. 속도 {{speed}}는 내 스윙 그대로 유지하고, 비율만 3대 1로 맞춰 연습을 시작합니다",
+    "a11yReference": "등록하고 연습하기. 3대 1 기준 리듬으로 연습을 시작합니다. 속도는 준비된 4단계 중 가장 가까운 {{speed}}로 맞춰집니다"
   },
   "saveOnlyButton": {
     "label": "등록만 하고 나중에 연습하기",

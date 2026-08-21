@@ -158,6 +158,20 @@ export default function ResultScreen() {
   const pick = recommendSwingSpeed([{ backswingSec, downswingSec }]);
 
   /**
+   * 실측 스윙 전체 시간 — 'mine'/'mineRefRatio' 요약·a11y에 쓴다.
+   *
+   * ⚠️ 버그 수정 — 이전엔 이 두 모드도 `pick.speed.swingSec`(프리셋 추천 단계,
+   * 예: 1.33초)을 표시했다. 하지만 두 모드 다 실제 재생은 언제나 이 실측
+   * 총 시간(예: 2.84초)을 쓴다 — "내 스윙 그대로"라는 라벨 바로 아래 다른
+   * 숫자가 뜨는 모순이었다. `pick`이 범위 밖이라 null이어도(0.4~3초 밖) 실측
+   * 값 자체는 항상 존재하므로 `pick` 유무와 무관하게 계산한다.
+   */
+  const measuredTotalSec = backswingSec + downswingSec;
+  const measuredTotalLabel = t('domain:units.seconds', {
+    value: swingSecLabel(measuredTotalSec),
+  });
+
+  /**
    * 저장 후 어디로 갈지 (2026-08-01 창업자 피드백으로 3갈래로 분리)
    *
    * 창업자 지적: "'이 템포로 바로 연습' 말고 '1.07초 단계로 연습하기' 버튼이 따로
@@ -249,6 +263,84 @@ export default function ResultScreen() {
     );
   }
 
+  /**
+   * 템포 선택 카드 (2026-08-21 재설계 — 가로 3버튼 → 세로 카드).
+   *
+   * 이전엔 라벨 3개("내 스윙 그대로"/"내 속도 · 3:1로"/"3:1 리듬으로")만 가로로
+   * 나열해서, 무엇을 유지하고 무엇을 바꾸는지 이름만으로 구분해야 했다(다른 AI
+   * 리뷰가 지적한 지점). 각 카드에 "무엇이 그대로고 무엇이 바뀌는지" 한 줄 설명 +
+   * 실제 적용될 값(위 `measuredTotalLabel` 버그 수정분 재사용)을 선택 전부터 항상
+   * 보이게 해서, 눌러보지 않아도 세 옵션을 바로 비교할 수 있게 한다.
+   */
+  function renderTempoCard(mode: 'mine' | 'mineRefRatio' | 'reference') {
+    const active = tempoMode === mode;
+    const label =
+      mode === 'mine'
+        ? t('result:tempoSection.mine')
+        : mode === 'mineRefRatio'
+          ? t('result:tempoSection.mineRefRatioLabel')
+          : t('result:tempoSection.referenceLabel');
+    const a11yLabel =
+      mode === 'mine'
+        ? t('result:tempoSection.mine')
+        : mode === 'mineRefRatio'
+          ? t('result:tempoSection.mineRefRatioA11y')
+          : t('result:tempoSection.referenceA11y');
+    const explain =
+      mode === 'mine'
+        ? t('result:tempoSection.mineExplain')
+        : mode === 'mineRefRatio'
+          ? t('result:tempoSection.mineRefRatioExplain')
+          : t('result:tempoSection.referenceExplain');
+    const value =
+      mode === 'mine'
+        ? t('result:tempoSection.mineSummary', { ratio: display.text, speed: measuredTotalLabel })
+        : mode === 'mineRefRatio'
+          ? t('result:tempoSection.mineRefRatioSummary', { speed: measuredTotalLabel })
+          : pick
+            ? t('result:tempoSection.referenceSummaryWithSpeed', {
+                speed: t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) }),
+              })
+            : t('result:tempoSection.referenceSummaryNoSpeed');
+
+    return (
+      <Pressable
+        key={mode}
+        onPress={() => setTempoMode(mode)}
+        accessibilityRole="radio"
+        accessibilityLabel={a11yLabel}
+        accessibilityState={{ checked: active, selected: active }}
+        style={{ minHeight: MIN_TOUCH }}
+        className={`rounded-card px-s2 py-s2 ${
+          active ? 'bg-primary dark:bg-primary-neon' : 'bg-surface2 dark:bg-surface2Dark'
+        } active:opacity-80`}
+      >
+        <Text
+          {...textScaling}
+          className="font-kr-bold text-body"
+          style={{ color: active ? c.onPrimary : c.ink }}
+        >
+          {label}
+        </Text>
+        <Text
+          {...koreanWrap}
+          {...textScaling}
+          className="font-kr-medium text-caption pt-[2px]"
+          style={{ color: active ? c.onPrimary : c.muted }}
+        >
+          {explain}
+        </Text>
+        <Text
+          {...numeralScaling}
+          className="font-kr-medium text-caption pt-[4px]"
+          style={{ color: active ? c.onPrimary : c.muted }}
+        >
+          {value}
+        </Text>
+      </Pressable>
+    );
+  }
+
   /* 훅을 전부 호출한 뒤에 분기한다 — 훅 순서가 조건에 따라 달라지면 안 된다 */
   if (!hasMarks) return <Redirect href="/marking" />;
 
@@ -321,29 +413,20 @@ export default function ResultScreen() {
           </Text>
         </View>
 
-        {/* 성향 한 줄 */}
+        {/*
+          성향 + 추천 (2026-08-21 통합 — 화면 간소화)
+          이전엔 성향 한 줄과 추천 카드가 별도 박스 두 개였다. 텍스트는 하나도
+          지우지 않았다 — 실측값과 "차이가 있는 편이에요" 문구는 [[2층사운드-
+          개인템포추천]]의 "목표가 아니라 출발점" 설계 원칙이라 숨기지 않는다.
+          박스 하나로 합쳐 시각적 단(段) 수만 줄인다.
+        */}
         <View className="bg-surface dark:bg-surfaceDark border border-line dark:border-lineDark rounded-lg p-s2 mt-s3">
           <Text {...textScaling} className="font-kr-bold text-body text-ink dark:text-inkDark">
             {t(`domain:character.${character}.headline`)}
           </Text>
           <Caption className="pt-[4px]">{t(`domain:character.${character}.detail`)}</Caption>
-        </View>
-
-        {suspicious && <Caption className="pt-s2">{t('result:suspiciousWarning')}</Caption>}
-
-        {/*
-          내 템포 추천 (2026-08-01, WBS 2.12)
-          실측값을 감추지 않고 그대로 보여준 다음 가장 가까운 단계를 말한다.
-          2026-08-08: 화면 길이를 줄이려고 별도 캡션 한 줄(속도 우열 안내)을
-          접었다 — 핵심 메시지("빠를수록 좋은 게 아니다")는 온보딩에서 이미
-          전달되므로, 여기서는 매 등록마다 반복하지 않아도 된다.
-        */}
-        {pick && (
-          <View className="bg-surface2 dark:bg-surface2Dark rounded-card p-s2 mt-s2">
-            <Text
-              {...koreanWrap}
-              className="font-kr-medium text-caption text-ink dark:text-inkDark"
-            >
+          {pick && (
+            <Caption className="pt-s2">
               {t(
                 pick.outOfRange
                   ? 'result:recommendation.outOfRange'
@@ -353,9 +436,11 @@ export default function ResultScreen() {
                   speed: t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) }),
                 },
               )}
-            </Text>
-          </View>
-        )}
+            </Caption>
+          )}
+        </View>
+
+        {suspicious && <Caption className="pt-s2">{t('result:suspiciousWarning')}</Caption>}
 
         {/* 이름 붙이기 */}
         <View className="pt-s2">
@@ -406,122 +491,23 @@ export default function ResultScreen() {
         */}
         <View className="pt-s2">
           <Caption className="pb-[6px]">{t('result:tempoSection.label')}</Caption>
-          <View className="flex-row gap-[6px]">
-            <Pressable
-              onPress={() => setTempoMode('mine')}
-              accessibilityRole="radio"
-              accessibilityLabel={t('result:tempoSection.mine')}
-              accessibilityState={{ checked: tempoMode === 'mine', selected: tempoMode === 'mine' }}
-              style={{ minHeight: MIN_TOUCH }}
-              className={`flex-1 items-center justify-center rounded-card px-s2 ${
-                tempoMode === 'mine'
-                  ? 'bg-primary dark:bg-primary-neon'
-                  : 'bg-surface2 dark:bg-surface2Dark'
-              } active:opacity-80`}
-            >
-              <Text
-                {...textScaling}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.85}
-                className="font-kr-medium text-body"
-                style={{ color: tempoMode === 'mine' ? c.onPrimary : c.ink }}
-              >
-                {t('result:tempoSection.mine')}
-              </Text>
-            </Pressable>
+          <View className="gap-[6px]">
+            {renderTempoCard('mine')}
             {/*
               2026-08-21 (T-45): "내 속도 · 3:1로" — 실측 총 스윙시간은 그대로 두고
-              비율만 3:1로 맞춘다(내 속도 그대로 vs 프리셋 이산 속도의 차이는
-              위 tempoMode 선언부 주석 참고). "기준 리듬으로"와 같은 이유로
-              어프로치·퍼팅에선 숨긴다 — 3:1은 드라이버·아이언 전용 관찰치다.
+              비율만 3:1로 맞춘다. "3:1 리듬으로"와 같은 이유로 어프로치·퍼팅에선
+              숨긴다 — 3:1은 드라이버·아이언 전용 관찰치다.
             */}
-            {club !== 'approach' && club !== 'putting' && (
-              <Pressable
-                onPress={() => setTempoMode('mineRefRatio')}
-                accessibilityRole="radio"
-                accessibilityLabel={t('result:tempoSection.mineRefRatioA11y')}
-                accessibilityState={{
-                  checked: tempoMode === 'mineRefRatio',
-                  selected: tempoMode === 'mineRefRatio',
-                }}
-                style={{ minHeight: MIN_TOUCH }}
-                className={`flex-1 items-center justify-center rounded-card px-s2 ${
-                  tempoMode === 'mineRefRatio'
-                    ? 'bg-primary dark:bg-primary-neon'
-                    : 'bg-surface2 dark:bg-surface2Dark'
-                } active:opacity-80`}
-              >
-                <Text
-                  {...textScaling}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.85}
-                  className="font-kr-medium text-body"
-                  style={{ color: tempoMode === 'mineRefRatio' ? c.onPrimary : c.ink }}
-                >
-                  {t('result:tempoSection.mineRefRatioLabel')}
-                </Text>
-              </Pressable>
-            )}
+            {club !== 'approach' && club !== 'putting' && renderTempoCard('mineRefRatio')}
             {/*
-              2026-08-20: "기준 리듬으로"(3:1)는 드라이버·아이언 전용 — 3:1은
-              그 두 클럽에서만 반복 관찰된 값이고, 어프로치·퍼팅의 근거 있는 비율은
+              2026-08-20: "3:1 리듬으로"는 드라이버·아이언 전용 — 3:1은 그 두
+              클럽에서만 반복 관찰된 값이고, 어프로치·퍼팅의 근거 있는 비율은
               2:1([[T-39]] 조사)이라 다르다. 무료로 내보낼 수 있는 2:1 기준 리듬이
               아직 없으므로(카탈로그의 2:1은 프리미엄 전용), 어프로치·퍼팅을 고른
               동안엔 이 선택지 자체를 숨긴다 — 없는 근거를 있는 척 보여주지 않는다.
             */}
-            {club !== 'approach' && club !== 'putting' && (
-              <Pressable
-                onPress={() => setTempoMode('reference')}
-                accessibilityRole="radio"
-                accessibilityLabel={t('result:tempoSection.referenceA11y')}
-                accessibilityState={{
-                  checked: tempoMode === 'reference',
-                  selected: tempoMode === 'reference',
-                }}
-                style={{ minHeight: MIN_TOUCH }}
-                className={`flex-1 items-center justify-center rounded-card px-s2 ${
-                  tempoMode === 'reference'
-                    ? 'bg-primary dark:bg-primary-neon'
-                    : 'bg-surface2 dark:bg-surface2Dark'
-                } active:opacity-80`}
-              >
-                <Text
-                  {...textScaling}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.85}
-                  className="font-kr-medium text-body"
-                  style={{ color: tempoMode === 'reference' ? c.onPrimary : c.ink }}
-                >
-                  {t('result:tempoSection.referenceLabel')}
-                </Text>
-              </Pressable>
-            )}
+            {club !== 'approach' && club !== 'putting' && renderTempoCard('reference')}
           </View>
-          <Caption className="pt-[6px]">
-            {tempoMode === 'mine'
-              ? t('result:tempoSection.mineSummary', {
-                  ratio: display.text,
-                  speed: pick
-                    ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
-                    : t('result:tempoSection.defaultWord'),
-                })
-              : tempoMode === 'mineRefRatio'
-                ? t('result:tempoSection.mineRefRatioSummary', {
-                    speed: pick
-                      ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
-                      : t('result:tempoSection.defaultWord'),
-                  })
-                : pick
-                  ? t('result:tempoSection.referenceSummaryWithSpeed', {
-                      speed: t('domain:units.seconds', {
-                        value: swingSecLabel(pick.speed.swingSec),
-                      }),
-                    })
-                  : t('result:tempoSection.referenceSummaryNoSpeed')}
-          </Caption>
         </View>
       </ScrollView>
 
@@ -556,17 +542,17 @@ export default function ResultScreen() {
               : tempoMode === 'mine'
                 ? t('result:registerButton.a11yMine', {
                     ratio: display.text,
-                    speed: pick
-                      ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
-                      : t('result:tempoSection.defaultWord'),
+                    speed: measuredTotalLabel,
                   })
                 : tempoMode === 'mineRefRatio'
                   ? t('result:registerButton.a11yMineRefRatio', {
+                      speed: measuredTotalLabel,
+                    })
+                  : t('result:registerButton.a11yReference', {
                       speed: pick
                         ? t('domain:units.seconds', { value: swingSecLabel(pick.speed.swingSec) })
                         : t('result:tempoSection.defaultWord'),
                     })
-                  : t('result:registerButton.a11yReference')
           }
           style={{ minHeight: MIN_TOUCH, opacity: canRegister ? 1 : 0.4 }}
           className="rounded-card items-center justify-center py-s2 bg-primary dark:bg-primary-neon active:opacity-80"
