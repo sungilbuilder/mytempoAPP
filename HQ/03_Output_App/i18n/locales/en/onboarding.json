@@ -13,8 +13,8 @@
       "body": "Swing along to the sound\nuntil it's second nature."
     },
     "4": {
-      "title": "Recommended tempo\nisn't a goal",
-      "body": "A 3:1 ratio shows up again and again\nin golfers' swings. It's a starting point,\nnot an answer — register your swing and it\nswitches to your own rhythm."
+      "title": "We recommend\na tempo",
+      "body": "Built around the 3:1 rhythm that\nrepeats in real swings — your starting point."
     },
     "5": {
       "title": "How should we\nlight the screen?",
@@ -36,7 +36,7 @@
   },
   "skip": "Skip",
   "skipA11y": "Skip intro",
-  "start": "Get started",
+  "start": "Find My Tempo",
   "nextA11y": "Next intro",
   "dotA11y": "Go to intro {{index}} of {{total}}"
 }
